@@ -116,7 +116,7 @@ class MailManagerServiceProvider extends PackageServiceProvider
         if (! class_exists(Nova::class) || ! $isNovaEnabled) {
             return;
         }
-
+        
         $resourceClass = $novaConfig['resource'] ?? Message::class;
         if (is_string($resourceClass) && class_exists($resourceClass)) {
             $modelClass = config('mail-manager.models.message');

@@ -8,23 +8,22 @@ use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Override;
 
-class MessagesCreatedDateFilter extends Filter
+class DateFilter extends Filter
 {
     /**
      * @var string
      */
     public $component = 'select-filter';
 
-    public $name = 'Created Date';
-
     public function __construct(protected string $column = 'created_at', protected ?string $defaultDateRange = 'month')
     {
+        $this->name = str($column)->afterLast('.')->headline()->toString();
     }
 
     #[Override]
     public function key(): string
     {
-        return 'MessagesCreatedDate_'.$this->column;
+        return 'DateFilter_'.$this->column;
     }
 
     /**

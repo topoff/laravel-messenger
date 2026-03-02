@@ -24,6 +24,8 @@ class MessageType extends Resource
 
     public static $group = 'Mail';
 
+    public static $globallySearchable = false;
+
     public static $search = [
         'id',
         'mail_class',

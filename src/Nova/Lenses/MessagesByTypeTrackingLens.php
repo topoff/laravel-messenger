@@ -9,7 +9,7 @@ use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\LensRequest;
 use Laravel\Nova\Lenses\Lens;
-use Topoff\MailManager\Nova\Filters\MessagesCreatedDateFilter;
+use Topoff\MailManager\Nova\Filters\DateFilter;
 
 class MessagesByTypeTrackingLens extends Lens
 {
@@ -70,7 +70,7 @@ class MessagesByTypeTrackingLens extends Lens
         $messageTable = (new (config('mail-manager.models.message')))->getTable();
 
         return [
-            new MessagesCreatedDateFilter("{$messageTable}.created_at", '30-days'),
+            new DateFilter("{$messageTable}.created_at", '30-days'),
         ];
     }
 

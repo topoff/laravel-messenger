@@ -14,10 +14,9 @@ use Topoff\MailManager\Models\Message as MessageModel;
 use Topoff\MailManager\Nova\Actions\PreviewMessageInBrowserAction;
 use Topoff\MailManager\Nova\Actions\ResendAsNewMessageAction;
 use Topoff\MailManager\Nova\Actions\ShowRealSentMessageAction;
-use Topoff\MailManager\Nova\Filters\MessagesMessageableIdFilter;
+use Topoff\MailManager\Nova\Filters\DateFilter;
 use Topoff\MailManager\Nova\Filters\MessagesMessageableTypeFilter;
 use Topoff\MailManager\Nova\Filters\MessagesMessageTypeFilter;
-use Topoff\MailManager\Nova\Filters\MessagesReceiverIdFilter;
 use Topoff\MailManager\Nova\Filters\MessagesReceiverTypeFilter;
 use Topoff\MailManager\Nova\Filters\MessagesStatusFilter;
 use Topoff\MailManager\Nova\Lenses\MessagesByTypeTrackingLens;
@@ -30,6 +29,8 @@ class Message extends Resource
     public static $title = 'id';
 
     public static $group = 'Mail';
+
+    public static $globallySearchable = false;
 
     public static $search = [
         'id',
@@ -110,12 +111,13 @@ class Message extends Resource
     public function filters(NovaRequest $request): array
     {
         return [
+            new DateFilter("created_at", 'today'),
+            new DateFilter("sent_at", null),
+            new DateFilter("error_at", null),
             new MessagesStatusFilter,
             new MessagesReceiverTypeFilter,
-            new MessagesReceiverIdFilter,
             new MessagesMessageTypeFilter,
             new MessagesMessageableTypeFilter,
-            new MessagesMessageableIdFilter,
         ];
     }
 
