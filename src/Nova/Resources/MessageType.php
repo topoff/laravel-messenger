@@ -14,6 +14,7 @@ use Laravel\Nova\Resource;
 use Topoff\MailManager\Models\MessageType as MessageTypeModel;
 use Topoff\MailManager\Nova\Actions\OpenSesSnsSiteAction;
 use Topoff\MailManager\Nova\Actions\PreviewMessageTypeInBrowserAction;
+use Topoff\MailManager\Nova\Lenses\MessagesByTypeTrackingLens;
 
 class MessageType extends Resource
 {
@@ -99,7 +100,9 @@ class MessageType extends Resource
      */
     public function lenses(NovaRequest $request): array
     {
-        return [];
+        return [
+            new MessagesByTypeTrackingLens,
+        ];
     }
 
     /**

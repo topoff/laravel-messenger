@@ -14,7 +14,14 @@ use Topoff\MailManager\Models\Message as MessageModel;
 use Topoff\MailManager\Nova\Actions\PreviewMessageInBrowserAction;
 use Topoff\MailManager\Nova\Actions\ResendAsNewMessageAction;
 use Topoff\MailManager\Nova\Actions\ShowRealSentMessageAction;
+use Topoff\MailManager\Nova\Filters\MessagesMessageableIdFilter;
+use Topoff\MailManager\Nova\Filters\MessagesMessageableTypeFilter;
+use Topoff\MailManager\Nova\Filters\MessagesMessageTypeFilter;
+use Topoff\MailManager\Nova\Filters\MessagesReceiverIdFilter;
+use Topoff\MailManager\Nova\Filters\MessagesReceiverTypeFilter;
 use Topoff\MailManager\Nova\Filters\MessagesStatusFilter;
+use Topoff\MailManager\Nova\Lenses\MessagesByTypeTrackingLens;
+use Topoff\MailManager\Nova\Lenses\MessagesTrackingLens;
 
 class Message extends Resource
 {
@@ -104,6 +111,11 @@ class Message extends Resource
     {
         return [
             new MessagesStatusFilter,
+            new MessagesReceiverTypeFilter,
+            new MessagesReceiverIdFilter,
+            new MessagesMessageTypeFilter,
+            new MessagesMessageableTypeFilter,
+            new MessagesMessageableIdFilter,
         ];
     }
 
@@ -112,7 +124,10 @@ class Message extends Resource
      */
     public function lenses(NovaRequest $request): array
     {
-        return [];
+        return [
+            new MessagesByTypeTrackingLens,
+            new MessagesTrackingLens,
+        ];
     }
 
     /**
