@@ -10,7 +10,6 @@ use Throwable;
 use Topoff\MailManager\Contracts\GroupableMailTypeInterface;
 use Topoff\MailManager\Contracts\MessageReceiverInterface;
 use Topoff\MailManager\Exceptions\MissingGroupableMailTypeInterfaceException;
-use Topoff\MailManager\Models\Message;
 
 /**
  * All Mails which should be sent als BulkMails with this MainBulkMailHandler
@@ -43,28 +42,41 @@ class MainBulkMailHandler
 
     public function send(): void
     {
+        /** @var array<int|string, MainMailHandler> $handlers */
+        $handlers = [];
+
         try {
             $this->setMessagesToReserved();
 
-            $this->messageGroup->each(function (Message $message): void {
+            foreach ($this->messageGroup as $message) {
                 /** @var GroupableMailTypeInterface|MainMailHandler $mailHandler */
                 $mailHandler = (new $message->messageType->single_mail_handler($message));
                 $this->throwExceptionOnMissingInterface($mailHandler);
-                $message->setRelation('mailHandler', $mailHandler);
-            });
+                $handlers[$message->getKey()] = $mailHandler;
+            }
 
             $mailClass = $this->mailClass();
             Mail::to($this->receiver->getEmail())->send(new $mailClass(...$this->getMailParameters()));
             $this->setMessagesToSent();
-
-            $this->messageGroup->each(function (Message $message): void {
-                /** @var MainMailHandler|null $mailHandler */
-                $mailHandler = $message->getRelation('mailHandler');
-                $mailHandler?->onSuccessfulSent();
-            });
         } catch (Throwable $t) {
             $this->setMessagesToError();
-            Log::error(static::class.':'.__FUNCTION__.': Messages could not be sent: '.$t->getMessage().' on line '.$t->getLine().' in File: '.$t->getFile());
+            Log::error('Messages could not be sent', [
+                'receiver' => $this->receiver->getEmail(),
+                'exception' => $t,
+            ]);
+
+            return;
+        }
+
+        foreach ($handlers as $key => $handler) {
+            try {
+                $handler->onSuccessfulSent();
+            } catch (Throwable $t) {
+                Log::warning('Post-send hook failed', [
+                    'message_id' => $key,
+                    'exception' => $t,
+                ]);
+            }
         }
     }
 
