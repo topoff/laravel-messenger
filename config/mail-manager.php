@@ -160,6 +160,7 @@ return [
 
         // SES v2 configuration sets managed by this package.
         // Each key is a logical name; values specify the AWS resource names.
+        // This can be important for the domain reputation management.
         'configuration_sets' => [
             'default' => [
                 'configuration_set' => 'mail-manager-tracking',

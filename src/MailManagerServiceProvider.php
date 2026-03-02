@@ -47,8 +47,7 @@ class MailManagerServiceProvider extends PackageServiceProvider
             ->hasCommand(CheckSesSendingCommand::class)
             ->hasCommand(TestSesSnsEventsCommand::class)
             ->hasCommand(TeardownSesSnsTrackingCommand::class)
-            ->discoversMigrations()
-            ->runsMigrations();
+            ->discoversMigrations();
     }
 
     public function packageRegistered(): void
