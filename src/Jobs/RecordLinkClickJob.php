@@ -6,20 +6,20 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use RuntimeException;
 use Topoff\MailManager\Events\MessageLinkClickedEvent;
 use Topoff\MailManager\Models\Message;
 
 class RecordLinkClickJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable;
 
     public int $maxExceptions = 3;
 
     public function __construct(
-        public Message $message,
+        public int $messageId,
         public string $url,
         public ?string $ipAddress
     ) {}
@@ -31,11 +31,14 @@ class RecordLinkClickJob implements ShouldQueue
 
     public function handle(): void
     {
-        $connection = $this->message->getConnectionName();
-        $updatedMessage = DB::connection($connection)->transaction(function (): ?Message {
+        /** @var class-string<Message> $messageClass */
+        $messageClass = config('mail-manager.models.message');
+
+        $connection = (new $messageClass)->getConnectionName();
+        $updatedMessage = DB::connection($connection)->transaction(function () use ($messageClass, $connection): ?Message {
             /** @var Message|null $message */
-            $message = $this->message->newQuery()
-                ->whereKey($this->message->getKey())
+            $message = $messageClass::on($connection)
+                ->whereKey($this->messageId)
                 ->lockForUpdate()
                 ->first();
 
@@ -56,10 +59,9 @@ class RecordLinkClickJob implements ShouldQueue
         });
 
         if (! $updatedMessage) {
-            return;
+            throw new RuntimeException("RecordLinkClickJob: Message [{$this->messageId}] not found");
         }
 
-        $this->message = $updatedMessage;
         Event::dispatch(new MessageLinkClickedEvent($updatedMessage, $this->ipAddress, $this->url));
     }
 }

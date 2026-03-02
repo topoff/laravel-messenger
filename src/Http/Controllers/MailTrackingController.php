@@ -22,7 +22,7 @@ class MailTrackingController extends Controller
 
         $response = Response::make($pixel, 200);
         $response->header('Content-type', 'image/gif');
-        $response->header('Content-Length', (string) strlen($pixel));
+        $response->header('Content-Length', (string) mb_strlen($pixel));
         $response->header('Cache-Control', 'private, no-cache, no-cache=Set-Cookie, proxy-revalidate');
         $response->header('Expires', 'Wed, 11 Jan 2000 12:59:00 GMT');
         $response->header('Last-Modified', 'Wed, 11 Jan 2006 12:59:00 GMT');
@@ -38,7 +38,7 @@ class MailTrackingController extends Controller
             if (! $event->skip) {
                 $ip = $request->ip();
                 $messages->each(function ($message) use ($ip): void {
-                    RecordOpenJob::dispatch($message, $ip)->onQueue(config('mail-manager.tracking.tracker_queue'));
+                    RecordOpenJob::dispatch($message->getKey(), $ip)->onQueue(config('mail-manager.tracking.tracker_queue'));
 
                     if (! $message->tracking_opened_at) {
                         $message->tracking_opened_at = now();
@@ -66,7 +66,7 @@ class MailTrackingController extends Controller
             if (! $event->skip) {
                 $ip = $request->ip();
                 $messages->each(function ($message) use ($url, $ip): void {
-                    RecordLinkClickJob::dispatch($message, $url, $ip)->onQueue(config('mail-manager.tracking.tracker_queue'));
+                    RecordLinkClickJob::dispatch($message->getKey(), $url, $ip)->onQueue(config('mail-manager.tracking.tracker_queue'));
 
                     if (config('mail-manager.tracking.inject_pixel') && ! $message->tracking_opened_at) {
                         $message->tracking_opened_at = now();

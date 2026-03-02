@@ -6,19 +6,18 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Event;
 use Topoff\MailManager\Events\MessageOpenedEvent;
 use Topoff\MailManager\Models\Message;
 
 class RecordOpenJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable;
 
     public int $maxExceptions = 3;
 
     public function __construct(
-        public Message $message,
+        public int $messageId,
         public ?string $ipAddress
     ) {}
 
@@ -29,8 +28,14 @@ class RecordOpenJob implements ShouldQueue
 
     public function handle(): void
     {
-        $this->message->increment('tracking_opens');
+        /** @var class-string<Message> $messageClass */
+        $messageClass = config('mail-manager.models.message');
 
-        Event::dispatch(new MessageOpenedEvent($this->message, $this->ipAddress));
+        $message = $messageClass::on((new $messageClass)->getConnectionName())
+            ->findOrFail($this->messageId);
+
+        $message->increment('tracking_opens');
+
+        Event::dispatch(new MessageOpenedEvent($message, $this->ipAddress));
     }
 }
