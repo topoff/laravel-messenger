@@ -45,16 +45,16 @@ class MainBulkMailHandler
         /** @var array<int|string, MainMailHandler> $handlers */
         $handlers = [];
 
-        $this->setMessagesToReserved();
-
-        foreach ($this->messageGroup as $message) {
-            /** @var GroupableMailTypeInterface|MainMailHandler $mailHandler */
-            $mailHandler = app($message->messageType->single_mail_handler, ['message' => $message]);
-            $this->throwExceptionOnMissingInterface($mailHandler);
-            $handlers[$message->getKey()] = $mailHandler;
-        }
-
         try {
+            $this->setMessagesToReserved();
+
+            foreach ($this->messageGroup as $message) {
+                /** @var GroupableMailTypeInterface|MainMailHandler $mailHandler */
+                $mailHandler = app($message->messageType->single_mail_handler, ['message' => $message]);
+                $this->throwExceptionOnMissingInterface($mailHandler);
+                $handlers[$message->getKey()] = $mailHandler;
+            }
+
             $mailClass = $this->mailClass();
             Mail::to($this->receiver->getEmail())->send(new $mailClass(...$this->getMailParameters()));
         } catch (Throwable $t) {
