@@ -35,7 +35,6 @@ _ide_helper_models.php
 # Misc
 phpunit.xml
 phpstan.neon
-/docs
 /coverage
 
 # Workbench (keep structure, ignore local config)
