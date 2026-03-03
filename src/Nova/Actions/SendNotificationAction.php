@@ -23,7 +23,7 @@ class SendNotificationAction extends Action
 {
     use InteractsWithQueue, Queueable;
 
-    public $name = 'Send Notification';
+    public $name = 'Send Notification (SMS)';
 
     public function handle(ActionFields $fields, Collection $models): Action|ActionResponse
     {
@@ -117,7 +117,7 @@ class SendNotificationAction extends Action
 
                     $field->setValue("{$metrics['encoding']} | chars: {$metrics['length']} | segments: {$metrics['segments']} | one SMS: {$fitsInOneSms}");
                 })
-                ->help('Shows SMS length and if the message fits into one SMS.'),
+                ->help('Shows SMS length and if the message fits into one SMS. Schweiz: 6.7rp / sms'),
         ];
     }
 
