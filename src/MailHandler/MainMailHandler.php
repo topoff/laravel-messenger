@@ -207,11 +207,7 @@ class MainMailHandler implements GroupableMailTypeInterface
         }
 
         // SES rejection
-        if (Str::contains($t->getMessage(), 'MessageRejected')) {
-            return true;
-        }
-
-        return false;
+        return Str::contains($t->getMessage(), 'MessageRejected');
     }
 
     /**

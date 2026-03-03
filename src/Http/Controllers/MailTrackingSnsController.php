@@ -9,6 +9,7 @@ use Topoff\MailManager\Events\SesSnsWebhookReceivedEvent;
 use Topoff\MailManager\Jobs\RecordBounceJob;
 use Topoff\MailManager\Jobs\RecordComplaintJob;
 use Topoff\MailManager\Jobs\RecordDeliveryJob;
+use Topoff\MailManager\Jobs\RecordRejectJob;
 
 class MailTrackingSnsController extends Controller
 {
@@ -47,6 +48,7 @@ class MailTrackingSnsController extends Controller
             'Delivery' => $this->dispatchTrackingJob(RecordDeliveryJob::class, $message, $processSynchronously),
             'Bounce' => $this->dispatchTrackingJob(RecordBounceJob::class, $message, $processSynchronously),
             'Complaint' => $this->dispatchTrackingJob(RecordComplaintJob::class, $message, $processSynchronously),
+            'Reject' => $this->dispatchTrackingJob(RecordRejectJob::class, $message, $processSynchronously),
             default => null,
         };
 
