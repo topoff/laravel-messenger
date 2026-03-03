@@ -206,8 +206,10 @@ class SesSendingSetupService
             }
 
             // Build per-identity detail record
+            $identityDomain = $this->identityDomainFromIdentity($identity);
             $identityDetail = [
                 'identity' => $identity,
+                'domain' => $identityDomain,
                 'dkim' => [
                     'status' => $dkimStatus,
                     'signing_enabled' => (bool) Arr::get($identityData, 'DkimAttributes.SigningEnabled', false),
@@ -220,6 +222,10 @@ class SesSendingSetupService
                     'domain' => (string) Arr::get($identityData, 'MailFromAttributes.MailFromDomain', ''),
                     'status' => $mailFromStatus,
                     'behavior_on_mx_failure' => (string) Arr::get($identityData, 'MailFromAttributes.BehaviorOnMxFailure', ''),
+                ],
+                'dmarc' => [
+                    'record_name' => '_dmarc.'.$identityDomain,
+                    'record_value' => '"v=DMARC1; p=none;"',
                 ],
                 'dns_records' => [],
             ];
@@ -237,6 +243,14 @@ class SesSendingSetupService
                     $identityDetail['dns_records'][] = array_merge($record, ['status' => $mailFromStatus]);
                 }
             }
+
+            // Attach DMARC TXT record
+            $identityDetail['dns_records'][] = [
+                'name' => '_dmarc.'.$identityDomain,
+                'type' => 'TXT',
+                'values' => ['"v=DMARC1; p=none;"'],
+                'status' => 'RECOMMENDED',
+            ];
 
             $identitiesDetails[$identityKey] = $identityDetail;
         }

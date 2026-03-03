@@ -256,6 +256,7 @@
     </div>
 
     @foreach((array) data_get($sending, 'identities_details', []) as $identityKey => $detail)
+        @ray($detail)
         <div class="card">
             <h2>Identity Details: <code>{{ data_get($detail, 'identity', $identityKey) }}</code></h2>
 
@@ -288,15 +289,15 @@
                     @endif
 
                     @php($dkimTokens = (array) data_get($detail, 'dkim.tokens', []))
+                    <h3 style="margin-top: 12px;">Publish DNS Records (CNAME)</h3>
                     @if(count($dkimTokens) > 0)
-                        <h3 style="margin-top: 12px;">DKIM DNS Records (CNAME)</h3>
                         <table>
                             <tr>
                                 <th>Type</th>
                                 <th>Name</th>
                                 <th>Value</th>
                             </tr>
-                            @php($dkimDomain = str_contains(data_get($detail, 'identity', ''), '@') ? substr(strrchr(data_get($detail, 'identity', ''), '@') ?: '', 1) : data_get($detail, 'identity', ''))
+                            @php($dkimDomain = (string) data_get($detail, 'domain', ''))
                             @foreach($dkimTokens as $token)
                                 <tr>
                                     <td><code>CNAME</code></td>
@@ -305,6 +306,8 @@
                                 </tr>
                             @endforeach
                         </table>
+                    @else
+                        <p class="meta">No DKIM tokens available. Run setup to generate DKIM tokens.</p>
                     @endif
                 </div>
 
@@ -352,6 +355,24 @@
                         </table>
                     @endif
                 </div>
+
+                {{-- DMARC Card --}}
+                <div class="card">
+                    <h3>DMARC</h3>
+                    <p class="meta">DMARC specifies how email servers should handle messages that fail the authentication checks.</p>
+                    <table>
+                        <tr>
+                            <th>Type</th>
+                            <th>Name</th>
+                            <th>Value</th>
+                        </tr>
+                        <tr>
+                            <td><code>TXT</code></td>
+                            <td><code>{{ data_get($detail, 'dmarc.record_name') }}</code></td>
+                            <td><code>{{ data_get($detail, 'dmarc.record_value') }}</code></td>
+                        </tr>
+                    </table>
+                </div>
             </div>
         </div>
     @endforeach
@@ -369,7 +390,11 @@
         <div class="card">
             <h2>AWS Console Cross-Check</h2>
             <ul>
+                <li><a href="{{ data_get($tracking, 'aws_console.ses_dashboard', '#') }}" target="_blank" rel="noopener">SES Dashboard</a></li>
+                <li><a href="{{ data_get($tracking, 'aws_console.ses_identities', '#') }}" target="_blank" rel="noopener">SES Identities</a></li>
                 <li><a href="{{ data_get($tracking, 'aws_console.ses_configuration_sets', '#') }}" target="_blank" rel="noopener">SES Configuration Sets</a></li>
+                <li><a href="{{ data_get($tracking, 'aws_console.ses_reputation', '#') }}" target="_blank" rel="noopener">SES Reputation Manager</a></li>
+                <li><a href="{{ data_get($tracking, 'aws_console.ses_tenants', '#') }}" target="_blank" rel="noopener">SES Multi-Tenant (VDM)</a></li>
                 <li><a href="{{ data_get($tracking, 'aws_console.sns_topics', '#') }}" target="_blank" rel="noopener">SNS Topics</a></li>
                 <li><a href="{{ data_get($tracking, 'aws_console.sns_subscriptions', '#') }}" target="_blank" rel="noopener">SNS Subscriptions</a></li>
             </ul>

@@ -303,7 +303,7 @@ class AwsSesSnsProvisioningApi implements SesSnsProvisioningApi
             throw $e;
         }
 
-        return (array) $result;
+        return $result->toArray();
     }
 
     public function createEmailIdentity(string $identity): array
@@ -312,7 +312,7 @@ class AwsSesSnsProvisioningApi implements SesSnsProvisioningApi
             'EmailIdentity' => $identity,
         ]);
 
-        return (array) $result;
+        return $result->toArray();
     }
 
     public function putEmailIdentityMailFromAttributes(

@@ -165,7 +165,11 @@ class SesSnsSetupService
             ],
             'checks' => $checks,
             'aws_console' => [
+                'ses_dashboard' => 'https://'.$consoleRegion.'.console.aws.amazon.com/sesv2/home?region='.$consoleRegion.'#/account',
+                'ses_identities' => 'https://'.$consoleRegion.'.console.aws.amazon.com/sesv2/home?region='.$consoleRegion.'#/identities',
                 'ses_configuration_sets' => 'https://'.$consoleRegion.'.console.aws.amazon.com/sesv2/home?region='.$consoleRegion.'#/configuration-sets',
+                'ses_reputation' => 'https://'.$consoleRegion.'.console.aws.amazon.com/sesv2/home?region='.$consoleRegion.'#/reputation',
+                'ses_tenants' => 'https://'.$consoleRegion.'.console.aws.amazon.com/sesv2/home?region='.$consoleRegion.'#/vdm/tenants',
                 'sns_topics' => 'https://'.$consoleRegion.'.console.aws.amazon.com/sns/v3/home?region='.$consoleRegion.'#/topics',
                 'sns_subscriptions' => 'https://'.$consoleRegion.'.console.aws.amazon.com/sns/v3/home?region='.$consoleRegion.'#/subscriptions',
             ],
