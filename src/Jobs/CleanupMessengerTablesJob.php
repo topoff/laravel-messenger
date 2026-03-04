@@ -20,8 +20,7 @@ class CleanupMessengerTablesJob implements ShouldQueue
     {
         $this->cleanupTrackingContent();
         $this->cleanupMessages();
-        $this->cleanupEmailLogs();
-        $this->cleanupNotificationLogs();
+        $this->cleanupMessageLogs();
     }
 
     protected function cleanupTrackingContent(): void
@@ -65,28 +64,15 @@ class CleanupMessengerTablesJob implements ShouldQueue
         $this->deleteQuery($query, $messageModelClass);
     }
 
-    protected function cleanupEmailLogs(): void
+    protected function cleanupMessageLogs(): void
     {
-        $months = $this->nullableInt(config('messenger.cleanup.email_log_delete_after_months'));
+        $months = $this->nullableInt(config('messenger.cleanup.message_log_delete_after_months'));
         if ($months === null) {
             return;
         }
 
-        $emailLogModelClass = $this->modelClass('messenger.models.email_log');
-        $emailLogModelClass::query()
-            ->where('created_at', '<', now()->subMonths($months))
-            ->delete();
-    }
-
-    protected function cleanupNotificationLogs(): void
-    {
-        $months = $this->nullableInt(config('messenger.cleanup.notification_log_delete_after_months'));
-        if ($months === null) {
-            return;
-        }
-
-        $notificationLogModelClass = $this->modelClass('messenger.models.notification_log');
-        $notificationLogModelClass::query()
+        $messageLogModelClass = $this->modelClass('messenger.models.message_log');
+        $messageLogModelClass::query()
             ->where('created_at', '<', now()->subMonths($months))
             ->delete();
     }

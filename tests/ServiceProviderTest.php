@@ -23,5 +23,6 @@ it('registers package views', function () {
 
 it('runs the migration and creates tables', function () {
     expect(\Illuminate\Support\Facades\Schema::hasTable('message_types'))->toBeTrue()
-        ->and(\Illuminate\Support\Facades\Schema::hasTable('messages'))->toBeTrue();
+        ->and(\Illuminate\Support\Facades\Schema::hasTable('messages'))->toBeTrue()
+        ->and(\Illuminate\Support\Facades\Schema::hasTable('message_log'))->toBeTrue();
 });

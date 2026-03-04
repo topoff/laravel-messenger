@@ -2,7 +2,8 @@
 
 it('has default model classes configured', function () {
     expect(config('messenger.models.message'))->toBe(\Topoff\Messenger\Models\Message::class)
-        ->and(config('messenger.models.message_type'))->toBe(\Topoff\Messenger\Models\MessageType::class);
+        ->and(config('messenger.models.message_type'))->toBe(\Topoff\Messenger\Models\MessageType::class)
+        ->and(config('messenger.models.message_log'))->toBe(\Topoff\Messenger\Models\MessageLog::class);
 });
 
 it('allows overriding model classes', function () {

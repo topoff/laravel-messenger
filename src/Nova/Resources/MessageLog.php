@@ -2,31 +2,32 @@
 
 namespace Topoff\Messenger\Nova\Resources;
 
+use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\DateTime;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
-use Topoff\Messenger\Models\NotificationLog as NotificationLogModel;
+use Topoff\Messenger\Models\MessageLog as MessageLogModel;
 
-class NotificationLog extends Resource
+class MessageLog extends Resource
 {
-    public static $model = NotificationLogModel::class;
+    public static $model = MessageLogModel::class;
 
     public static $title = 'id';
 
     public static $group = 'Mail';
 
-    public static $search = ['id', 'channel', 'notifyable_id', 'to', 'type', 'notification_id'];
+    public static $search = ['id', 'channel', 'to', 'subject', 'type'];
 
     public static function label(): string
     {
-        return 'Notification Logs';
+        return 'Message Logs';
     }
 
     public static function singularLabel(): string
     {
-        return 'Notification Log';
+        return 'Message Log';
     }
 
     /**
@@ -37,10 +38,14 @@ class NotificationLog extends Resource
         return [
             ID::make()->sortable(),
             Text::make('Channel', 'channel')->sortable(),
-            Text::make('Notifyable Id', 'notifyable_id')->sortable(),
             Text::make('To', 'to')->sortable(),
-            Text::make('Type', 'type')->sortable(),
-            Text::make('Notification Id', 'notification_id')->sortable(),
+            Text::make('Type', 'type')->sortable()->nullable(),
+            Text::make('Subject', 'subject')->sortable()->nullable(),
+            Text::make('Cc', 'cc')->sortable()->nullable(),
+            Text::make('Bcc', 'bcc')->sortable()->nullable(),
+            Boolean::make('Has Attachment', 'has_attachment')->sortable(),
+            Text::make('Notifyable Id', 'notifyable_id')->sortable()->nullable(),
+            Text::make('Notification Id', 'notification_id')->sortable()->nullable(),
             DateTime::make('Created At', 'created_at')->sortable()->hideWhenCreating()->hideWhenUpdating(),
         ];
     }

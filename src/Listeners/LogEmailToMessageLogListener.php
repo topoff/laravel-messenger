@@ -5,9 +5,9 @@ namespace Topoff\Messenger\Listeners;
 use Exception;
 use Illuminate\Mail\Events\MessageSent;
 use Illuminate\Support\Str;
-use Topoff\Messenger\Models\EmailLog;
+use Topoff\Messenger\Models\MessageLog;
 
-class LogEmailsListener
+class LogEmailToMessageLogListener
 {
     public function handle(MessageSent $event): void
     {
@@ -19,12 +19,13 @@ class LogEmailsListener
                 return;
             }
 
-            $emailLogModelClass = config('messenger.models.email_log', EmailLog::class);
-            $emailLogModelClass::query()->create([
+            $messageLogModelClass = config('messenger.models.message_log', MessageLog::class);
+            $messageLogModelClass::query()->create([
+                'channel' => 'mail',
                 'to' => Str::limit($toHeader->toString(), 97),
+                'subject' => Str::limit($message->getHeaders()->get('Subject')?->toString() ?? '', 77),
                 'cc' => Str::limit($message->getHeaders()->get('Cc')?->toString() ?? '', 97),
                 'bcc' => Str::limit($message->getHeaders()->get('Bcc')?->toString() ?? '', 57),
-                'subject' => Str::limit($message->getHeaders()->get('Subject')?->toString() ?? '', 77),
                 'has_attachment' => (bool) $message->getAttachments(),
             ]);
         } catch (Exception) {

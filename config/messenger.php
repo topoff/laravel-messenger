@@ -4,8 +4,7 @@ return [
     'models' => [
         'message' => \Topoff\Messenger\Models\Message::class,
         'message_type' => \Topoff\Messenger\Models\MessageType::class,
-        'email_log' => \Topoff\Messenger\Models\EmailLog::class,
-        'notification_log' => \Topoff\Messenger\Models\NotificationLog::class,
+        'message_log' => \Topoff\Messenger\Models\MessageLog::class,
     ],
 
     'database' => [
@@ -14,8 +13,7 @@ return [
 
     'logs' => [
         'connection' => 'mysql',
-        'email_log_table' => 'email_log',
-        'notification_log_table' => 'notification_log',
+        'message_log_table' => 'message_log',
     ],
 
     'cache' => [
@@ -26,8 +24,7 @@ return [
     'cleanup' => [
         // Null disables deletion. Positive integer = delete records older than X months.
         'messages_delete_after_months' => 24,
-        'email_log_delete_after_months' => 24,
-        'notification_log_delete_after_months' => 24,
+        'message_log_delete_after_months' => 24,
 
         // Null disables this cleanup. Positive integer = set messages.tracking_content
         // to null when records are older than X days.

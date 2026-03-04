@@ -27,6 +27,7 @@ class TestCase extends Orchestra
     {
         config()->set('database.default', 'testing');
         config()->set('messenger.database.connection');
+        config()->set('messenger.logs.connection');
         config()->set('queue.default', 'sync');
         config()->set('cache.default', 'array');
         config()->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
@@ -73,6 +74,25 @@ class TestCase extends Orchestra
                 $table->softDeletes();
                 $table->timestamp('created_at')->useCurrent();
                 $table->timestamp('updated_at')->nullable();
+            });
+        }
+
+        if (! Schema::hasTable('message_log')) {
+            Schema::create('message_log', function (Blueprint $table): void {
+                $table->bigIncrements('id');
+                $table->string('channel', 30);
+                $table->string('to', 100);
+                $table->string('type', 80)->nullable();
+                $table->string('subject', 80)->nullable();
+                $table->string('cc', 100)->nullable();
+                $table->string('bcc', 60)->nullable();
+                $table->boolean('has_attachment')->default(false);
+                $table->string('notifyable_id', 48)->nullable();
+                $table->string('notification_id', 48)->nullable();
+                $table->timestamp('created_at')->useCurrent();
+
+                $table->index('channel');
+                $table->index('created_at');
             });
         }
 

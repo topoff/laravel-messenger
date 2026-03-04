@@ -6,9 +6,9 @@ use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Events\NotificationSent;
 use Illuminate\Support\Str;
-use Topoff\Messenger\Models\NotificationLog;
+use Topoff\Messenger\Models\MessageLog;
 
-class LogNotificationListener implements ShouldQueue
+class LogNotificationToMessageLogListener implements ShouldQueue
 {
     public function handle(NotificationSent $event): void
     {
@@ -23,12 +23,12 @@ class LogNotificationListener implements ShouldQueue
                 default => data_get($notifiable, 'phone'),
             };
 
-            $notificationLogModelClass = config('messenger.models.notification_log', NotificationLog::class);
-            $notificationLogModelClass::query()->create([
+            $messageLogModelClass = config('messenger.models.message_log', MessageLog::class);
+            $messageLogModelClass::query()->create([
                 'channel' => Str::limit((string) $event->channel, 30, ''),
-                'notifyable_id' => Str::limit((string) data_get($notifiable, 'id', ''), 48, ''),
                 'to' => Str::limit((string) $receiver, 100, ''),
                 'type' => Str::limit((string) ($event->notification->type ?? $event->notification::class), 80, ''),
+                'notifyable_id' => Str::limit((string) data_get($notifiable, 'id', ''), 48, ''),
                 'notification_id' => Str::limit((string) $event->notification->id, 48, ''),
             ]);
         } catch (Exception) {

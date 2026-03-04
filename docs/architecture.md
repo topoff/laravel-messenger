@@ -20,8 +20,10 @@ Mail management package: template-driven sending via SES, SNS event tracking (op
 - Config: `dev_bcc`, `error_stop_send_minutes`, `required_*` fields (sender, messagable, company_id, scheduled, text, params), `configuration_set`, `max_retry_attempts` (default: 10)
 - Cached via `MessageTypeRepository` (30-day TTL, `messageType` cache tag)
 
-### EmailLog / NotificationLog
-- Simple audit trail models with configurable tables & connections
+### MessageLog (`src/Models/MessageLog.php`)
+- Unified audit trail model for all outgoing communications (emails & notifications)
+- Configurable table (`messenger.logs.message_log_table`) & connection (`messenger.logs.connection`)
+- Key fields: `channel` (mail, vonage, etc.), `to`, `type`, `subject`, `cc`, `bcc`, `has_attachment`, `notifyable_id`, `notification_id`
 
 ## Mail Sending Flow
 
@@ -116,8 +118,8 @@ All use `ExtractsSesMessageTags` trait for SES tag extraction.
 
 ## Listeners
 
-- `LogEmailsListener` — logs to `email_log` table on `MessageSent`
-- `LogNotificationListener` — logs to `notification_log` table on `NotificationSent`
+- `LogEmailToMessageLogListener` — logs to `message_log` table on `MessageSent` (channel=mail)
+- `LogNotificationToMessageLogListener` — logs to `message_log` table on `NotificationSent` (queued)
 - `AddBccToEmailsListener` — adds BCC on `MessageSending` (respects `dev_bcc` flag per MessageType)
 
 ## SES/SNS Provisioning
@@ -217,7 +219,7 @@ Web-based dashboard at `/emessenger/nova/ses-sns-dashboard` (signed URL via `Ope
 
 | Section | Key Settings |
 |---|---|
-| `models.*` | Configurable model classes: message, message_type, email_log, notification_log |
+| `models.*` | Configurable model classes: message, message_type, message_log |
 | `database.*` | Connection name, table names for all models |
 | `cache.*` | Tag: `messageType`, TTL: 30 days |
 | `cleanup.*` | Delete messages/logs after 24 months; null tracking_content after 60 days; schedule cron `17 3 * * *` |
@@ -227,17 +229,18 @@ Web-based dashboard at `/emessenger/nova/ses-sns-dashboard` (signed URL via `Ope
 | `tracking.*` | inject_pixel, track_links, nova resource class, preview route config, content storage |
 | `ses_sns.*` | AWS region/credentials, configuration_sets (keyed by name with identity + event_destination), topic name, event types, callback endpoint, tenant config, Route53 automation |
 
-## Migrations (9 total)
+## Migrations (10 total)
 
 1. Create messages + message_types tables
 2. Add tracking_* columns to messages
 3. Custom message mail type
 4. Locale column
-5. Email log table
-6. Notification log table
+5. Email log table (legacy)
+6. Notification log table (legacy)
 7. SES configuration_set on message_types
 8. Retry improvements (failed_at on messages, max_retry_attempts on message_types)
 9. Rename columns for channel support (mail_class→notification_class, email_error→error_message, etc.) + add `channel` field
+10. Unified message_log table (replaces email_log + notification_log)
 
 ## Test Structure
 

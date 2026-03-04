@@ -3,9 +3,12 @@
 namespace Topoff\Messenger\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Topoff\Messenger\Models\Traits\DateScopesTrait;
 
-class NotificationLog extends Model
+class MessageLog extends Model
 {
+    use DateScopesTrait;
+
     public $timestamps = false;
 
     protected $guarded = [];
@@ -14,7 +17,7 @@ class NotificationLog extends Model
     {
         parent::__construct($attributes);
 
-        $this->table = (string) config('messenger.logs.notification_log_table', 'notification_log');
+        $this->table = (string) config('messenger.logs.message_log_table', 'message_log');
 
         $connection = config('messenger.logs.connection');
         if (is_string($connection) && $connection !== '') {
@@ -26,11 +29,7 @@ class NotificationLog extends Model
     protected function casts(): array
     {
         return [
-            'channel' => 'string',
-            'notifyable_id' => 'string',
-            'to' => 'string',
-            'type' => 'string',
-            'notification_id' => 'string',
+            'has_attachment' => 'boolean',
             'created_at' => 'datetime',
         ];
     }

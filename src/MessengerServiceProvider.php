@@ -21,12 +21,11 @@ use Topoff\Messenger\Console\TestSesSnsEventsCommand;
 use Topoff\Messenger\Contracts\SesSnsProvisioningApi;
 use Topoff\Messenger\Jobs\CleanupMessengerTablesJob;
 use Topoff\Messenger\Listeners\AddBccToEmailsListener;
-use Topoff\Messenger\Listeners\LogEmailsListener;
-use Topoff\Messenger\Listeners\LogNotificationListener;
-use Topoff\Messenger\Nova\Resources\EmailLog as EmailLogResource;
+use Topoff\Messenger\Listeners\LogEmailToMessageLogListener;
+use Topoff\Messenger\Listeners\LogNotificationToMessageLogListener;
 use Topoff\Messenger\Nova\Resources\Message;
+use Topoff\Messenger\Nova\Resources\MessageLog as MessageLogResource;
 use Topoff\Messenger\Nova\Resources\MessageType as MessageTypeResource;
-use Topoff\Messenger\Nova\Resources\NotificationLog as NotificationLogResource;
 use Topoff\Messenger\Observers\MessageTypeObserver;
 use Topoff\Messenger\Repositories\MessageTypeRepository;
 use Topoff\Messenger\Services\SesSns\AwsSesSnsProvisioningApi;
@@ -76,8 +75,8 @@ class MessengerServiceProvider extends PackageServiceProvider
         Event::listen(MessageSending::class, AddBccToEmailsListener::class);
         Event::listen(MessageSending::class, fn (MessageSending $event) => app(MailTracker::class)->messageSending($event));
         Event::listen(MessageSent::class, fn (MessageSent $event) => app(MailTracker::class)->messageSent($event));
-        Event::listen(MessageSent::class, LogEmailsListener::class);
-        Event::listen(NotificationSent::class, LogNotificationListener::class);
+        Event::listen(MessageSent::class, LogEmailToMessageLogListener::class);
+        Event::listen(NotificationSent::class, LogNotificationToMessageLogListener::class);
     }
 
     protected function registerCleanupSchedule(): void
@@ -134,21 +133,15 @@ class MessengerServiceProvider extends PackageServiceProvider
             MessageTypeResource::$model = $messageTypeModelClass;
         }
 
-        $emailLogModelClass = config('messenger.models.email_log');
-        if (is_string($emailLogModelClass) && is_subclass_of($emailLogModelClass, Model::class)) {
-            EmailLogResource::$model = $emailLogModelClass;
-        }
-
-        $notificationLogModelClass = config('messenger.models.notification_log');
-        if (is_string($notificationLogModelClass) && is_subclass_of($notificationLogModelClass, Model::class)) {
-            NotificationLogResource::$model = $notificationLogModelClass;
+        $messageLogModelClass = config('messenger.models.message_log');
+        if (is_string($messageLogModelClass) && is_subclass_of($messageLogModelClass, Model::class)) {
+            MessageLogResource::$model = $messageLogModelClass;
         }
 
         Nova::resources([
             $resourceClass,
             MessageTypeResource::class,
-            EmailLogResource::class,
-            NotificationLogResource::class,
+            MessageLogResource::class,
         ]);
     }
 }
