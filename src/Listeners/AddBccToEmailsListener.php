@@ -28,12 +28,12 @@ class AddBccToEmailsListener
             /** @var Message $message */
             $message = $event->message;
 
-            // Only the Messages sent with the SendMessageJob do have a messageModel, the Framework messages like
-            // the Verification Email do not have this
+            // Only the Messages sent with the SendMessageJob do have a messageModel,
+            // the Framework messages like the Verification Email do not have this
             if (Arr::has($event->data, 'messageModel')) {
                 $messageModel = $event->data['messageModel'];
 
-                if ($messageModel->messageType->dev_bcc === true) {
+                if ($messageModel->messageType?->dev_bcc === true) {
                     $message->addBcc(config('mail.bcc.address'));
                 }
             } else {
