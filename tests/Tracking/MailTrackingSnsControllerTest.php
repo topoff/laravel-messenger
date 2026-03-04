@@ -208,10 +208,10 @@ it('extracts ses_tags from delivery notification into tracking_meta', function (
     ]);
 });
 
-it('skips delivery event when recipient does not match tracking_recipient_email', function () {
+it('skips delivery event when recipient does not match tracking_recipient_contact', function () {
     $message = createMessage([
         'tracking_message_id' => 'delivery-mid-bcc',
-        'tracking_recipient_email' => 'alice@example.com',
+        'tracking_recipient_contact' => 'alice@example.com',
         'tracking_meta' => [],
     ]);
 
@@ -235,10 +235,10 @@ it('skips delivery event when recipient does not match tracking_recipient_email'
     expect($message->tracking_meta)->toBeEmpty();
 });
 
-it('skips bounce event when recipient does not match tracking_recipient_email', function () {
+it('skips bounce event when recipient does not match tracking_recipient_contact', function () {
     $message = createMessage([
         'tracking_message_id' => 'bounce-mid-bcc',
-        'tracking_recipient_email' => 'alice@example.com',
+        'tracking_recipient_contact' => 'alice@example.com',
         'tracking_meta' => [],
     ]);
 
@@ -264,10 +264,10 @@ it('skips bounce event when recipient does not match tracking_recipient_email', 
     expect($message->tracking_meta)->toBeEmpty();
 });
 
-it('skips complaint event when recipient does not match tracking_recipient_email', function () {
+it('skips complaint event when recipient does not match tracking_recipient_contact', function () {
     $message = createMessage([
         'tracking_message_id' => 'complaint-mid-bcc',
-        'tracking_recipient_email' => 'alice@example.com',
+        'tracking_recipient_contact' => 'alice@example.com',
         'tracking_meta' => [],
     ]);
 

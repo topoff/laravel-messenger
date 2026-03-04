@@ -23,7 +23,7 @@ class MessagesByTypeTrackingLens extends Lens
 
         $query = $query->from($messageTable)->select([
             "{$messageTable}.message_type_id",
-            DB::raw("{$messageTypeTable}.mail_class"),
+            DB::raw("{$messageTypeTable}.notification_class"),
             DB::raw('COUNT(*) as total_messages'),
             DB::raw("COUNT(CASE WHEN {$messageTable}.sent_at IS NOT NULL THEN 1 END) as total_sent"),
             DB::raw("SUM({$messageTable}.tracking_opens) as total_opens"),
@@ -34,7 +34,7 @@ class MessagesByTypeTrackingLens extends Lens
             DB::raw("ROUND(COUNT(CASE WHEN {$messageTable}.tracking_clicked_at IS NOT NULL THEN 1 END) / NULLIF(COUNT(CASE WHEN {$messageTable}.sent_at IS NOT NULL THEN 1 END), 0) * 100, 2) as click_rate"),
         ])
             ->join($messageTypeTable, "{$messageTable}.message_type_id", '=', "{$messageTypeTable}.id")
-            ->groupBy("{$messageTable}.message_type_id", "{$messageTypeTable}.mail_class");
+            ->groupBy("{$messageTable}.message_type_id", "{$messageTypeTable}.notification_class");
 
         return $request->withOrdering(
             $request->withFilters($query),
@@ -50,7 +50,7 @@ class MessagesByTypeTrackingLens extends Lens
     public function fields(Request $request): array
     {
         return [
-            Text::make('Message Type', 'mail_class')->sortable(),
+            Text::make('Message Type', 'notification_class')->sortable(),
             Number::make('Total Messages', 'total_messages')->sortable(),
             Number::make('Total Sent', 'total_sent')->sortable(),
             Number::make('Total Opens', 'total_opens')->sortable(),

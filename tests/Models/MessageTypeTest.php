@@ -7,7 +7,7 @@ it('can create a message type', function () {
 
     expect($messageType)->toBeInstanceOf(MessageType::class)
         ->and($messageType->id)->toBeInt()
-        ->and($messageType->mail_class)->toBe(\Workbench\App\Mail\TestMail::class)
+        ->and($messageType->notification_class)->toBe(\Workbench\App\Mail\TestMail::class)
         ->and($messageType->direct)->toBe(true)
         ->and($messageType->dev_bcc)->toBe(true);
 });
@@ -37,13 +37,13 @@ it('casts dev_bcc to boolean', function () {
 });
 
 it('scopes direct message types', function () {
-    createMessageType(['mail_class' => 'Direct\\Mail', 'direct' => true]);
-    createMessageType(['mail_class' => 'Indirect\\Mail', 'direct' => false]);
+    createMessageType(['notification_class' => 'Direct\\Mail', 'direct' => true]);
+    createMessageType(['notification_class' => 'Indirect\\Mail', 'direct' => false]);
 
     $directTypes = MessageType::direct()->get();
 
     expect($directTypes)->toHaveCount(1)
-        ->and($directTypes->first()->mail_class)->toBe('Direct\\Mail');
+        ->and($directTypes->first()->notification_class)->toBe('Direct\\Mail');
 });
 
 it('supports soft deletes', function () {

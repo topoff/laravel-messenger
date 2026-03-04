@@ -7,14 +7,14 @@ it('clears cache when a message type is created', function () {
     $repository = app(MessageTypeRepository::class);
 
     // Prime the cache
-    $existing = createMessageType(['mail_class' => 'App\\Mail\\Existing']);
+    $existing = createMessageType(['notification_class' => 'App\\Mail\\Existing']);
     $repository->getFromTypeAndCustomer('App\\Mail\\Existing');
 
     // Create a new message type — observer should flush cache
-    createMessageType(['mail_class' => 'App\\Mail\\New']);
+    createMessageType(['notification_class' => 'App\\Mail\\New']);
 
     // Delete the existing record from DB
-    MessageType::where('mail_class', 'App\\Mail\\Existing')->forceDelete();
+    MessageType::where('notification_class', 'App\\Mail\\Existing')->forceDelete();
 
     // Cache was flushed, so this should fail (record no longer in DB)
     expect(fn () => $repository->getFromTypeAndCustomer('App\\Mail\\Existing'))
@@ -24,11 +24,11 @@ it('clears cache when a message type is created', function () {
 it('clears cache when a message type is updated', function () {
     $repository = app(MessageTypeRepository::class);
 
-    $messageType = createMessageType(['mail_class' => 'App\\Mail\\Update']);
+    $messageType = createMessageType(['notification_class' => 'App\\Mail\\Update']);
     $repository->getFromTypeAndCustomer('App\\Mail\\Update');
 
     // Update triggers the observer
-    $messageType->update(['mail_class' => 'App\\Mail\\Updated']);
+    $messageType->update(['notification_class' => 'App\\Mail\\Updated']);
 
     // Old cache key should be gone
     expect(fn () => $repository->getFromTypeAndCustomer('App\\Mail\\Update'))
@@ -38,7 +38,7 @@ it('clears cache when a message type is updated', function () {
 it('clears cache when a message type is deleted', function () {
     $repository = app(MessageTypeRepository::class);
 
-    $messageType = createMessageType(['mail_class' => 'App\\Mail\\Delete']);
+    $messageType = createMessageType(['notification_class' => 'App\\Mail\\Delete']);
     $repository->getFromTypeAndCustomer('App\\Mail\\Delete');
 
     $messageType->delete();

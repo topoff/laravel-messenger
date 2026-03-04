@@ -20,7 +20,7 @@ class MessagesByDomainTrackingLens extends Lens
     public static function query(LensRequest $request, Builder $query): Builder
     {
         $messageTable = (new (config('mail-manager.models.message')))->getTable();
-        $domainExpr = static::domainExpression("{$messageTable}.tracking_recipient_email");
+        $domainExpr = static::domainExpression("{$messageTable}.tracking_recipient_contact");
 
         $query = $query->from($messageTable)->select([
             DB::raw("{$domainExpr} as domain"),
@@ -33,7 +33,7 @@ class MessagesByDomainTrackingLens extends Lens
             DB::raw("ROUND(COUNT(CASE WHEN {$messageTable}.tracking_opened_at IS NOT NULL THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN {$messageTable}.sent_at IS NOT NULL THEN 1 END), 0), 2) as open_rate"),
             DB::raw("ROUND(COUNT(CASE WHEN {$messageTable}.tracking_clicked_at IS NOT NULL THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN {$messageTable}.sent_at IS NOT NULL THEN 1 END), 0), 2) as click_rate"),
         ])
-            ->whereNotNull("{$messageTable}.tracking_recipient_email")
+            ->whereNotNull("{$messageTable}.tracking_recipient_contact")
             ->groupBy('domain');
 
         return $request->withOrdering(

@@ -9,9 +9,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * @property int $id
- * @property string $mail_class
- * @property string|null $single_mail_handler
- * @property string|null $bulk_mail_handler
+ * @property string $channel
+ * @property string $notification_class
+ * @property string|null $single_handler
+ * @property string|null $bulk_handler
  * @property bool $direct
  * @property bool $dev_bcc
  * @property int $error_stop_send_minutes
@@ -19,7 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property bool $required_messagable
  * @property bool $required_company_id
  * @property bool $required_scheduled
- * @property bool $required_mail_text
+ * @property bool $required_text
  * @property bool $required_params
  * @property string|null $bulk_message_line
  * @property string|null $ses_configuration_set

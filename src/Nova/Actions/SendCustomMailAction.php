@@ -71,8 +71,7 @@ class SendCustomMailAction extends Action
                 ->setMessagable($model::class, (int) $model->id)
                 ->setMessageTypeClass(CustomMessageMail::class)
                 ->setScheduled($scheduledAt)
-                ->setMailText($markdown)
-                ->setParams(['subject' => $subject])
+                ->setParams(['subject' => $subject, 'text' => $markdown])
                 ->create();
 
             $sentCount++;

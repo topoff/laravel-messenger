@@ -91,7 +91,7 @@ it('aborts and deletes when messagable is missing', function () {
     $handler->send();
 
     $message->refresh();
-    expect($message->email_error)->toContain('Messagable itself is missing')
+    expect($message->error_message)->toContain('Messagable itself is missing')
         ->and($message->trashed())->toBeTrue();
 
     Mail::assertNothingSent();
@@ -116,7 +116,7 @@ it('aborts and deletes when receiver email is invalid', function () {
     $handler->send();
 
     $message->refresh();
-    expect($message->email_error)->toContain('receiver email is invalid')
+    expect($message->error_message)->toContain('receiver email is invalid')
         ->and($message->trashed())->toBeTrue();
 
     Mail::assertNothingSent();
@@ -139,8 +139,8 @@ it('handles ReceiverMissingException when receiver is null', function () {
     $handler->send();
 
     $message->refresh();
-    expect($message->email_error)->toContain('receiver is missing')
-        ->and($message->email_error_code)->toBe(ReceiverMissingException::USER_DELETED)
+    expect($message->error_message)->toContain('receiver is missing')
+        ->and($message->error_code)->toBe(ReceiverMissingException::USER_DELETED)
         ->and($message->trashed())->toBeTrue();
 
     Mail::assertNothingSent();

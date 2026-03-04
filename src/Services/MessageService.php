@@ -35,8 +35,6 @@ class MessageService
 
     protected ?Carbon $scheduled = null;
 
-    protected ?string $mailText = null;
-
     protected ?array $params = null;
 
     protected ?string $locale = null;
@@ -110,7 +108,7 @@ class MessageService
 
     public function setMailText(?string $mailText = null): self
     {
-        $this->mailText = $mailText;
+        $this->params = array_merge($this->params ?? [], ['text' => $mailText]);
 
         return $this;
     }
@@ -158,7 +156,6 @@ class MessageService
                 'messagable_type' => $this->messagableClass,
                 'messagable_id' => $this->messagableId,
                 'params' => $this->params,
-                'text' => $this->mailText,
                 'locale' => $this->locale,
                 'scheduled_at' => $this->scheduled,
             ]);
@@ -180,7 +177,6 @@ class MessageService
             ->where('message_type_id', $this->messageType->id)
             ->where('messagable_type', $this->messagableClass)
             ->where('messagable_id', $this->messagableId)
-            ->where('text', $this->mailText)
             ->first();
 
         if ($message) {
@@ -271,7 +267,7 @@ class MessageService
             return false;
         }
 
-        if ($this->messageType->required_mail_text && in_array($this->mailText, [null, '', '0'], true)) {
+        if ($this->messageType->required_text && in_array(data_get($this->params, 'text'), [null, '', '0'], true)) {
             report(static::class.':'.__FUNCTION__.': The MailText parameter has been missing, the message has supposedly not been saved to the messages table. MessageType: '.$this->messageTypeClass.' Sender: '.$this->senderClass.' '.$this->senderId.' Receiver: '.$this->receiverClass.' '.$this->receiverId);
 
             return false;
@@ -319,7 +315,6 @@ class MessageService
         $this->messageTypeClass = null;
         $this->companyId = null;
         $this->scheduled = null;
-        $this->mailText = null;
         $this->params = null;
         $this->locale = null;
         $this->actionMissing = false;

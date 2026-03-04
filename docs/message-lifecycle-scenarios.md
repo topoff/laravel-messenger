@@ -12,8 +12,8 @@ Complete overview of all scenarios a message can go through, and which database 
 | `sent_at` | Message was successfully handed off to the mail transport (SMTP/SES) |
 | `deleted_at` | Message was soft-deleted |
 | `attempts` | Number of send attempts so far |
-| `email_error_code` | SMTP error code from the last failure |
-| `email_error` | Error description from the last failure |
+| `error_code` | SMTP error code from the last failure |
+| `error_message` | Error description from the last failure |
 | `tracking_meta` | JSON field enriched by SES/SNS callbacks after sending |
 
 ---
@@ -61,8 +61,8 @@ An SMTP error occurs that is **not** in the permanent failure list. Examples: ti
 | `error_at` | `now()` |
 | `failed_at` | `null` |
 | `attempts` | incremented by 1 |
-| `email_error_code` | SMTP code (e.g. `421`) |
-| `email_error` | Error message (truncated to 245 chars) |
+| `error_code` | SMTP code (e.g. `421`) |
+| `error_message` | Error message (truncated to 245 chars) |
 
 **Retry behavior:** Message will be retried by `SendMessageJob(isRetryCall: true)` with exponential backoff:
 
@@ -100,8 +100,8 @@ An SMTP error occurs with a code indicating the mailbox or domain is permanently
 | `error_at` | `null` (not set) |
 | `failed_at` | `now()` |
 | `attempts` | incremented by 1 |
-| `email_error_code` | SMTP code (e.g. `550`) |
-| `email_error` | Error message (truncated to 245 chars) |
+| `error_code` | SMTP code (e.g. `550`) |
+| `error_message` | Error message (truncated to 245 chars) |
 
 **No retry.** Message is permanently marked as failed. `onError()` is **not** called.
 
@@ -117,8 +117,8 @@ SES rejects the message before even attempting delivery. The exception message c
 |---|---|
 | `reserved_at` | `null` (cleared) |
 | `failed_at` | `now()` |
-| `email_error_code` | error code from exception |
-| `email_error` | contains "MessageRejected" |
+| `error_code` | error code from exception |
+| `error_message` | contains "MessageRejected" |
 
 **No retry.** Same handling as scenario 4.
 
@@ -136,8 +136,8 @@ The receiver model returns `null` (e.g. user was deleted between message creatio
 | `error_at` | `now()` |
 | `deleted_at` | `now()` (soft-deleted) |
 | `attempts` | incremented by 1 |
-| `email_error_code` | `1000` (`ReceiverMissingException::USER_DELETED`) |
-| `email_error` | "Message could not be sent because the receiver is missing, presumably trashed." |
+| `error_code` | `1000` (`ReceiverMissingException::USER_DELETED`) |
+| `error_message` | "Message could not be sent because the receiver is missing, presumably trashed." |
 
 **No retry.** Message is soft-deleted and excluded from all queries.
 
@@ -153,7 +153,7 @@ The messagable model (e.g. the order, ticket, etc. the message is about) no long
 |---|---|
 | `reserved_at` | set (from pickup) |
 | `deleted_at` | `now()` (soft-deleted) |
-| `email_error` | "Message has been deleted, because the Messagable itself is missing." |
+| `error_message` | "Message has been deleted, because the Messagable itself is missing." |
 
 **No retry.** Message is soft-deleted.
 
@@ -169,7 +169,7 @@ The receiver exists but `getEmailIsValid()` returns `false` (e.g. `email_invalid
 |---|---|
 | `reserved_at` | set (from pickup) |
 | `deleted_at` | `now()` (soft-deleted) |
-| `email_error` | "Message has been deleted, because the receiver is trashed or the receiver email is invalid..." |
+| `error_message` | "Message has been deleted, because the receiver is trashed or the receiver email is invalid..." |
 
 **No retry.** Message is soft-deleted.
 
@@ -190,9 +190,9 @@ Message stays in current state. Will be picked up again on next job run if `rese
 
 ---
 
-### 10. Invalid/Missing single_mail_handler
+### 10. Invalid/Missing single_handler
 
-The `message_type.single_mail_handler` class doesn't exist or is null.
+The `message_type.single_handler` class doesn't exist or is null.
 
 | Field | Value |
 |---|---|

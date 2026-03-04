@@ -69,8 +69,7 @@ class SesSnsDashboardCustomMailController extends Controller
     protected function messageFromPayload(array $payload): Message
     {
         return new Message([
-            'params' => ['subject' => (string) $payload['subject']],
-            'text' => (string) $payload['markdown'],
+            'params' => ['subject' => (string) $payload['subject'], 'text' => (string) $payload['markdown']],
         ]);
     }
 }

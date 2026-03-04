@@ -204,7 +204,7 @@ class TestSesSnsEventsCommand extends Command
             'messagable_type' => $messageTypeModelClass,
             'messagable_id' => $messageTypeId,
             'tracking_message_id' => $messageId,
-            'tracking_recipient_email' => $recipientEmail,
+            'tracking_recipient_contact' => $recipientEmail,
             'tracking_subject' => $subject,
             'tracking_meta' => [
                 'simulator' => true,
@@ -220,10 +220,10 @@ class TestSesSnsEventsCommand extends Command
 
         /** @var Model $messageType */
         $messageType = $messageTypeModelClass::query()->firstOrCreate(
-            ['mail_class' => SesTestMail::class],
+            ['notification_class' => SesTestMail::class],
             [
-                'single_mail_handler' => null,
-                'bulk_mail_handler' => null,
+                'single_handler' => null,
+                'bulk_handler' => null,
                 'direct' => false,
                 'dev_bcc' => true,
                 'error_stop_send_minutes' => 60,
@@ -231,7 +231,7 @@ class TestSesSnsEventsCommand extends Command
                 'required_messagable' => false,
                 'required_company_id' => false,
                 'required_scheduled' => false,
-                'required_mail_text' => false,
+                'required_text' => false,
                 'required_params' => false,
                 'bulk_message_line' => null,
             ]

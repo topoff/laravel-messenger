@@ -9,15 +9,15 @@ Mail management package: template-driven sending via SES, SNS event tracking (op
 ### Message (`src/Models/Message.php`)
 - Polymorphic relations: `receiver`, `sender`, `messagable` (MorphTo), `messageType` (BelongsTo)
 - Status timestamps: `scheduled_at`, `reserved_at`, `error_at`, `sent_at`, `failed_at`
-- Tracking fields: `tracking_hash`, `tracking_message_id`, `tracking_recipient_email`, `tracking_sender_email`, `tracking_subject`, `tracking_opens`, `tracking_clicks`, `tracking_meta`, `tracking_content`, `tracking_content_path`
+- Tracking fields: `tracking_hash`, `tracking_message_id`, `tracking_recipient_contact`, `tracking_sender_contact`, `tracking_subject`, `tracking_opens`, `tracking_clicks`, `tracking_meta`, `tracking_content`, `tracking_content_path`
 - Tracking timestamps: `tracking_opened_at`, `tracking_clicked_at`
-- Error fields: `email_error_code`, `email_error`, `attempts`
+- Error fields: `error_code`, `error_message`, `attempts`
 - Scopes: `hasErrorAndIsNotSent()` (excludes `failed_at IS NOT NULL`), `isScheduledButNotSent()`
 - SoftDeletes enabled
 
 ### MessageType (`src/Models/MessageType.php`)
-- Defines: `mail_class`, `single_mail_handler`, `bulk_mail_handler`, `direct` flag
-- Config: `dev_bcc`, `error_stop_send_minutes`, `required_*` fields (sender, messagable, company_id, scheduled, mail_text, params), `configuration_set`, `max_retry_attempts` (default: 10)
+- Defines: `channel`, `notification_class`, `single_handler`, `bulk_handler`, `direct` flag
+- Config: `dev_bcc`, `error_stop_send_minutes`, `required_*` fields (sender, messagable, company_id, scheduled, text, params), `configuration_set`, `max_retry_attempts` (default: 10)
 - Cached via `MessageTypeRepository` (30-day TTL, `messageType` cache tag)
 
 ### EmailLog / NotificationLog
@@ -77,7 +77,7 @@ Creates a new message copying all data from original, resets all status fields (
 - Injects pixel `<img>` + rewrites links to signed tracking URLs
 - Injects `X-SES-CONFIGURATION-SET` and `X-SES-MESSAGE-TAGS` headers
 - Can override From address based on identity config
-- Persists tracking metadata to Message (including `tracking_recipient_email` from TO address)
+- Persists tracking metadata to Message (including `tracking_recipient_contact` from TO address)
 - On `MessageSent`: updates `tracking_message_id` from SES response header
 - Respects `X-No-Track` header to skip tracking
 
@@ -104,7 +104,7 @@ All use `ExtractsSesMessageTags` trait for SES tag extraction.
 
 **Problem:** BCC recipients share the same SES message ID. SNS events for BCC would corrupt the TO recipient's tracking data.
 
-**Solution:** Delivery/Bounce/Complaint jobs compare event recipient(s) against `Message.tracking_recipient_email`. Skip if no match. Null-safe (null = process all). Case-insensitive via `mb_strtolower()`.
+**Solution:** Delivery/Bounce/Complaint jobs compare event recipient(s) against `Message.tracking_recipient_contact`. Skip if no match. Null-safe (null = process all). Case-insensitive via `mb_strtolower()`.
 
 ## Events
 
@@ -161,15 +161,15 @@ Returns identity & DNS status:
 ### Resources (`src/Nova/Resources/`)
 
 **Message** — full CRUD with 37 fields across all message properties:
-- Core: ID, receiver/sender (type + id), message_type_id, messagable (type + id), params (KeyValue), text
-- Status: scheduled_at, reserved_at, error_at, sent_at, failed_at, attempts, email_error_code, email_error
-- Tracking: all tracking_* fields (hash, message_id, subject, sender/recipient email/name, opens, clicks, opened_at, clicked_at, content_path, meta)
+- Core: ID, receiver/sender (type + id), message_type_id, messagable (type + id), params (KeyValue)
+- Status: scheduled_at, reserved_at, error_at, sent_at, failed_at, attempts, error_code, error_message
+- Tracking: all tracking_* fields (hash, message_id, subject, sender/recipient contact/name, opens, clicks, opened_at, clicked_at, content_path, meta)
 - Timestamps: created_at, updated_at, deleted_at
 
 **MessageType** — manages message type definitions:
-- Core: mail_class, single_mail_handler, bulk_mail_handler, direct (Boolean)
+- Core: channel, notification_class, single_handler, bulk_handler, direct (Boolean)
 - Config: dev_bcc, error_stop_send_minutes, max_retry_attempts, configuration_set
-- Required flags: required_sender, required_messagable, required_company_id, required_scheduled, required_mail_text, required_params
+- Required flags: required_sender, required_messagable, required_company_id, required_scheduled, required_text, required_params
 - Template: bulk_message_line (Blade template for bulk emails)
 
 ### Actions (`src/Nova/Actions/`)
@@ -227,7 +227,7 @@ Web-based dashboard at `/email-manager/nova/ses-sns-dashboard` (signed URL via `
 | `tracking.*` | inject_pixel, track_links, nova resource class, preview route config, content storage |
 | `ses_sns.*` | AWS region/credentials, configuration_sets (keyed by name with identity + event_destination), topic name, event types, callback endpoint, tenant config, Route53 automation |
 
-## Migrations (8 total)
+## Migrations (9 total)
 
 1. Create messages + message_types tables
 2. Add tracking_* columns to messages
@@ -237,6 +237,7 @@ Web-based dashboard at `/email-manager/nova/ses-sns-dashboard` (signed URL via `
 6. Notification log table
 7. SES configuration_set on message_types
 8. Retry improvements (failed_at on messages, max_retry_attempts on message_types)
+9. Rename columns for channel support (mail_class→notification_class, email_error→error_message, etc.) + add `channel` field
 
 ## Test Structure
 

@@ -28,7 +28,7 @@ class MessagesMessageTypeFilter extends Filter
 
         return (new $messageTypeModel)
             ->newQuery()
-            ->pluck('id', 'mail_class')
+            ->pluck('id', 'notification_class')
             ->toArray();
     }
 }

@@ -48,11 +48,11 @@ class RecordComplaintJob implements ShouldQueue
 
         $trackedMessages->each(function ($trackedMessage): void {
             // Skip if this event is for a different recipient (e.g. BCC)
-            if ($trackedMessage->tracking_recipient_email !== null) {
+            if ($trackedMessage->tracking_recipient_contact !== null) {
                 $eventRecipients = collect(data_get($this->message, 'complaint.complainedRecipients', []))
                     ->map(fn ($r) => mb_strtolower((string) data_get($r, 'emailAddress', '')));
 
-                if (! $eventRecipients->contains(mb_strtolower((string) $trackedMessage->tracking_recipient_email))) {
+                if (! $eventRecipients->contains(mb_strtolower((string) $trackedMessage->tracking_recipient_contact))) {
                     return;
                 }
             }

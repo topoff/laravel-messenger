@@ -17,7 +17,7 @@ use Topoff\MailManager\Exceptions\MissingGroupableMailTypeInterfaceException;
  *
  * It's also possible to extend this MainBulkMailHandler to send one / many
  * MessageTypes with a separate BulkMail. In this case the custom BulkMailHandler
- * must be set in the table: message_types.bulk_mail_handler.
+ * must be set in the table: message_types.bulk_handler.
  */
 class MainBulkMailHandler
 {
@@ -50,7 +50,7 @@ class MainBulkMailHandler
 
             foreach ($this->messageGroup as $message) {
                 /** @var MainMailHandler $mailHandler */
-                $mailHandler = app($message->messageType->single_mail_handler, ['message' => $message]);
+                $mailHandler = app($message->messageType->single_handler, ['message' => $message]);
                 $this->throwExceptionOnMissingInterface($mailHandler);
                 $handlers[$message->getKey()] = $mailHandler;
             }

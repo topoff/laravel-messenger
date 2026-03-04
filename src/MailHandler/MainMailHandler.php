@@ -69,14 +69,14 @@ class MainMailHandler implements GroupableMailTypeInterface
     {
         $messagable = $this->message->messagable;
         if (! $messagable) {
-            $this->message->email_error = 'Message has been deleted, because the Messagable itself is missing.';
+            $this->message->error_message = 'Message has been deleted, because the Messagable itself is missing.';
             $this->message->save();
 
             return true;
         }
 
         if (! $this->receiver->getEmailIsValid()) {
-            $this->message->email_error = 'Message has been deleted, because the receiver is trashed or the receiver email is invalid (email_invalid_at is not null).';
+            $this->message->error_message = 'Message has been deleted, because the receiver is trashed or the receiver email is invalid (email_invalid_at is not null).';
             $this->message->save();
 
             return true;
@@ -144,23 +144,23 @@ class MainMailHandler implements GroupableMailTypeInterface
             $this->onSuccessfulSent();
         } catch (Throwable $t) {
             $this->message->reserved_at = null;
-            $this->message->email_error_code = (int) $t->getCode();
+            $this->message->error_code = (int) $t->getCode();
 
             if ($t instanceof ReceiverMissingException) {
                 Log::notice(static::class.':'.__FUNCTION__.': Message could not be sent because the receiver is missing, presumably trashed. message_id: '.$this->message->id.' class: '.$this->mailClass());
-                $this->message->email_error = 'Message could not be sent because the receiver is missing, presumably trashed.';
+                $this->message->error_message = 'Message could not be sent because the receiver is missing, presumably trashed.';
                 $this->message->error_at = now();
                 $this->message->deleted_at = now();
                 $this->message->save();
             } elseif ($this->isPermanentFailure($t)) {
                 $this->message->failed_at = now();
-                $this->message->email_error = Str::limit(($t->getCode().' : '.$t->getMessage()), 245);
+                $this->message->error_message = Str::limit(($t->getCode().' : '.$t->getMessage()), 245);
                 $this->message->save();
 
                 Log::warning(static::class.':'.__FUNCTION__.': Message permanently failed: message_id: '.$this->message->id.' class: '.$this->mailClass().' - Code: '.$t->getCode().' Message: '.$t->getMessage());
             } else {
                 $this->message->error_at = now();
-                $this->message->email_error = Str::limit(($t->getCode().' : '.$t->getMessage()), 245);
+                $this->message->error_message = Str::limit(($t->getCode().' : '.$t->getMessage()), 245);
                 $this->message->save();
 
                 $params = collect(...$this->getMailParameters());
@@ -217,7 +217,7 @@ class MainMailHandler implements GroupableMailTypeInterface
      */
     protected function mailClass(): string
     {
-        return $this->message->messageType->mail_class;
+        return $this->message->messageType->notification_class;
     }
 
     /**

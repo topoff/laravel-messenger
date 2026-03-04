@@ -72,8 +72,8 @@ it('does not crash when messagable_type is an invalid class string', function ()
 });
 
 it('scopes direct message types', function () {
-    $directType = createMessageType(['mail_class' => 'Direct\\Test', 'direct' => true]);
-    $indirectType = createMessageType(['mail_class' => 'Indirect\\Test', 'direct' => false]);
+    $directType = createMessageType(['notification_class' => 'Direct\\Test', 'direct' => true]);
+    $indirectType = createMessageType(['notification_class' => 'Indirect\\Test', 'direct' => false]);
 
     createMessage(['message_type_id' => $directType->id]);
     createMessage(['message_type_id' => $indirectType->id]);

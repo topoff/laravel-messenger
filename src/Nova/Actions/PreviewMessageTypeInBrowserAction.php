@@ -69,7 +69,7 @@ class PreviewMessageTypeInBrowserAction extends Action
                 ->get()
                 ->mapWithKeys(function (Model $message): array {
                     $createdAt = $message->created_at?->format('Y-m-d H:i');
-                    $recipient = $message->tracking_recipient_email ?: ($message->receiver_id ? 'receiverId#'.$message->receiver_id : 'n/a');
+                    $recipient = $message->tracking_recipient_contact ?: ($message->receiver_id ? 'receiverId#'.$message->receiver_id : 'n/a');
                     $locale = $message->locale ?: $message->language ?: 'n/a';
                     $messagableType = $message->messagable_type ? Str::afterLast($message->messagable_type, '\\') : 'n/a';
                     $receiverType = $message->receiver_type ? Str::afterLast($message->receiver_type, '\\') : 'n/a';

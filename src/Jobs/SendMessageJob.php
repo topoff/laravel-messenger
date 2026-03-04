@@ -118,13 +118,13 @@ class SendMessageJob implements ShouldQueue
      */
     protected function callMailHandlerWithSingleMessage(Message $message): void
     {
-        $handlerClass = $message->messageType->single_mail_handler;
+        $handlerClass = $message->messageType->single_handler;
 
         if (! $handlerClass || ! class_exists($handlerClass)) {
-            Log::error('SendMessageJob: Invalid or missing single_mail_handler for message.', [
+            Log::error('SendMessageJob: Invalid or missing single_handler for message.', [
                 'message_id' => $message->id,
                 'message_type_id' => $message->message_type_id,
-                'single_mail_handler' => $handlerClass,
+                'single_handler' => $handlerClass,
             ]);
             $message->update(['error_at' => Date::now()]);
 
@@ -245,10 +245,10 @@ class SendMessageJob implements ShouldQueue
             ->select([
                 "$messageTable.receiver_type",
                 "$messageTable.receiver_id",
-                "$messageTypeTable.bulk_mail_handler",
+                "$messageTypeTable.bulk_handler",
             ])
             ->selectRaw('COUNT(*) as message_count')
-            ->groupBy("$messageTable.receiver_type", "$messageTable.receiver_id", "$messageTypeTable.bulk_mail_handler")
+            ->groupBy("$messageTable.receiver_type", "$messageTable.receiver_id", "$messageTypeTable.bulk_handler")
             ->orderBy("$messageTable.receiver_type")
             ->orderBy("$messageTable.receiver_id");
 
@@ -257,10 +257,10 @@ class SendMessageJob implements ShouldQueue
                 ->where("$messageTable.receiver_type", $group->receiver_type)
                 ->where("$messageTable.receiver_id", $group->receiver_id);
 
-            if ($group->bulk_mail_handler) {
-                $messageGroupQuery->where("$messageTypeTable.bulk_mail_handler", $group->bulk_mail_handler);
+            if ($group->bulk_handler) {
+                $messageGroupQuery->where("$messageTypeTable.bulk_handler", $group->bulk_handler);
             } else {
-                $messageGroupQuery->whereNull("$messageTypeTable.bulk_mail_handler");
+                $messageGroupQuery->whereNull("$messageTypeTable.bulk_handler");
             }
 
             $messageGroup = $messageGroupQuery->get();
@@ -269,13 +269,13 @@ class SendMessageJob implements ShouldQueue
                 continue;
             }
 
-            if ($group->bulk_mail_handler && $group->receiver_id && (int) $group->message_count > 1) {
+            if ($group->bulk_handler && $group->receiver_id && (int) $group->message_count > 1) {
                 // in case an account meanwhile is deleted
                 if (! $messageGroup->first()->receiver) {
                     $messageGroup->each(fn (Message $message) => $message->delete());
                 } else {
                     /** @var MainBulkMailHandler $bulkMailHandler */
-                    $bulkMailHandler = $group->bulk_mail_handler;
+                    $bulkMailHandler = $group->bulk_handler;
                     (new $bulkMailHandler($messageGroup->first()->receiver, $messageGroup))->send();
                 }
             } else {

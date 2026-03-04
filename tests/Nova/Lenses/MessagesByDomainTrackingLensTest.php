@@ -9,17 +9,17 @@ beforeEach(function () {
 it('groups messages by recipient domain', function () {
     createMessage([
         'message_type_id' => $this->messageType->id,
-        'tracking_recipient_email' => 'alice@gmail.com',
+        'tracking_recipient_contact' => 'alice@gmail.com',
         'sent_at' => now(),
     ]);
     createMessage([
         'message_type_id' => $this->messageType->id,
-        'tracking_recipient_email' => 'bob@gmail.com',
+        'tracking_recipient_contact' => 'bob@gmail.com',
         'sent_at' => now(),
     ]);
     createMessage([
         'message_type_id' => $this->messageType->id,
-        'tracking_recipient_email' => 'carol@yahoo.com',
+        'tracking_recipient_contact' => 'carol@yahoo.com',
         'sent_at' => now(),
     ]);
 
@@ -37,14 +37,14 @@ it('groups messages by recipient domain', function () {
 it('calculates open rate per domain', function () {
     createMessage([
         'message_type_id' => $this->messageType->id,
-        'tracking_recipient_email' => 'a@gmail.com',
+        'tracking_recipient_contact' => 'a@gmail.com',
         'sent_at' => now(),
         'tracking_opened_at' => now(),
         'tracking_opens' => 3,
     ]);
     createMessage([
         'message_type_id' => $this->messageType->id,
-        'tracking_recipient_email' => 'b@gmail.com',
+        'tracking_recipient_contact' => 'b@gmail.com',
         'sent_at' => now(),
         'tracking_opens' => 0,
     ]);
@@ -60,20 +60,20 @@ it('calculates open rate per domain', function () {
 it('calculates click rate per domain', function () {
     createMessage([
         'message_type_id' => $this->messageType->id,
-        'tracking_recipient_email' => 'a@outlook.com',
+        'tracking_recipient_contact' => 'a@outlook.com',
         'sent_at' => now(),
         'tracking_clicked_at' => now(),
         'tracking_clicks' => 5,
     ]);
     createMessage([
         'message_type_id' => $this->messageType->id,
-        'tracking_recipient_email' => 'b@outlook.com',
+        'tracking_recipient_contact' => 'b@outlook.com',
         'sent_at' => now(),
         'tracking_clicks' => 0,
     ]);
     createMessage([
         'message_type_id' => $this->messageType->id,
-        'tracking_recipient_email' => 'c@outlook.com',
+        'tracking_recipient_contact' => 'c@outlook.com',
         'sent_at' => now(),
         'tracking_clicked_at' => now(),
         'tracking_clicks' => 2,
@@ -87,15 +87,15 @@ it('calculates click rate per domain', function () {
         ->and((int) $outlook->total_clicks)->toBe(7);
 });
 
-it('excludes messages with null tracking_recipient_email', function () {
+it('excludes messages with null tracking_recipient_contact', function () {
     createMessage([
         'message_type_id' => $this->messageType->id,
-        'tracking_recipient_email' => 'user@example.com',
+        'tracking_recipient_contact' => 'user@example.com',
         'sent_at' => now(),
     ]);
     createMessage([
         'message_type_id' => $this->messageType->id,
-        'tracking_recipient_email' => null,
+        'tracking_recipient_contact' => null,
         'sent_at' => now(),
     ]);
 
@@ -108,7 +108,7 @@ it('excludes messages with null tracking_recipient_email', function () {
 it('handles zero sent messages without division error', function () {
     createMessage([
         'message_type_id' => $this->messageType->id,
-        'tracking_recipient_email' => 'test@nowhere.com',
+        'tracking_recipient_contact' => 'test@nowhere.com',
         'sent_at' => null,
     ]);
 
@@ -140,7 +140,7 @@ function domainExpression(string $column): string
 function domainTrackingQuery(): \Illuminate\Database\Query\Builder
 {
     $table = (new (config('mail-manager.models.message')))->getTable();
-    $domainExpr = domainExpression("{$table}.tracking_recipient_email");
+    $domainExpr = domainExpression("{$table}.tracking_recipient_contact");
 
     return DB::table($table)
         ->select([
@@ -154,7 +154,7 @@ function domainTrackingQuery(): \Illuminate\Database\Query\Builder
             DB::raw("ROUND(COUNT(CASE WHEN {$table}.tracking_opened_at IS NOT NULL THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN {$table}.sent_at IS NOT NULL THEN 1 END), 0), 2) as open_rate"),
             DB::raw("ROUND(COUNT(CASE WHEN {$table}.tracking_clicked_at IS NOT NULL THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN {$table}.sent_at IS NOT NULL THEN 1 END), 0), 2) as click_rate"),
         ])
-        ->whereNotNull("{$table}.tracking_recipient_email")
+        ->whereNotNull("{$table}.tracking_recipient_contact")
         ->groupBy('domain')
         ->orderByDesc('total_messages');
 }

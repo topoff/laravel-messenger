@@ -72,7 +72,7 @@ it('creates a message with mail text', function () {
         ->setMailText('Hello World')
         ->create();
 
-    expect(Message::first()->text)->toBe('Hello World');
+    expect(data_get(Message::first()->params, 'text'))->toBe('Hello World');
 });
 
 it('resets vars after create for reuse', function () {
@@ -216,7 +216,7 @@ it('deletes a message', function () {
 
 it('reports when required_messagable is missing', function () {
     createMessageType([
-        'mail_class' => 'App\\Mail\\RequiresMsgable',
+        'notification_class' => 'App\\Mail\\RequiresMsgable',
         'required_messagable' => true,
     ]);
 
@@ -231,7 +231,7 @@ it('reports when required_messagable is missing', function () {
 
 it('reports when required_sender is missing', function () {
     createMessageType([
-        'mail_class' => 'App\\Mail\\RequiresSender',
+        'notification_class' => 'App\\Mail\\RequiresSender',
         'required_sender' => true,
     ]);
 
@@ -246,7 +246,7 @@ it('reports when required_sender is missing', function () {
 
 it('reports when required_company_id is missing', function () {
     createMessageType([
-        'mail_class' => 'App\\Mail\\RequiresCompany',
+        'notification_class' => 'App\\Mail\\RequiresCompany',
         'required_company_id' => true,
     ]);
 
@@ -259,10 +259,10 @@ it('reports when required_company_id is missing', function () {
     expect(Message::count())->toBe(1);
 });
 
-it('reports when required_mail_text is missing', function () {
+it('reports when required_text is missing', function () {
     createMessageType([
-        'mail_class' => 'App\\Mail\\RequiresText',
-        'required_mail_text' => true,
+        'notification_class' => 'App\\Mail\\RequiresText',
+        'required_text' => true,
     ]);
 
     $service = new MessageService;
@@ -276,7 +276,7 @@ it('reports when required_mail_text is missing', function () {
 
 it('reports when required_scheduled is missing', function () {
     createMessageType([
-        'mail_class' => 'App\\Mail\\RequiresScheduled',
+        'notification_class' => 'App\\Mail\\RequiresScheduled',
         'required_scheduled' => true,
     ]);
 
@@ -291,7 +291,7 @@ it('reports when required_scheduled is missing', function () {
 
 it('reports when required_params is missing', function () {
     createMessageType([
-        'mail_class' => 'App\\Mail\\RequiresParams',
+        'notification_class' => 'App\\Mail\\RequiresParams',
         'required_params' => true,
     ]);
 
@@ -306,11 +306,11 @@ it('reports when required_params is missing', function () {
 
 it('passes validation when all required fields are provided', function () {
     createMessageType([
-        'mail_class' => 'App\\Mail\\RequiresAll',
+        'notification_class' => 'App\\Mail\\RequiresAll',
         'required_sender' => true,
         'required_messagable' => true,
         'required_company_id' => true,
-        'required_mail_text' => true,
+        'required_text' => true,
         'required_scheduled' => true,
         'required_params' => true,
     ]);

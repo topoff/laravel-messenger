@@ -8,7 +8,7 @@ beforeEach(function () {
 });
 
 it('gets message type id by mail class', function () {
-    $messageType = createMessageType(['mail_class' => 'App\\Mail\\TestMail']);
+    $messageType = createMessageType(['notification_class' => 'App\\Mail\\TestMail']);
 
     $id = $this->repository->getIdFromTypeAndCustomer('App\\Mail\\TestMail');
 
@@ -16,13 +16,13 @@ it('gets message type id by mail class', function () {
 });
 
 it('gets message type by mail class', function () {
-    $messageType = createMessageType(['mail_class' => 'App\\Mail\\FindMe']);
+    $messageType = createMessageType(['notification_class' => 'App\\Mail\\FindMe']);
 
     $result = $this->repository->getFromTypeAndCustomer('App\\Mail\\FindMe');
 
     expect($result)->toBeInstanceOf(MessageType::class)
         ->and($result->id)->toBe($messageType->id)
-        ->and($result->mail_class)->toBe('App\\Mail\\FindMe');
+        ->and($result->notification_class)->toBe('App\\Mail\\FindMe');
 });
 
 it('gets message type by id', function () {
@@ -35,13 +35,13 @@ it('gets message type by id', function () {
 });
 
 it('caches message type lookups', function () {
-    $messageType = createMessageType(['mail_class' => 'App\\Mail\\Cached']);
+    $messageType = createMessageType(['notification_class' => 'App\\Mail\\Cached']);
 
     // First call — hits DB
     $result1 = $this->repository->getFromTypeAndCustomer('App\\Mail\\Cached');
 
     // Delete from DB
-    MessageType::where('mail_class', 'App\\Mail\\Cached')->forceDelete();
+    MessageType::where('notification_class', 'App\\Mail\\Cached')->forceDelete();
 
     // Second call — should come from cache
     $result2 = $this->repository->getFromTypeAndCustomer('App\\Mail\\Cached');

@@ -18,8 +18,7 @@ class NovaCustomMessagePreviewController
         abort_if(! is_array($payload), 404);
 
         $message = new Message([
-            'params' => ['subject' => (string) ($payload['subject'] ?? '')],
-            'text' => (string) ($payload['markdown'] ?? ''),
+            'params' => ['subject' => (string) ($payload['subject'] ?? ''), 'text' => (string) ($payload['markdown'] ?? '')],
             'receiver_type' => (string) ($payload['model_type'] ?? ''),
         ]);
 

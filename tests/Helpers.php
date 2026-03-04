@@ -10,9 +10,9 @@ use Workbench\App\Models\TestSender;
 function createMessageType(array $attributes = []): MessageType
 {
     return MessageType::create(array_merge([
-        'mail_class' => \Workbench\App\Mail\TestMail::class,
-        'single_mail_handler' => TestMailHandler::class,
-        'bulk_mail_handler' => \Topoff\MailManager\MailHandler\MainBulkMailHandler::class,
+        'notification_class' => \Workbench\App\Mail\TestMail::class,
+        'single_handler' => TestMailHandler::class,
+        'bulk_handler' => \Topoff\MailManager\MailHandler\MainBulkMailHandler::class,
         'direct' => true,
         'dev_bcc' => true,
         'error_stop_send_minutes' => 60 * 24 * 3,
@@ -20,7 +20,7 @@ function createMessageType(array $attributes = []): MessageType
         'required_messagable' => false,
         'required_company_id' => false,
         'required_scheduled' => false,
-        'required_mail_text' => false,
+        'required_text' => false,
         'required_params' => false,
         'bulk_message_line' => 'Test bulk line',
     ], $attributes));

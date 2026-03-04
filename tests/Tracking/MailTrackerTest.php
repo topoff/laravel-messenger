@@ -31,8 +31,8 @@ it('injects tracking pixel and links and persists tracking metadata on messageSe
     $messageModel->refresh();
 
     expect($messageModel->tracking_hash)->not->toBeNull()
-        ->and($messageModel->tracking_sender_email)->toBe('sender@example.com')
-        ->and($messageModel->tracking_recipient_email)->toBe('receiver@example.com')
+        ->and($messageModel->tracking_sender_contact)->toBe('sender@example.com')
+        ->and($messageModel->tracking_recipient_contact)->toBe('receiver@example.com')
         ->and($messageModel->tracking_subject)->toBe('Tracking Subject')
         ->and($messageModel->tracking_opens)->toBe(0)
         ->and($messageModel->tracking_clicks)->toBe(0)
@@ -189,7 +189,7 @@ it('overrides From address based on identity mapped to config set', function () 
         ->and($from->getName())->toBe('Original Name');
 
     $messageModel->refresh();
-    expect($messageModel->tracking_sender_email)->toBe('outreach@connect.example.com');
+    expect($messageModel->tracking_sender_contact)->toBe('outreach@connect.example.com');
 });
 
 it('injects X-SES-MESSAGE-TAGS header with tenant, stream, mail_type', function () {

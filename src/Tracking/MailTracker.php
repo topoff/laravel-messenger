@@ -200,9 +200,9 @@ class MailTracker
         $messageModels->each(function (Message $messageModel) use ($from, $to, $message, $hash, $mutated, $originalHtml): void {
             $messageModel->tracking_hash = $hash;
             $messageModel->tracking_sender_name = $from?->getName();
-            $messageModel->tracking_sender_email = $from?->getAddress();
+            $messageModel->tracking_sender_contact = $from?->getAddress();
             $messageModel->tracking_recipient_name = $to?->getName();
-            $messageModel->tracking_recipient_email = $to?->getAddress();
+            $messageModel->tracking_recipient_contact = $to?->getAddress();
             $messageModel->tracking_subject = $message->getSubject();
             $messageModel->tracking_opens = 0;
             $messageModel->tracking_clicks = 0;
@@ -311,7 +311,7 @@ class MailTracker
         }
 
         $tenantName = trim((string) config('mail-manager.ses_sns.tenant.name', ''));
-        $mailClass = class_basename($messageModels->first()?->messageType->mail_class ?? '');
+        $mailClass = class_basename($messageModels->first()?->messageType->notification_class ?? '');
 
         $tags = collect([
             'tenant_id' => $tenantName,

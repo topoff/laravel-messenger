@@ -21,7 +21,7 @@ class CustomMessageMail extends Mailable
         return $this->subject($subject)
             ->markdown($view, [
                 'subjectLine' => $subject,
-                'markdownBody' => (string) ($this->messageModel->text ?? ''),
+                'markdownBody' => (string) data_get($this->messageModel->params, 'text', ''),
                 'receiver' => $this->messageModel->receiver,
             ]);
     }

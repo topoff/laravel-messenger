@@ -19,7 +19,7 @@ class MessageTypeRepository
 
         return $this->remember(
             static::class.':'.__FUNCTION__.':'.$type,
-            fn () => $messageTypeClass::where('mail_class', $type)->select('id')->first()->id
+            fn () => $messageTypeClass::where('notification_class', $type)->select('id')->first()->id
         );
     }
 
@@ -32,7 +32,7 @@ class MessageTypeRepository
 
         return $this->remember(
             static::class.':'.__FUNCTION__.':'.$type,
-            fn () => $messageTypeClass::where('mail_class', $type)->first()
+            fn () => $messageTypeClass::where('notification_class', $type)->first()
         );
     }
 

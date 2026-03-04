@@ -24,17 +24,17 @@ use Topoff\MailManager\Models\Traits\DateScopesTrait;
  * @property string|null $messagable_type
  * @property int|null $messagable_id
  * @property array|null $params
- * @property string|null $text
  * @property string|null $locale
  * @property int|null $attempts
- * @property int|null $email_error_code
- * @property string|null $email_error
+ * @property string $channel
+ * @property int|null $error_code
+ * @property string|null $error_message
  * @property string|null $tracking_hash
  * @property string|null $tracking_message_id
  * @property string|null $tracking_sender_name
- * @property string|null $tracking_sender_email
+ * @property string|null $tracking_sender_contact
  * @property string|null $tracking_recipient_name
- * @property string|null $tracking_recipient_email
+ * @property string|null $tracking_recipient_contact
  * @property string|null $tracking_subject
  * @property int $tracking_opens
  * @property int $tracking_clicks
@@ -143,17 +143,17 @@ class Message extends Model
             'messagable_type' => 'string',
             'messagable_id' => 'integer',
             'params' => 'array',
-            'text' => 'string',
             'locale' => 'string',
             'attempts' => 'integer',
-            'email_error_code' => 'integer',
-            'email_error' => 'string',
+            'channel' => 'string',
+            'error_code' => 'integer',
+            'error_message' => 'string',
             'tracking_hash' => 'string',
             'tracking_message_id' => 'string',
             'tracking_sender_name' => 'string',
-            'tracking_sender_email' => 'string',
+            'tracking_sender_contact' => 'string',
             'tracking_recipient_name' => 'string',
-            'tracking_recipient_email' => 'string',
+            'tracking_recipient_contact' => 'string',
             'tracking_subject' => 'string',
             'tracking_opens' => 'integer',
             'tracking_clicks' => 'integer',

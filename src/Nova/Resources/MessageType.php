@@ -28,7 +28,7 @@ class MessageType extends Resource
 
     public static $search = [
         'id',
-        'mail_class',
+        'notification_class',
     ];
 
     public static function label(): string
@@ -43,7 +43,7 @@ class MessageType extends Resource
 
     public function title(): string
     {
-        return $this->id.' '.$this->mail_class;
+        return $this->id.' '.$this->notification_class;
     }
 
     /**
@@ -53,9 +53,10 @@ class MessageType extends Resource
     {
         return [
             ID::make()->sortable(),
-            Text::make('Mail Class', 'mail_class')->sortable()->rules('required'),
-            Text::make('Single Mail Handler', 'single_mail_handler')->nullable()->sortable(),
-            Text::make('Bulk Mail Handler', 'bulk_mail_handler')->nullable()->sortable(),
+            Text::make('Channel', 'channel')->sortable(),
+            Text::make('Notification Class', 'notification_class')->sortable()->rules('required'),
+            Text::make('Single Handler', 'single_handler')->nullable()->sortable(),
+            Text::make('Bulk Handler', 'bulk_handler')->nullable()->sortable(),
             Boolean::make('Direct', 'direct')->sortable(),
             Boolean::make('Dev BCC', 'dev_bcc')->sortable(),
             Number::make('Error Stop Send Minutes', 'error_stop_send_minutes')->sortable(),
@@ -64,7 +65,7 @@ class MessageType extends Resource
             Boolean::make('Required Messagable', 'required_messagable')->sortable(),
             Boolean::make('Required Company Id', 'required_company_id')->sortable(),
             Boolean::make('Required Scheduled', 'required_scheduled')->sortable(),
-            Boolean::make('Required Mail Text', 'required_mail_text')->sortable(),
+            Boolean::make('Required Text', 'required_text')->sortable(),
             Boolean::make('Required Params', 'required_params')->sortable(),
             Text::make('Bulk Message Line', 'bulk_message_line')
                 ->displayUsing(fn (?string $text): string => Str::limit((string) $text, 120))

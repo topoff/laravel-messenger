@@ -20,9 +20,9 @@ class ResendMessageJob implements ShouldQueue
         $messageClass = config('mail-manager.models.message');
         $message = $messageClass::query()->with('messageType')->findOrFail($this->messageId);
 
-        $handlerClass = $message->messageType?->single_mail_handler;
+        $handlerClass = $message->messageType?->single_handler;
         if (! $handlerClass) {
-            throw new RuntimeException("ResendMessageJob: No single_mail_handler for message [{$this->messageId}]");
+            throw new RuntimeException("ResendMessageJob: No single_handler for message [{$this->messageId}]");
         }
 
         /** @var MainMailHandler $mailHandler */

@@ -7,7 +7,6 @@ use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\KeyValue;
 use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
-use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
 use Topoff\MailManager\Models\Message as MessageModel;
@@ -36,9 +35,9 @@ class Message extends Resource
     public static $search = [
         'id',
         'tracking_subject',
-        'tracking_sender_email',
+        'tracking_sender_contact',
         'tracking_sender_name',
-        'tracking_recipient_email',
+        'tracking_recipient_contact',
         'tracking_recipient_name',
         'tracking_message_id',
         'tracking_hash',
@@ -70,7 +69,6 @@ class Message extends Resource
             Text::make('Messagable Type', 'messagable_type')->hideFromIndex(),
             Number::make('Messagable Id', 'messagable_id')->hideFromIndex(),
             KeyValue::make('Params', 'params')->nullable()->hideFromIndex(),
-            Textarea::make('Text', 'text')->alwaysShow()->hideFromIndex(),
             Text::make('Locale', 'locale')->sortable(),
             DateTime::make('Scheduled At', 'scheduled_at')->nullable()->sortable(),
             DateTime::make('Reserved At', 'reserved_at')->nullable()->sortable(),
@@ -78,11 +76,12 @@ class Message extends Resource
             DateTime::make('Sent At', 'sent_at')->nullable()->sortable(),
             DateTime::make('Failed At', 'failed_at')->nullable()->sortable(),
             Number::make('Attempts', 'attempts')->sortable(),
-            Number::make('Email Error Code', 'email_error_code')->nullable()->hideFromIndex(),
-            Text::make('Email Error', 'email_error')->nullable()->hideFromIndex(),
+            Text::make('Channel', 'channel')->sortable(),
+            Number::make('Error Code', 'error_code')->nullable()->hideFromIndex(),
+            Text::make('Error', 'error_message')->nullable()->hideFromIndex(),
             Text::make('Tracking Subject', 'tracking_subject')->sortable(),
-            Text::make('Sender', 'tracking_sender_email')->sortable(),
-            Text::make('Recipient', 'tracking_recipient_email')->sortable(),
+            Text::make('Sender Contact', 'tracking_sender_contact')->sortable(),
+            Text::make('Recipient Contact', 'tracking_recipient_contact')->sortable(),
             Number::make('Opens', 'tracking_opens')->sortable(),
             Number::make('Clicks', 'tracking_clicks')->sortable(),
             DateTime::make('Opened At', 'tracking_opened_at')->nullable()->hideFromIndex(),

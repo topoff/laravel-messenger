@@ -10,8 +10,8 @@ it('creates and sends a resent tracked message', function () {
     $original = createMessage([
         'tracking_hash' => 'originalhash001',
         'tracking_message_id' => 'original-mid',
-        'tracking_sender_email' => 'sender@example.com',
-        'tracking_recipient_email' => 'receiver@example.com',
+        'tracking_sender_contact' => 'sender@example.com',
+        'tracking_recipient_contact' => 'receiver@example.com',
         'tracking_subject' => 'Original Subject',
         'tracking_opens' => 2,
         'tracking_clicks' => 1,
