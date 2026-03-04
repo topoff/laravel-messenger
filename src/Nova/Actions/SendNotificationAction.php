@@ -43,6 +43,16 @@ class SendNotificationAction extends Action
             return Action::danger('Subject is required for email notifications.');
         }
 
+        // Standalone mode: send to manually entered recipient
+        $recipientPhone = trim((string) $fields->get('recipient_phone'));
+        if ($models->isEmpty() && $recipientPhone !== '') {
+            $notifiable = new AnonymousNotifiable;
+            $notifiable->route($channel, Str::replace(' ', '', $recipientPhone));
+            $notifiable->notify(new NovaChannelNotification($subject, $message, $channel));
+
+            return Action::message('Notification sent to '.$recipientPhone.'.');
+        }
+
         $sentCount = 0;
         $skippedCount = 0;
 
@@ -88,7 +98,6 @@ class SendNotificationAction extends Action
                     $field->hide();
                 }),
             Text::make(__('Recipient Phone'), 'recipient_phone')
-                ->readonly()
                 ->dependsOn(['channel'], function (Text $field, NovaRequest $request, FormData $formData): void {
                     if ((string) $formData->channel !== 'vonage') {
                         $field->hide();
@@ -97,9 +106,18 @@ class SendNotificationAction extends Action
                     }
 
                     $field->show();
-                    $field->setValue($this->resolveSmsRecipientPreview($request));
+                    $preview = $this->resolveSmsRecipientPreview($request);
+                    $isStandalone = $preview === 'No recipient selected.';
+
+                    if ($isStandalone) {
+                        $field->readonly(false);
+                        $field->rules('required');
+                    } else {
+                        $field->readonly();
+                        $field->setValue($preview);
+                    }
                 })
-                ->help('Effective SMS recipient phone number(s).'),
+                ->help('Effective SMS recipient phone number(s). Editable when used as standalone action.'),
             Textarea::make(__('Message'), 'message')
                 ->default(fn (): string => (string) config('messenger.notifications.default_message_footer', ''))
                 ->rules('required'),

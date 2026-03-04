@@ -12,6 +12,8 @@ use Laravel\Nova\Resource;
 use Topoff\Messenger\Models\Message as MessageModel;
 use Topoff\Messenger\Nova\Actions\PreviewMessageInBrowserAction;
 use Topoff\Messenger\Nova\Actions\ResendAsNewMessageAction;
+use Topoff\Messenger\Nova\Actions\SendCustomMailAction;
+use Topoff\Messenger\Nova\Actions\SendNotificationAction;
 use Topoff\Messenger\Nova\Actions\ShowRealSentMessageAction;
 use Topoff\Messenger\Nova\Filters\DateFilter;
 use Topoff\Messenger\Nova\Filters\MessagesMessageableTypeFilter;
@@ -140,9 +142,11 @@ class Message extends Resource
     public function actions(NovaRequest $request): array
     {
         return [
-            (new ShowRealSentMessageAction)->confirmText('')->confirmButtonText('Go'),
-            (new ResendAsNewMessageAction)->confirmText('')->confirmButtonText('Go'),
-            (new PreviewMessageInBrowserAction)->confirmText('')->confirmButtonText('Go'),
+            (new ShowRealSentMessageAction)->withoutConfirmation(),
+            (new ResendAsNewMessageAction),
+            (new PreviewMessageInBrowserAction)->withoutConfirmation(),
+            (new SendCustomMailAction)->standalone(),
+            (new SendNotificationAction)->standalone(),
         ];
     }
 }
