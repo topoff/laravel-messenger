@@ -1,6 +1,6 @@
 <?php
 
-use Topoff\MailManager\Models\MessageType;
+use Topoff\Messenger\Models\MessageType;
 
 it('can create a message type', function () {
     $messageType = createMessageType();
@@ -13,14 +13,14 @@ it('can create a message type', function () {
 });
 
 it('uses the configured database connection', function () {
-    config()->set('mail-manager.database.connection', 'custom');
+    config()->set('messenger.database.connection', 'custom');
     $messageType = new MessageType;
 
     expect($messageType->getConnectionName())->toBe('custom');
 });
 
 it('uses default connection when config is null', function () {
-    config()->set('mail-manager.database.connection');
+    config()->set('messenger.database.connection');
     $messageType = new MessageType;
 
     expect($messageType->getConnectionName())->toBeNull();

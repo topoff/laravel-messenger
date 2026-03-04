@@ -1,11 +1,11 @@
 <?php
 
-namespace Topoff\MailManager\Mail;
+namespace Topoff\Messenger\Mail;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
-use Topoff\MailManager\Models\Message;
+use Topoff\Messenger\Models\Message;
 
 class CustomMessageMail extends Mailable
 {
@@ -16,7 +16,7 @@ class CustomMessageMail extends Mailable
     public function build(): self
     {
         $subject = (string) data_get($this->messageModel->params, 'subject', 'Custom Message');
-        $view = (string) config('mail-manager.mail.custom_message_view', 'mail-manager::customMessage');
+        $view = (string) config('messenger.mail.custom_message_view', 'messenger::customMessage');
 
         return $this->subject($subject)
             ->markdown($view, [

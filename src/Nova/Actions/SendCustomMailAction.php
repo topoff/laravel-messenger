@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Nova\Actions;
+namespace Topoff\Messenger\Nova\Actions;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -19,9 +19,9 @@ use Laravel\Nova\Fields\Markdown;
 use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Topoff\MailManager\Contracts\MessageReceiverInterface;
-use Topoff\MailManager\Mail\CustomMessageMail;
-use Topoff\MailManager\Services\MessageService;
+use Topoff\Messenger\Contracts\MessageReceiverInterface;
+use Topoff\Messenger\Mail\CustomMessageMail;
+use Topoff\Messenger\Services\MessageService;
 
 class SendCustomMailAction extends Action
 {
@@ -42,7 +42,7 @@ class SendCustomMailAction extends Action
         }
 
         if ($isPreview) {
-            $previewKey = 'mail-manager:nova-custom-preview:'.Str::uuid();
+            $previewKey = 'messenger:nova-custom-preview:'.Str::uuid();
             Cache::put($previewKey, [
                 'subject' => $subject,
                 'markdown' => $markdown,
@@ -50,7 +50,7 @@ class SendCustomMailAction extends Action
                 'receiver_count' => $models->count(),
             ], now()->addMinutes(10));
 
-            $previewUrl = URL::temporarySignedRoute('mail-manager.tracking.nova.custom-preview', now()->addMinutes(10), ['key' => $previewKey]);
+            $previewUrl = URL::temporarySignedRoute('messenger.tracking.nova.custom-preview', now()->addMinutes(10), ['key' => $previewKey]);
 
             return Action::openInNewTab($previewUrl);
         }

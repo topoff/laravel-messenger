@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Jobs;
+namespace Topoff\Messenger\Jobs;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -9,8 +9,8 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
-use Topoff\MailManager\Events\MessageRejectedEvent;
-use Topoff\MailManager\Jobs\Concerns\ExtractsSesMessageTags;
+use Topoff\Messenger\Events\MessageRejectedEvent;
+use Topoff\Messenger\Jobs\Concerns\ExtractsSesMessageTags;
 
 class RecordRejectJob implements ShouldQueue
 {
@@ -36,7 +36,7 @@ class RecordRejectJob implements ShouldQueue
 
         $reason = (string) data_get($this->message, 'reject.reason', 'unknown');
 
-        $messageClass = config('mail-manager.models.message');
+        $messageClass = config('messenger.models.message');
         $trackedMessages = $messageClass::query()->where('tracking_message_id', $messageId)->get();
         if ($trackedMessages->isEmpty()) {
             return;

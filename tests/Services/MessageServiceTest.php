@@ -2,8 +2,8 @@
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Date;
-use Topoff\MailManager\Models\Message;
-use Topoff\MailManager\Services\MessageService;
+use Topoff\Messenger\Models\Message;
+use Topoff\Messenger\Services\MessageService;
 use Workbench\App\Models\TestMessagable;
 use Workbench\App\Models\TestReceiver;
 use Workbench\App\Models\TestSender;
@@ -118,7 +118,7 @@ it('supports fluent chaining', function () {
 });
 
 it('prevents message creation when prevent_create_message returns true', function () {
-    config()->set('mail-manager.sending.prevent_create_message', fn () => true);
+    config()->set('messenger.sending.prevent_create_message', fn () => true);
 
     $service = new MessageService;
     $service->setReceiver(TestReceiver::class, $this->receiver->id)
@@ -130,7 +130,7 @@ it('prevents message creation when prevent_create_message returns true', functio
 });
 
 it('creates message when prevent_create_message returns false', function () {
-    config()->set('mail-manager.sending.prevent_create_message', fn () => false);
+    config()->set('messenger.sending.prevent_create_message', fn () => false);
 
     $service = new MessageService;
     $service->setReceiver(TestReceiver::class, $this->receiver->id)
@@ -142,7 +142,7 @@ it('creates message when prevent_create_message returns false', function () {
 });
 
 it('creates message when prevent_create_message is null', function () {
-    config()->set('mail-manager.sending.prevent_create_message');
+    config()->set('messenger.sending.prevent_create_message');
 
     $service = new MessageService;
     $service->setReceiver(TestReceiver::class, $this->receiver->id)
@@ -155,7 +155,7 @@ it('creates message when prevent_create_message is null', function () {
 
 it('prevent_create_message receives receiver class and id', function () {
     $receivedArgs = [];
-    config()->set('mail-manager.sending.prevent_create_message', function (string $class, int $id) use (&$receivedArgs) {
+    config()->set('messenger.sending.prevent_create_message', function (string $class, int $id) use (&$receivedArgs) {
         $receivedArgs = ['class' => $class, 'id' => $id];
 
         return false;

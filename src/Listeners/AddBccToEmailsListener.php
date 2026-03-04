@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Listeners;
+namespace Topoff\Messenger\Listeners;
 
 use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Mail\Message;
@@ -16,7 +16,7 @@ class AddBccToEmailsListener
     public function handle(MessageSending $event): void
     {
         try {
-            $checker = config('mail-manager.bcc.check_should_add_bcc');
+            $checker = config('messenger.bcc.check_should_add_bcc');
             if (is_callable($checker) && ! $checker()) {
                 return;
             }

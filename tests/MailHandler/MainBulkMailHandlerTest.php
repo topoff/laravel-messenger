@@ -1,9 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Mail;
-use Topoff\MailManager\Mail\BulkMail;
-use Topoff\MailManager\MailHandler\MainBulkMailHandler;
-use Topoff\MailManager\Models\Message;
+use Topoff\Messenger\Mail\BulkMail;
+use Topoff\Messenger\MailHandler\MainBulkMailHandler;
+use Topoff\Messenger\Models\Message;
 use Workbench\App\Models\TestMessagable;
 use Workbench\App\Models\TestReceiver;
 
@@ -154,7 +154,7 @@ it('uses the configured bulk mail class', function () {
 });
 
 it('throws when no bulk mail class is configured', function () {
-    config()->set('mail-manager.mail.default_bulk_mail_class');
+    config()->set('messenger.mail.default_bulk_mail_class');
 
     $handler = new MainBulkMailHandler($this->receiver, collect());
 

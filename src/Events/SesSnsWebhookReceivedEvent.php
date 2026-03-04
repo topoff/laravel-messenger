@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Events;
+namespace Topoff\Messenger\Events;
 
 class SesSnsWebhookReceivedEvent
 {

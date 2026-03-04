@@ -1,8 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Date;
-use Topoff\MailManager\Models\Message;
-use Topoff\MailManager\Models\MessageType;
+use Topoff\Messenger\Models\Message;
+use Topoff\Messenger\Models\MessageType;
 use Workbench\App\Models\TestMessagable;
 use Workbench\App\Models\TestReceiver;
 use Workbench\App\Models\TestSender;
@@ -15,7 +15,7 @@ it('can create a message', function () {
 });
 
 it('uses the configured database connection', function () {
-    config()->set('mail-manager.database.connection', 'custom');
+    config()->set('messenger.database.connection', 'custom');
     $message = new Message;
 
     expect($message->getConnectionName())->toBe('custom');
@@ -64,7 +64,7 @@ it('has a morphTo messagable relationship', function () {
 
 it('does not crash when messagable_type is an invalid class string', function () {
     $message = createMessage([
-        'messagable_type' => 'mail-manager-simulator',
+        'messagable_type' => 'messenger-simulator',
         'messagable_id' => 1,
     ]);
 

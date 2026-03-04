@@ -1,12 +1,12 @@
 <?php
 
-namespace Topoff\MailManager\Services\SesSns;
+namespace Topoff\Messenger\Services\SesSns;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Route;
 use RuntimeException;
 use Throwable;
-use Topoff\MailManager\Contracts\SesSnsProvisioningApi;
+use Topoff\Messenger\Contracts\SesSnsProvisioningApi;
 
 class SesSnsSetupService
 {
@@ -123,7 +123,7 @@ class SesSnsSetupService
             }
         }
 
-        $region = (string) config('mail-manager.ses_sns.aws.region', 'eu-central-1');
+        $region = (string) config('messenger.ses_sns.aws.region', 'eu-central-1');
         $tenantName = $this->tenantName();
         if ($tenantName !== null) {
             $tenantExists = $this->api->tenantExists($tenantName);
@@ -159,7 +159,7 @@ class SesSnsSetupService
                 'region' => $region,
                 'configuration_sets' => $configurationSets,
                 'topic_arn' => $topicArn,
-                'topic_name' => (string) config('mail-manager.ses_sns.topic_name', ''),
+                'topic_name' => (string) config('messenger.ses_sns.topic_name', ''),
                 'callback_endpoint' => $endpoint,
                 'event_types' => $eventTypes,
             ],
@@ -248,10 +248,10 @@ class SesSnsSetupService
      */
     protected function configurationSets(): array
     {
-        $sets = (array) config('mail-manager.ses_sns.configuration_sets', []);
+        $sets = (array) config('messenger.ses_sns.configuration_sets', []);
 
         if ($sets === []) {
-            throw new RuntimeException('No configuration sets configured. Set mail-manager.ses_sns.configuration_sets.');
+            throw new RuntimeException('No configuration sets configured. Set messenger.ses_sns.configuration_sets.');
         }
 
         return $sets;
@@ -270,13 +270,13 @@ class SesSnsSetupService
             return $topicArn;
         }
 
-        if (! (bool) config('mail-manager.ses_sns.create_topic_if_missing', true)) {
+        if (! (bool) config('messenger.ses_sns.create_topic_if_missing', true)) {
             throw new RuntimeException('SNS topic does not exist and create_topic_if_missing is false.');
         }
 
-        $topicName = (string) config('mail-manager.ses_sns.topic_name', '');
+        $topicName = (string) config('messenger.ses_sns.topic_name', '');
         if ($topicName === '') {
-            throw new RuntimeException('mail-manager.ses_sns.topic_name is empty.');
+            throw new RuntimeException('messenger.ses_sns.topic_name is empty.');
         }
 
         $createdArn = $this->api->createTopic($topicName);
@@ -295,7 +295,7 @@ class SesSnsSetupService
      */
     protected function ensureTopicPolicy(string $topicArn, string $accountId, array $configurationSets, array &$steps): void
     {
-        if (! (bool) config('mail-manager.ses_sns.set_topic_policy', true)) {
+        if (! (bool) config('messenger.ses_sns.set_topic_policy', true)) {
             $steps[] = ['label' => 'SNS topic policy', 'ok' => true, 'details' => 'Skipped by configuration.'];
 
             return;
@@ -312,7 +312,7 @@ class SesSnsSetupService
      */
     protected function ensureHttpsSubscription(string $topicArn, array &$steps): void
     {
-        if (! (bool) config('mail-manager.ses_sns.create_https_subscription_if_missing', true)) {
+        if (! (bool) config('messenger.ses_sns.create_https_subscription_if_missing', true)) {
             $steps[] = ['label' => 'SNS HTTPS subscription', 'ok' => true, 'details' => 'Skipped by configuration.'];
 
             return;
@@ -320,13 +320,13 @@ class SesSnsSetupService
 
         $endpoint = $this->callbackEndpoint();
         if ($endpoint === '') {
-            throw new RuntimeException('Callback endpoint is empty. Configure mail-manager.ses_sns.callback_endpoint or APP_URL.');
+            throw new RuntimeException('Callback endpoint is empty. Configure messenger.ses_sns.callback_endpoint or APP_URL.');
         }
 
         if (! $this->isPublicHttpsEndpoint($endpoint)) {
             throw new RuntimeException(
                 'Callback endpoint is not publicly reachable via HTTPS for AWS SNS: '.$endpoint.
-                '. Use a public HTTPS URL in mail-manager.ses_sns.callback_endpoint or set create_https_subscription_if_missing=false.'
+                '. Use a public HTTPS URL in messenger.ses_sns.callback_endpoint or set create_https_subscription_if_missing=false.'
             );
         }
 
@@ -370,7 +370,7 @@ class SesSnsSetupService
             $eventDestName,
             $topicArn,
             $this->eventTypes(),
-            (bool) config('mail-manager.ses_sns.enable_event_destination', true),
+            (bool) config('messenger.ses_sns.enable_event_destination', true),
         );
 
         $steps[] = ['label' => 'SES event destination'.$suffix, 'ok' => true, 'details' => 'Upserted with SNS topic: '.$topicArn];
@@ -378,12 +378,12 @@ class SesSnsSetupService
 
     protected function resolveTopicArn(): string
     {
-        $configuredTopicArn = (string) config('mail-manager.ses_sns.topic_arn', '');
+        $configuredTopicArn = (string) config('messenger.ses_sns.topic_arn', '');
         if ($configuredTopicArn !== '') {
             return $configuredTopicArn;
         }
 
-        $topicName = (string) config('mail-manager.ses_sns.topic_name', '');
+        $topicName = (string) config('messenger.ses_sns.topic_name', '');
         if ($topicName === '') {
             return '';
         }
@@ -393,7 +393,7 @@ class SesSnsSetupService
 
     protected function accountId(): string
     {
-        $configuredAccountId = (string) config('mail-manager.ses_sns.aws.account_id', '');
+        $configuredAccountId = (string) config('messenger.ses_sns.aws.account_id', '');
         if ($configuredAccountId !== '') {
             return $configuredAccountId;
         }
@@ -403,16 +403,16 @@ class SesSnsSetupService
 
     protected function callbackEndpoint(): string
     {
-        $configuredEndpoint = (string) config('mail-manager.ses_sns.callback_endpoint', '');
+        $configuredEndpoint = (string) config('messenger.ses_sns.callback_endpoint', '');
         if ($configuredEndpoint !== '') {
             return $configuredEndpoint;
         }
 
-        if (! Route::has('mail-manager.tracking.sns')) {
+        if (! Route::has('messenger.tracking.sns')) {
             return '';
         }
 
-        return route('mail-manager.tracking.sns');
+        return route('messenger.tracking.sns');
     }
 
     /**
@@ -420,14 +420,14 @@ class SesSnsSetupService
      */
     protected function eventTypes(): array
     {
-        $eventTypes = (array) config('mail-manager.ses_sns.event_types', ['SEND', 'REJECT', 'BOUNCE', 'COMPLAINT', 'DELIVERY']);
+        $eventTypes = (array) config('messenger.ses_sns.event_types', ['SEND', 'REJECT', 'BOUNCE', 'COMPLAINT', 'DELIVERY']);
 
         return array_values(array_unique(array_map(static fn (mixed $type): string => strtoupper((string) $type), $eventTypes)));
     }
 
     protected function tenantName(): ?string
     {
-        $value = trim((string) config('mail-manager.ses_sns.tenant.name', ''));
+        $value = trim((string) config('messenger.ses_sns.tenant.name', ''));
 
         return $value !== '' ? $value : null;
     }
@@ -452,7 +452,7 @@ class SesSnsSetupService
             $steps[] = ['label' => 'SES tenant'.$suffix, 'ok' => true, 'details' => 'Already exists: '.$tenantName];
         }
 
-        $region = (string) config('mail-manager.ses_sns.aws.region', 'eu-central-1');
+        $region = (string) config('messenger.ses_sns.aws.region', 'eu-central-1');
         $configurationSetArn = sprintf('arn:aws:ses:%s:%s:configuration-set/%s', $region, $accountId, $configSetName);
         if (! $this->api->tenantHasResourceAssociation($tenantName, $configurationSetArn)) {
             $this->api->associateTenantResource($tenantName, $configurationSetArn);
@@ -480,7 +480,7 @@ class SesSnsSetupService
             return;
         }
 
-        $region = (string) config('mail-manager.ses_sns.aws.region', 'eu-central-1');
+        $region = (string) config('messenger.ses_sns.aws.region', 'eu-central-1');
         $accountId = $this->accountId();
         $configurationSetArn = sprintf('arn:aws:ses:%s:%s:configuration-set/%s', $region, $accountId, $configurationSet);
 
@@ -500,7 +500,7 @@ class SesSnsSetupService
      */
     protected function buildTopicPolicy(string $topicArn, string $accountId, array $configurationSets): array
     {
-        $region = (string) config('mail-manager.ses_sns.aws.region', 'eu-central-1');
+        $region = (string) config('messenger.ses_sns.aws.region', 'eu-central-1');
 
         $configurationSetArns = array_values(array_map(
             static fn (array $set): string => "arn:aws:ses:{$region}:{$accountId}:configuration-set/{$set['configuration_set']}",

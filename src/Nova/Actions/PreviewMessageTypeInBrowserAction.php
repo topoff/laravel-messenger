@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Nova\Actions;
+namespace Topoff\Messenger\Nova\Actions;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Database\Eloquent\Model;
@@ -13,7 +13,7 @@ use Laravel\Nova\Actions\ActionResponse;
 use Laravel\Nova\Fields\ActionFields;
 use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Topoff\MailManager\Models\MessageType;
+use Topoff\Messenger\Models\MessageType;
 
 class PreviewMessageTypeInBrowserAction extends Action
 {
@@ -33,7 +33,7 @@ class PreviewMessageTypeInBrowserAction extends Action
         }
 
         $messageId = (int) $fields->get('message_id');
-        $messageModelClass = config('mail-manager.models.message');
+        $messageModelClass = config('messenger.models.message');
         $message = $messageModelClass::query()
             ->where('id', $messageId)
             ->where('message_type_id', $messageType->id)
@@ -44,7 +44,7 @@ class PreviewMessageTypeInBrowserAction extends Action
         }
 
         $previewUrl = URL::temporarySignedRoute(
-            'mail-manager.tracking.nova.preview-message',
+            'messenger.tracking.nova.preview-message',
             now()->addMinutes(10),
             ['message' => $message->id]
         );
@@ -61,7 +61,7 @@ class PreviewMessageTypeInBrowserAction extends Action
         $options = [];
 
         if ($messageTypeId) {
-            $messageModelClass = config('mail-manager.models.message');
+            $messageModelClass = config('messenger.models.message');
             $options = $messageModelClass::query()
                 ->where('message_type_id', $messageTypeId)
                 ->orderByDesc('created_at')

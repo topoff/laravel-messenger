@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Nova\Filters;
+namespace Topoff\Messenger\Nova\Filters;
 
 use Illuminate\Database\Eloquent\Builder;
 use Laravel\Nova\Filters\Filter;
@@ -24,7 +24,7 @@ class MessagesMessageTypeFilter extends Filter
 
     public function options(NovaRequest $request): array
     {
-        $messageTypeModel = config('mail-manager.models.message_type');
+        $messageTypeModel = config('messenger.models.message_type');
 
         return (new $messageTypeModel)
             ->newQuery()

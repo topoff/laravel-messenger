@@ -1,13 +1,13 @@
 <?php
 
-namespace Topoff\MailManager\Nova\Resources;
+namespace Topoff\Messenger\Nova\Resources;
 
 use Laravel\Nova\Fields\DateTime;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
-use Topoff\MailManager\Models\NotificationLog as NotificationLogModel;
+use Topoff\Messenger\Models\NotificationLog as NotificationLogModel;
 
 class NotificationLog extends Resource
 {

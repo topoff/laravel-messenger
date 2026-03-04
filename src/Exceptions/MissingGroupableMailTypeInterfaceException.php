@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Exceptions;
+namespace Topoff\Messenger\Exceptions;
 
 use Exception;
 

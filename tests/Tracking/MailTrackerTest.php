@@ -8,13 +8,13 @@ use Symfony\Component\Mailer\Envelope;
 use Symfony\Component\Mailer\SentMessage as SymfonySentMessage;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
-use Topoff\MailManager\Tracking\MailTracker;
+use Topoff\Messenger\Tracking\MailTracker;
 
 it('injects tracking pixel and links and persists tracking metadata on messageSending', function () {
-    config()->set('mail-manager.tracking.inject_pixel', true);
-    config()->set('mail-manager.tracking.track_links', true);
-    config()->set('mail-manager.tracking.log_content', true);
-    config()->set('mail-manager.tracking.log_content_strategy', 'database');
+    config()->set('messenger.tracking.inject_pixel', true);
+    config()->set('messenger.tracking.track_links', true);
+    config()->set('messenger.tracking.log_content', true);
+    config()->set('messenger.tracking.log_content_strategy', 'database');
 
     $messageModel = createMessage();
 
@@ -39,7 +39,7 @@ it('injects tracking pixel and links and persists tracking metadata on messageSe
         ->and($messageModel->tracking_content)->toContain('https://example.com/path?x=1&amp;y=2');
 
     $body = $email->getBody()->getBody() ?? '';
-    $expectedTrackedUrl = URL::signedRoute('mail-manager.tracking.click', [
+    $expectedTrackedUrl = URL::signedRoute('messenger.tracking.click', [
         'l' => 'https://example.com/path?x=1&y=2',
         'h' => $messageModel->tracking_hash,
     ]);
@@ -104,8 +104,8 @@ it('writes tracking message id from transport when ses header is missing', funct
 });
 
 it('applies the same tracking hash to all grouped messages for bulk sends', function () {
-    config()->set('mail-manager.tracking.inject_pixel', true);
-    config()->set('mail-manager.tracking.track_links', true);
+    config()->set('messenger.tracking.inject_pixel', true);
+    config()->set('messenger.tracking.track_links', true);
 
     $m1 = createMessage();
     $m2 = createMessage([
@@ -132,7 +132,7 @@ it('applies the same tracking hash to all grouped messages for bulk sends', func
 });
 
 it('injects X-SES-CONFIGURATION-SET header when messageType has ses_configuration_set', function () {
-    config()->set('mail-manager.ses_sns.configuration_sets', [
+    config()->set('messenger.ses_sns.configuration_sets', [
         'transactional' => [
             'configuration_set' => 'my-tenant-prod-transactional',
             'event_destination' => 'my-tenant-prod-transactional-sns',
@@ -157,14 +157,14 @@ it('injects X-SES-CONFIGURATION-SET header when messageType has ses_configuratio
 });
 
 it('overrides From address based on identity mapped to config set', function () {
-    config()->set('mail-manager.ses_sns.configuration_sets', [
+    config()->set('messenger.ses_sns.configuration_sets', [
         'outreach' => [
             'configuration_set' => 'my-tenant-prod-outreach',
             'event_destination' => 'my-tenant-prod-outreach-sns',
             'identity' => 'outreach',
         ],
     ]);
-    config()->set('mail-manager.ses_sns.sending.identities', [
+    config()->set('messenger.ses_sns.sending.identities', [
         'outreach' => [
             'identity_domain' => 'connect.example.com',
             'mail_from_domain' => 'bounce.connect.example.com',
@@ -193,14 +193,14 @@ it('overrides From address based on identity mapped to config set', function () 
 });
 
 it('injects X-SES-MESSAGE-TAGS header with tenant, stream, mail_type', function () {
-    config()->set('mail-manager.ses_sns.configuration_sets', [
+    config()->set('messenger.ses_sns.configuration_sets', [
         'marketing' => [
             'configuration_set' => 'my-tenant-prod-marketing',
             'event_destination' => 'my-tenant-prod-marketing-sns',
             'identity' => 'default',
         ],
     ]);
-    config()->set('mail-manager.ses_sns.tenant.name', 'my-tenant-prod-tenant');
+    config()->set('messenger.ses_sns.tenant.name', 'my-tenant-prod-tenant');
 
     $messageType = createMessageType(['ses_configuration_set' => 'marketing']);
     $messageModel = createMessage(['message_type_id' => $messageType->id]);
@@ -221,14 +221,14 @@ it('injects X-SES-MESSAGE-TAGS header with tenant, stream, mail_type', function 
 });
 
 it('does not override From when identity has no mail_from_address', function () {
-    config()->set('mail-manager.ses_sns.configuration_sets', [
+    config()->set('messenger.ses_sns.configuration_sets', [
         'default' => [
             'configuration_set' => 'my-tenant-prod-tracking',
             'event_destination' => 'my-tenant-prod-sns',
             'identity' => 'default',
         ],
     ]);
-    config()->set('mail-manager.ses_sns.sending.identities', [
+    config()->set('messenger.ses_sns.sending.identities', [
         'default' => [
             'identity_domain' => 'example.com',
             'mail_from_domain' => 'bounce.example.com',

@@ -1,9 +1,9 @@
-# laravel-mail-manager
+# laravel-messenger
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/topoff/laravel-mail-manager.svg?style=flat-square)](https://packagist.org/packages/topoff/laravel-mail-manager)
-[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/topoff/laravel-mail-manager/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/topoff/laravel-mail-manager/actions?query=workflow%3Arun-tests+branch%3Amain)
-[![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/topoff/laravel-mail-manager/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/topoff/laravel-mail-manager/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
-[![Total Downloads](https://img.shields.io/packagist/dt/topoff/laravel-mail-manager.svg?style=flat-square)](https://packagist.org/packages/topoff/laravel-mail-manager)
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/topoff/laravel-messenger.svg?style=flat-square)](https://packagist.org/packages/topoff/laravel-messenger)
+[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/topoff/laravel-messenger/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/topoff/laravel-messenger/actions?query=workflow%3Arun-tests+branch%3Amain)
+[![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/topoff/laravel-messenger/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/topoff/laravel-messenger/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
+[![Total Downloads](https://img.shields.io/packagist/dt/topoff/laravel-messenger.svg?style=flat-square)](https://packagist.org/packages/topoff/laravel-messenger)
 
 This package provides a comprehensive solution for managing mail templates and mail sending in Laravel applications.
 
@@ -12,13 +12,13 @@ This package provides a comprehensive solution for managing mail templates and m
 You can install the package via composer:
 
 ```bash
-composer require topoff/laravel-mail-manager
+composer require topoff/laravel-messenger
 ```
 
 You can publish the config file with:
 
 ```bash
-php artisan vendor:publish --tag="mail-manager-config"
+php artisan vendor:publish --tag="messenger-config"
 ```
 
 ## Usage
@@ -32,7 +32,7 @@ The package can provision SES/SNS tracking resources via AWS API:
 - SES Configuration Set
 - SES Event Destination (SNS)
 - SNS Topic policy for SES publish
-- SNS HTTPS subscription to `mail-manager.tracking.sns`
+- SNS HTTPS subscription to `messenger.tracking.sns`
 
 Enable it in config:
 
@@ -45,11 +45,11 @@ Enable it in config:
 Then run:
 
 ```bash
-php artisan mail-manager:ses-sns:setup-tracking
-php artisan mail-manager:ses-sns:check-tracking
-php artisan mail-manager:ses-sns:setup-sending
-php artisan mail-manager:ses-sns:check-sending
-php artisan mail-manager:ses-sns:teardown --force
+php artisan messenger:ses-sns:setup-tracking
+php artisan messenger:ses-sns:check-tracking
+php artisan messenger:ses-sns:setup-sending
+php artisan messenger:ses-sns:check-sending
+php artisan messenger:ses-sns:teardown --force
 ```
 
 In Nova (`Message Types` resource), use action `Setup SES/SNS Tracking` to run setup and open the status/check page.
@@ -68,12 +68,12 @@ If Laravel Nova is installed, the package can auto-register a tracked messages r
 
 Configuration keys:
 
-- `mail-manager.tracking.nova.enabled`
-- `mail-manager.tracking.nova.register_resource`
-- `mail-manager.tracking.nova.resource`
-- `mail-manager.tracking.nova.preview_route`
+- `messenger.tracking.nova.enabled`
+- `messenger.tracking.nova.register_resource`
+- `messenger.tracking.nova.resource`
+- `messenger.tracking.nova.preview_route`
 
-The preview action uses a temporary signed URL and the package route `mail-manager.tracking.nova.preview`.
+The preview action uses a temporary signed URL and the package route `messenger.tracking.nova.preview`.
 
 ## Development
 

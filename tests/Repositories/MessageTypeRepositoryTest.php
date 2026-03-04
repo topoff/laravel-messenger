@@ -1,7 +1,7 @@
 <?php
 
-use Topoff\MailManager\Models\MessageType;
-use Topoff\MailManager\Repositories\MessageTypeRepository;
+use Topoff\Messenger\Models\MessageType;
+use Topoff\Messenger\Repositories\MessageTypeRepository;
 
 beforeEach(function () {
     $this->repository = app(MessageTypeRepository::class);

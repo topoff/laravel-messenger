@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Http\Controllers;
+namespace Topoff\Messenger\Http\Controllers;
 
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -8,17 +8,17 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
-use Topoff\MailManager\Mail\CustomMessageMail;
-use Topoff\MailManager\Models\Message;
+use Topoff\Messenger\Mail\CustomMessageMail;
+use Topoff\Messenger\Models\Message;
 
 class SesSnsDashboardCustomMailController extends Controller
 {
     public function show(Request $request)
     {
-        return view('mail-manager::ses-sns-custom-mail-action', [
-            'send_url' => URL::temporarySignedRoute('mail-manager.ses-sns.dashboard.custom-mail.send', now()->addMinutes(30)),
-            'back_url' => URL::temporarySignedRoute('mail-manager.ses-sns.dashboard', now()->addMinutes(30)),
-            'preview_url' => URL::temporarySignedRoute('mail-manager.ses-sns.dashboard.custom-mail.preview', now()->addMinutes(30)),
+        return view('messenger::ses-sns-custom-mail-action', [
+            'send_url' => URL::temporarySignedRoute('messenger.ses-sns.dashboard.custom-mail.send', now()->addMinutes(30)),
+            'back_url' => URL::temporarySignedRoute('messenger.ses-sns.dashboard', now()->addMinutes(30)),
+            'preview_url' => URL::temporarySignedRoute('messenger.ses-sns.dashboard.custom-mail.preview', now()->addMinutes(30)),
         ]);
     }
 
@@ -38,8 +38,8 @@ class SesSnsDashboardCustomMailController extends Controller
         $mailer = $payload['mailer'] ?? config('mail.default');
         Mail::mailer($mailer)->to($payload['email'])->send(new CustomMessageMail($message));
 
-        return redirect()->to(URL::temporarySignedRoute('mail-manager.ses-sns.dashboard.custom-mail', now()->addMinutes(30)))
-            ->with('mail_manager_custom_mail_result', [
+        return redirect()->to(URL::temporarySignedRoute('messenger.ses-sns.dashboard.custom-mail', now()->addMinutes(30)))
+            ->with('messenger_custom_mail_result', [
                 'ok' => true,
                 'email' => $payload['email'],
                 'subject' => $payload['subject'],

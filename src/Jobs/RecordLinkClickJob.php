@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Jobs;
+namespace Topoff\Messenger\Jobs;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -9,8 +9,8 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use RuntimeException;
-use Topoff\MailManager\Events\MessageLinkClickedEvent;
-use Topoff\MailManager\Models\Message;
+use Topoff\Messenger\Events\MessageLinkClickedEvent;
+use Topoff\Messenger\Models\Message;
 
 class RecordLinkClickJob implements ShouldQueue
 {
@@ -32,7 +32,7 @@ class RecordLinkClickJob implements ShouldQueue
     public function handle(): void
     {
         /** @var class-string<Message> $messageClass */
-        $messageClass = config('mail-manager.models.message');
+        $messageClass = config('messenger.models.message');
 
         $connection = (new $messageClass)->getConnectionName();
         $updatedMessage = DB::connection($connection)->transaction(function () use ($messageClass, $connection): ?Message {

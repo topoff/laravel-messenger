@@ -8,17 +8,17 @@ return new class extends Migration
 {
     public function getConnection(): ?string
     {
-        $connection = config('mail-manager.logs.connection');
+        $connection = config('messenger.logs.connection');
 
         return is_string($connection) && $connection !== ''
             ? $connection
-            : config('mail-manager.database.connection');
+            : config('messenger.database.connection');
     }
 
     public function up(): void
     {
         $connection = $this->getConnection();
-        $tableName = (string) config('mail-manager.logs.email_log_table', 'email_log');
+        $tableName = (string) config('messenger.logs.email_log_table', 'email_log');
 
         if (Schema::connection($connection)->hasTable($tableName)) {
             return;
@@ -38,7 +38,7 @@ return new class extends Migration
     public function down(): void
     {
         $connection = $this->getConnection();
-        $tableName = (string) config('mail-manager.logs.email_log_table', 'email_log');
+        $tableName = (string) config('messenger.logs.email_log_table', 'email_log');
 
         Schema::connection($connection)->dropIfExists($tableName);
     }

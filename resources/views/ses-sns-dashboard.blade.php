@@ -107,8 +107,8 @@
     </nav>
 
     {{-- Command Result Alert Banner --}}
-    @if(session()->has('mail_manager_ses_sns_command_result'))
-        @php $result = (array) session('mail_manager_ses_sns_command_result'); @endphp
+    @if(session()->has('messenger_ses_sns_command_result'))
+        @php $result = (array) session('messenger_ses_sns_command_result'); @endphp
         <div class="alert {{ (bool) data_get($result, 'ok') ? 'alert-ok' : 'alert-fail' }}" id="command-result">
             <p style="margin:0;">
                 @if((bool) data_get($result, 'ok'))
@@ -364,7 +364,7 @@
             @endif
 
             @if($mfDomain !== '')
-                @php $region = (string) config('mail-manager.ses_sns.aws.region', 'eu-central-1'); @endphp
+                @php $region = (string) config('messenger.ses_sns.aws.region', 'eu-central-1'); @endphp
                 <h3 style="margin-top: 12px;">MAIL FROM DNS Records</h3>
                 <table>
                     <tr>

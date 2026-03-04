@@ -38,7 +38,7 @@ AWS_SES_OUTREACH_IDENTITY_DOMAIN=outreach.example.com
 AWS_SES_OUTREACH_MAIL_FROM_DOMAIN=mail.outreach.example.com
 ```
 
-Der Befehl `mail-manager:ses-sns:setup-all` provisioniert alle konfigurierten Identities automatisch.
+Der Befehl `messenger:ses-sns:setup-all` provisioniert alle konfigurierten Identities automatisch.
 
 ---
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Nova\Resources;
+namespace Topoff\Messenger\Nova\Resources;
 
 use Laravel\Nova\Fields\DateTime;
 use Laravel\Nova\Fields\ID;
@@ -9,18 +9,18 @@ use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
-use Topoff\MailManager\Models\Message as MessageModel;
-use Topoff\MailManager\Nova\Actions\PreviewMessageInBrowserAction;
-use Topoff\MailManager\Nova\Actions\ResendAsNewMessageAction;
-use Topoff\MailManager\Nova\Actions\ShowRealSentMessageAction;
-use Topoff\MailManager\Nova\Filters\DateFilter;
-use Topoff\MailManager\Nova\Filters\MessagesMessageableTypeFilter;
-use Topoff\MailManager\Nova\Filters\MessagesMessageTypeFilter;
-use Topoff\MailManager\Nova\Filters\MessagesReceiverTypeFilter;
-use Topoff\MailManager\Nova\Filters\MessagesStatusFilter;
-use Topoff\MailManager\Nova\Lenses\MessagesByDomainTrackingLens;
-use Topoff\MailManager\Nova\Lenses\MessagesByTypeTrackingLens;
-use Topoff\MailManager\Nova\Lenses\MessagesTrackingLens;
+use Topoff\Messenger\Models\Message as MessageModel;
+use Topoff\Messenger\Nova\Actions\PreviewMessageInBrowserAction;
+use Topoff\Messenger\Nova\Actions\ResendAsNewMessageAction;
+use Topoff\Messenger\Nova\Actions\ShowRealSentMessageAction;
+use Topoff\Messenger\Nova\Filters\DateFilter;
+use Topoff\Messenger\Nova\Filters\MessagesMessageableTypeFilter;
+use Topoff\Messenger\Nova\Filters\MessagesMessageTypeFilter;
+use Topoff\Messenger\Nova\Filters\MessagesReceiverTypeFilter;
+use Topoff\Messenger\Nova\Filters\MessagesStatusFilter;
+use Topoff\Messenger\Nova\Lenses\MessagesByDomainTrackingLens;
+use Topoff\Messenger\Nova\Lenses\MessagesByTypeTrackingLens;
+use Topoff\Messenger\Nova\Lenses\MessagesTrackingLens;
 
 class Message extends Resource
 {

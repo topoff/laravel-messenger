@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Models;
+namespace Topoff\Messenger\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -41,7 +41,7 @@ class MessageType extends Model
     {
         parent::__construct($attributes);
 
-        if ($connection = config('mail-manager.database.connection')) {
+        if ($connection = config('messenger.database.connection')) {
             $this->connection = $connection;
         }
     }
@@ -56,7 +56,7 @@ class MessageType extends Model
 
     public function messages(): HasMany
     {
-        return $this->hasMany(config('mail-manager.models.message'), 'message_type_id');
+        return $this->hasMany(config('messenger.models.message'), 'message_type_id');
     }
 
     #[\Override]

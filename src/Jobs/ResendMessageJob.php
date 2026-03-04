@@ -1,13 +1,13 @@
 <?php
 
-namespace Topoff\MailManager\Jobs;
+namespace Topoff\Messenger\Jobs;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use RuntimeException;
-use Topoff\MailManager\MailHandler\MainMailHandler;
+use Topoff\Messenger\MailHandler\MainMailHandler;
 
 class ResendMessageJob implements ShouldQueue
 {
@@ -17,7 +17,7 @@ class ResendMessageJob implements ShouldQueue
 
     public function handle(): void
     {
-        $messageClass = config('mail-manager.models.message');
+        $messageClass = config('messenger.models.message');
         $message = $messageClass::query()->with('messageType')->findOrFail($this->messageId);
 
         $handlerClass = $message->messageType?->single_handler;

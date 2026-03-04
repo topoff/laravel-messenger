@@ -3,14 +3,14 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Topoff\MailManager\Mail\CustomMessageMail;
-use Topoff\MailManager\MailHandler\MainMailHandler;
+use Topoff\Messenger\Mail\CustomMessageMail;
+use Topoff\Messenger\MailHandler\MainMailHandler;
 
 return new class extends Migration
 {
     public function getConnection(): ?string
     {
-        return config('mail-manager.database.connection');
+        return config('messenger.database.connection');
     }
 
     public function up(): void

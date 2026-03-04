@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\MailHandler;
+namespace Topoff\Messenger\MailHandler;
 
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
@@ -9,10 +9,10 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Throwable;
-use Topoff\MailManager\Contracts\GroupableMailTypeInterface;
-use Topoff\MailManager\Contracts\MessageReceiverInterface;
-use Topoff\MailManager\Exceptions\ReceiverMissingException;
-use Topoff\MailManager\Models\Message;
+use Topoff\Messenger\Contracts\GroupableMailTypeInterface;
+use Topoff\Messenger\Contracts\MessageReceiverInterface;
+use Topoff\Messenger\Exceptions\ReceiverMissingException;
+use Topoff\Messenger\Models\Message;
 
 /**
  * Base / Parent class of all MailHandlers
@@ -28,7 +28,7 @@ use Topoff\MailManager\Models\Message;
  *
  * They are even called for every line in a bulk mail with multiple messages
  *
- * @see \Topoff\MailManager\MailHandler\MainBulkMailHandler::send()
+ * @see \Topoff\Messenger\MailHandler\MainBulkMailHandler::send()
  */
 class MainMailHandler implements GroupableMailTypeInterface
 {
@@ -53,7 +53,7 @@ class MainMailHandler implements GroupableMailTypeInterface
 
     public function shouldBeSentInThisEnvironment(): bool
     {
-        $checker = config('mail-manager.sending.check_should_send');
+        $checker = config('messenger.sending.check_should_send');
 
         if (is_callable($checker)) {
             return $checker();

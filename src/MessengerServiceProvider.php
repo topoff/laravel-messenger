@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager;
+namespace Topoff\Messenger;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\Eloquent\Model;
@@ -11,33 +11,33 @@ use Illuminate\Support\Facades\Event;
 use Laravel\Nova\Nova;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Topoff\MailManager\Console\CheckSesSendingCommand;
-use Topoff\MailManager\Console\CheckSesSnsTrackingCommand;
-use Topoff\MailManager\Console\SetupSesSendingCommand;
-use Topoff\MailManager\Console\SetupSesSnsAllCommand;
-use Topoff\MailManager\Console\SetupSesSnsTrackingCommand;
-use Topoff\MailManager\Console\TeardownSesSnsTrackingCommand;
-use Topoff\MailManager\Console\TestSesSnsEventsCommand;
-use Topoff\MailManager\Contracts\SesSnsProvisioningApi;
-use Topoff\MailManager\Jobs\CleanupMailManagerTablesJob;
-use Topoff\MailManager\Listeners\AddBccToEmailsListener;
-use Topoff\MailManager\Listeners\LogEmailsListener;
-use Topoff\MailManager\Listeners\LogNotificationListener;
-use Topoff\MailManager\Nova\Resources\EmailLog as EmailLogResource;
-use Topoff\MailManager\Nova\Resources\Message;
-use Topoff\MailManager\Nova\Resources\MessageType as MessageTypeResource;
-use Topoff\MailManager\Nova\Resources\NotificationLog as NotificationLogResource;
-use Topoff\MailManager\Observers\MessageTypeObserver;
-use Topoff\MailManager\Repositories\MessageTypeRepository;
-use Topoff\MailManager\Services\SesSns\AwsSesSnsProvisioningApi;
-use Topoff\MailManager\Tracking\MailTracker;
+use Topoff\Messenger\Console\CheckSesSendingCommand;
+use Topoff\Messenger\Console\CheckSesSnsTrackingCommand;
+use Topoff\Messenger\Console\SetupSesSendingCommand;
+use Topoff\Messenger\Console\SetupSesSnsAllCommand;
+use Topoff\Messenger\Console\SetupSesSnsTrackingCommand;
+use Topoff\Messenger\Console\TeardownSesSnsTrackingCommand;
+use Topoff\Messenger\Console\TestSesSnsEventsCommand;
+use Topoff\Messenger\Contracts\SesSnsProvisioningApi;
+use Topoff\Messenger\Jobs\CleanupMessengerTablesJob;
+use Topoff\Messenger\Listeners\AddBccToEmailsListener;
+use Topoff\Messenger\Listeners\LogEmailsListener;
+use Topoff\Messenger\Listeners\LogNotificationListener;
+use Topoff\Messenger\Nova\Resources\EmailLog as EmailLogResource;
+use Topoff\Messenger\Nova\Resources\Message;
+use Topoff\Messenger\Nova\Resources\MessageType as MessageTypeResource;
+use Topoff\Messenger\Nova\Resources\NotificationLog as NotificationLogResource;
+use Topoff\Messenger\Observers\MessageTypeObserver;
+use Topoff\Messenger\Repositories\MessageTypeRepository;
+use Topoff\Messenger\Services\SesSns\AwsSesSnsProvisioningApi;
+use Topoff\Messenger\Tracking\MailTracker;
 
-class MailManagerServiceProvider extends PackageServiceProvider
+class MessengerServiceProvider extends PackageServiceProvider
 {
     public function configurePackage(Package $package): void
     {
         $package
-            ->name('laravel-mail-manager')
+            ->name('laravel-messenger')
             ->hasConfigFile()
             ->hasViews()
             ->hasCommand(SetupSesSnsAllCommand::class)
@@ -67,7 +67,7 @@ class MailManagerServiceProvider extends PackageServiceProvider
 
     protected function registerObservers(): void
     {
-        $messageTypeClass = config('mail-manager.models.message_type');
+        $messageTypeClass = config('messenger.models.message_type');
         $messageTypeClass::observe(MessageTypeObserver::class);
     }
 
@@ -83,20 +83,20 @@ class MailManagerServiceProvider extends PackageServiceProvider
     protected function registerCleanupSchedule(): void
     {
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
-            if (! (bool) config('mail-manager.cleanup.schedule.enabled', true)) {
+            if (! (bool) config('messenger.cleanup.schedule.enabled', true)) {
                 return;
             }
 
-            $cronExpression = (string) config('mail-manager.cleanup.schedule.cron', '17 3 * * *');
-            $queue = config('mail-manager.cleanup.schedule.queue');
+            $cronExpression = (string) config('messenger.cleanup.schedule.cron', '17 3 * * *');
+            $queue = config('messenger.cleanup.schedule.queue');
 
-            $event = $schedule->job(new CleanupMailManagerTablesJob, $queue)->cron($cronExpression)->name('mail-manager.cleanup');
+            $event = $schedule->job(new CleanupMessengerTablesJob, $queue)->cron($cronExpression)->name('messenger.cleanup');
 
-            if ((bool) config('mail-manager.cleanup.schedule.without_overlapping', true)) {
+            if ((bool) config('messenger.cleanup.schedule.without_overlapping', true)) {
                 $event->withoutOverlapping();
             }
 
-            if ((bool) config('mail-manager.cleanup.schedule.on_one_server', false)) {
+            if ((bool) config('messenger.cleanup.schedule.on_one_server', false)) {
                 $event->onOneServer();
             }
         });
@@ -110,7 +110,7 @@ class MailManagerServiceProvider extends PackageServiceProvider
 
     protected function registerNovaResources(): void
     {
-        $novaConfig = (array) config('mail-manager.tracking.nova', []);
+        $novaConfig = (array) config('messenger.tracking.nova', []);
         $isNovaEnabled = (bool) ($novaConfig['enabled'] ?? true);
 
         if (! class_exists(Nova::class) || ! $isNovaEnabled) {
@@ -119,7 +119,7 @@ class MailManagerServiceProvider extends PackageServiceProvider
 
         $resourceClass = $novaConfig['resource'] ?? Message::class;
         if (is_string($resourceClass) && class_exists($resourceClass)) {
-            $modelClass = config('mail-manager.models.message');
+            $modelClass = config('messenger.models.message');
             if (is_string($modelClass) && is_subclass_of($modelClass, Model::class)) {
                 $resourceClass::$model = $modelClass;
             }
@@ -129,17 +129,17 @@ class MailManagerServiceProvider extends PackageServiceProvider
             return;
         }
 
-        $messageTypeModelClass = config('mail-manager.models.message_type');
+        $messageTypeModelClass = config('messenger.models.message_type');
         if (is_string($messageTypeModelClass) && is_subclass_of($messageTypeModelClass, Model::class)) {
             MessageTypeResource::$model = $messageTypeModelClass;
         }
 
-        $emailLogModelClass = config('mail-manager.models.email_log');
+        $emailLogModelClass = config('messenger.models.email_log');
         if (is_string($emailLogModelClass) && is_subclass_of($emailLogModelClass, Model::class)) {
             EmailLogResource::$model = $emailLogModelClass;
         }
 
-        $notificationLogModelClass = config('mail-manager.models.notification_log');
+        $notificationLogModelClass = config('messenger.models.notification_log');
         if (is_string($notificationLogModelClass) && is_subclass_of($notificationLogModelClass, Model::class)) {
             NotificationLogResource::$model = $notificationLogModelClass;
         }

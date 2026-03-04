@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Nova\Filters;
+namespace Topoff\Messenger\Nova\Filters;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Date;

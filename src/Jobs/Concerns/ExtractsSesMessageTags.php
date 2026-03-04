@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Jobs\Concerns;
+namespace Topoff\Messenger\Jobs\Concerns;
 
 trait ExtractsSesMessageTags
 {

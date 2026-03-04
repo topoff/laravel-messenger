@@ -1,9 +1,9 @@
 <?php
 
-namespace Topoff\MailManager\Tracking;
+namespace Topoff\Messenger\Tracking;
 
-use Topoff\MailManager\Jobs\ResendMessageJob;
-use Topoff\MailManager\Models\Message;
+use Topoff\Messenger\Jobs\ResendMessageJob;
+use Topoff\Messenger\Models\Message;
 
 class MessageResender
 {
@@ -50,7 +50,7 @@ class MessageResender
             'tracking_meta' => $resentMeta->toArray(),
         ]);
 
-        ResendMessageJob::dispatch($newMessage->id)->onQueue(config('mail-manager.tracking.tracker_queue'));
+        ResendMessageJob::dispatch($newMessage->id)->onQueue(config('messenger.tracking.tracker_queue'));
 
         return $newMessage;
     }
@@ -60,10 +60,10 @@ class MessageResender
      */
     private function messageModelClass(): string
     {
-        $modelClass = config('mail-manager.models.message');
+        $modelClass = config('messenger.models.message');
 
         if (! is_string($modelClass) || ! class_exists($modelClass) || ! is_a($modelClass, Message::class, true)) {
-            throw new \RuntimeException('Invalid mail-manager.models.message configuration.');
+            throw new \RuntimeException('Invalid messenger.models.message configuration.');
         }
 
         return $modelClass;

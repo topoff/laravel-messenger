@@ -1,22 +1,22 @@
 <?php
 
-use Topoff\MailManager\Contracts\SesSnsProvisioningApi;
-use Topoff\MailManager\Services\SesSns\SesSnsSetupService;
+use Topoff\Messenger\Contracts\SesSnsProvisioningApi;
+use Topoff\Messenger\Services\SesSns\SesSnsSetupService;
 
 it('provisions missing ses/sns resources and returns green status', function () {
-    config()->set('mail-manager.ses_sns.enabled', true);
-    config()->set('mail-manager.ses_sns.aws.region', 'eu-central-1');
-    config()->set('mail-manager.ses_sns.topic_name', 'mail-manager-events');
-    config()->set('mail-manager.ses_sns.configuration_sets', [
+    config()->set('messenger.ses_sns.enabled', true);
+    config()->set('messenger.ses_sns.aws.region', 'eu-central-1');
+    config()->set('messenger.ses_sns.topic_name', 'messenger-events');
+    config()->set('messenger.ses_sns.configuration_sets', [
         'default' => [
-            'configuration_set' => 'mail-manager-tracking',
-            'event_destination' => 'mail-manager-sns',
+            'configuration_set' => 'messenger-tracking',
+            'event_destination' => 'messenger-sns',
             'identity' => 'default',
         ],
     ]);
-    config()->set('mail-manager.ses_sns.callback_endpoint', 'https://mail-manager-demo.ngrok-free.app/email/sns');
-    config()->set('mail-manager.ses_sns.event_types', ['SEND', 'BOUNCE', 'COMPLAINT', 'DELIVERY']);
-    config()->set('mail-manager.ses_sns.tenant.name');
+    config()->set('messenger.ses_sns.callback_endpoint', 'https://messenger-demo.ngrok-free.app/email/sns');
+    config()->set('messenger.ses_sns.event_types', ['SEND', 'BOUNCE', 'COMPLAINT', 'DELIVERY']);
+    config()->set('messenger.ses_sns.tenant.name');
 
     $fake = new class implements SesSnsProvisioningApi
     {
@@ -171,20 +171,20 @@ it('provisions missing ses/sns resources and returns green status', function () 
         ->and($fake->topicArn)->not->toBeNull()
         ->and($fake->configurationSetExists)->toBeTrue()
         ->and($fake->eventDestination)->not->toBeNull()
-        ->and($fake->subscriptions)->toContain('https://mail-manager-demo.ngrok-free.app/email/sns');
+        ->and($fake->subscriptions)->toContain('https://messenger-demo.ngrok-free.app/email/sns');
 });
 
 it('returns failing checks when topic is missing', function () {
-    config()->set('mail-manager.ses_sns.enabled', true);
-    config()->set('mail-manager.ses_sns.topic_name', 'mail-manager-events');
-    config()->set('mail-manager.ses_sns.configuration_sets', [
+    config()->set('messenger.ses_sns.enabled', true);
+    config()->set('messenger.ses_sns.topic_name', 'messenger-events');
+    config()->set('messenger.ses_sns.configuration_sets', [
         'default' => [
-            'configuration_set' => 'mail-manager-tracking',
-            'event_destination' => 'mail-manager-sns',
+            'configuration_set' => 'messenger-tracking',
+            'event_destination' => 'messenger-sns',
             'identity' => 'default',
         ],
     ]);
-    config()->set('mail-manager.ses_sns.callback_endpoint', 'https://backend.example.test/email/sns');
+    config()->set('messenger.ses_sns.callback_endpoint', 'https://backend.example.test/email/sns');
 
     $fake = new class implements SesSnsProvisioningApi
     {
@@ -296,31 +296,31 @@ it('returns failing checks when topic is missing', function () {
 });
 
 it('tears down existing ses/sns resources', function () {
-    config()->set('mail-manager.ses_sns.enabled', true);
-    config()->set('mail-manager.ses_sns.aws.region', 'eu-central-1');
-    config()->set('mail-manager.ses_sns.aws.account_id', '123456789012');
-    config()->set('mail-manager.ses_sns.tenant.name', 'tenant-a');
-    config()->set('mail-manager.ses_sns.topic_name', 'mail-manager-events');
-    config()->set('mail-manager.ses_sns.configuration_sets', [
+    config()->set('messenger.ses_sns.enabled', true);
+    config()->set('messenger.ses_sns.aws.region', 'eu-central-1');
+    config()->set('messenger.ses_sns.aws.account_id', '123456789012');
+    config()->set('messenger.ses_sns.tenant.name', 'tenant-a');
+    config()->set('messenger.ses_sns.topic_name', 'messenger-events');
+    config()->set('messenger.ses_sns.configuration_sets', [
         'default' => [
-            'configuration_set' => 'mail-manager-tracking',
-            'event_destination' => 'mail-manager-sns',
+            'configuration_set' => 'messenger-tracking',
+            'event_destination' => 'messenger-sns',
             'identity' => 'default',
         ],
     ]);
-    config()->set('mail-manager.ses_sns.callback_endpoint', 'https://backend.example.test/email/sns');
+    config()->set('messenger.ses_sns.callback_endpoint', 'https://backend.example.test/email/sns');
 
     $fake = new class implements SesSnsProvisioningApi
     {
-        public ?string $topicArn = 'arn:aws:sns:eu-central-1:123456789012:mail-manager-events';
+        public ?string $topicArn = 'arn:aws:sns:eu-central-1:123456789012:messenger-events';
 
         public bool $configurationSetExists = true;
 
-        public ?array $eventDestination = ['Name' => 'mail-manager-sns'];
+        public ?array $eventDestination = ['Name' => 'messenger-sns'];
 
         public array $subscriptions = ['https://backend.example.test/email/sns'];
 
-        public array $associatedResources = ['arn:aws:ses:eu-central-1:123456789012:configuration-set/mail-manager-tracking'];
+        public array $associatedResources = ['arn:aws:ses:eu-central-1:123456789012:configuration-set/messenger-tracking'];
 
         public function getCallerAccountId(): string
         {

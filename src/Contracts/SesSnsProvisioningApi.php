@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Contracts;
+namespace Topoff\Messenger\Contracts;
 
 interface SesSnsProvisioningApi
 {

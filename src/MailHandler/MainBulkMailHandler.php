@@ -1,15 +1,15 @@
 <?php
 
-namespace Topoff\MailManager\MailHandler;
+namespace Topoff\Messenger\MailHandler;
 
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
-use Topoff\MailManager\Contracts\GroupableMailTypeInterface;
-use Topoff\MailManager\Contracts\MessageReceiverInterface;
-use Topoff\MailManager\Exceptions\MissingGroupableMailTypeInterfaceException;
+use Topoff\Messenger\Contracts\GroupableMailTypeInterface;
+use Topoff\Messenger\Contracts\MessageReceiverInterface;
+use Topoff\Messenger\Exceptions\MissingGroupableMailTypeInterfaceException;
 
 /**
  * All Mails which should be sent als BulkMails with this MainBulkMailHandler
@@ -31,10 +31,10 @@ class MainBulkMailHandler
      */
     public function mailClass(): string
     {
-        $class = config('mail-manager.mail.default_bulk_mail_class');
+        $class = config('messenger.mail.default_bulk_mail_class');
 
         if (! $class) {
-            throw new \RuntimeException('No bulk mail class configured. Set mail-manager.mail.default_bulk_mail_class in config.');
+            throw new \RuntimeException('No bulk mail class configured. Set messenger.mail.default_bulk_mail_class in config.');
         }
 
         return $class;
@@ -101,7 +101,7 @@ class MainBulkMailHandler
      */
     protected function setMessagesToReserved(): void
     {
-        $messageClass = config('mail-manager.models.message');
+        $messageClass = config('messenger.models.message');
         $messageClass::whereIn('id', $this->messageGroup->pluck('id'))->update(['reserved_at' => Date::now()]);
     }
 
@@ -110,7 +110,7 @@ class MainBulkMailHandler
      */
     protected function setMessagesToError(): void
     {
-        $messageClass = config('mail-manager.models.message');
+        $messageClass = config('messenger.models.message');
         $messageClass::whereIn('id', $this->messageGroup->pluck('id'))->update(['reserved_at' => null, 'error_at' => Date::now()]);
     }
 
@@ -119,7 +119,7 @@ class MainBulkMailHandler
      */
     protected function setMessagesToSent(): void
     {
-        $messageClass = config('mail-manager.models.message');
+        $messageClass = config('messenger.models.message');
         $messageClass::whereIn('id', $this->messageGroup->pluck('id'))->update(['sent_at' => Date::now(), 'error_at' => null, 'failed_at' => null]);
     }
 

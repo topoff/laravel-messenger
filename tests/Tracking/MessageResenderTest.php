@@ -1,11 +1,11 @@
 <?php
 
-use Topoff\MailManager\Tracking\MessageResender;
+use Topoff\Messenger\Tracking\MessageResender;
 
 it('creates and sends a resent tracked message', function () {
-    config()->set('mail-manager.tracking.inject_pixel', true);
-    config()->set('mail-manager.tracking.track_links', true);
-    config()->set('mail-manager.sending.check_should_send', fn () => true);
+    config()->set('messenger.tracking.inject_pixel', true);
+    config()->set('messenger.tracking.track_links', true);
+    config()->set('messenger.sending.check_should_send', fn () => true);
 
     $original = createMessage([
         'tracking_hash' => 'originalhash001',

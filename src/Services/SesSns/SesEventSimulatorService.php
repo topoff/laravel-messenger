@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Services\SesSns;
+namespace Topoff\Messenger\Services\SesSns;
 
 class SesEventSimulatorService
 {
@@ -63,11 +63,11 @@ class SesEventSimulatorService
      */
     protected function sharedAwsConfig(): array
     {
-        $region = (string) config('mail-manager.ses_sns.aws.region', 'eu-central-1');
-        $profile = config('mail-manager.ses_sns.aws.profile');
-        $key = config('mail-manager.ses_sns.aws.key');
-        $secret = config('mail-manager.ses_sns.aws.secret');
-        $sessionToken = config('mail-manager.ses_sns.aws.session_token');
+        $region = (string) config('messenger.ses_sns.aws.region', 'eu-central-1');
+        $profile = config('messenger.ses_sns.aws.profile');
+        $key = config('messenger.ses_sns.aws.key');
+        $secret = config('messenger.ses_sns.aws.secret');
+        $sessionToken = config('messenger.ses_sns.aws.session_token');
 
         $config = [
             'version' => 'latest',

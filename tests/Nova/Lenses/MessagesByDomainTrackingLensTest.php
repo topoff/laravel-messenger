@@ -139,7 +139,7 @@ function domainExpression(string $column): string
  */
 function domainTrackingQuery(): \Illuminate\Database\Query\Builder
 {
-    $table = (new (config('mail-manager.models.message')))->getTable();
+    $table = (new (config('messenger.models.message')))->getTable();
     $domainExpr = domainExpression("{$table}.tracking_recipient_contact");
 
     return DB::table($table)

@@ -1,18 +1,18 @@
 <?php
 
-namespace Topoff\MailManager\Console;
+namespace Topoff\Messenger\Console;
 
 use Illuminate\Console\Command;
 use Throwable;
-use Topoff\MailManager\Services\SesSns\SesSnsSetupService;
+use Topoff\Messenger\Services\SesSns\SesSnsSetupService;
 
 class SetupSesSnsTrackingCommand extends Command
 {
-    protected $signature = 'mail-manager:ses-sns:setup-tracking';
+    protected $signature = 'messenger:ses-sns:setup-tracking';
 
-    protected $aliases = ['mail-manager:ses-sns:setup'];
+    protected $aliases = ['messenger:ses-sns:setup'];
 
-    protected $description = 'Provision SES v2 configuration set + SNS destination + subscription for mail-manager tracking.';
+    protected $description = 'Provision SES v2 configuration set + SNS destination + subscription for messenger tracking.';
 
     public function handle(SesSnsSetupService $service): int
     {

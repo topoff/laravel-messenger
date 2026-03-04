@@ -1,11 +1,11 @@
 <?php
 
-namespace Topoff\MailManager\Tests;
+namespace Topoff\Messenger\Tests;
 
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Orchestra\Testbench\TestCase as Orchestra;
-use Topoff\MailManager\MailManagerServiceProvider;
+use Topoff\Messenger\MessengerServiceProvider;
 
 class TestCase extends Orchestra
 {
@@ -19,14 +19,14 @@ class TestCase extends Orchestra
     protected function getPackageProviders($app): array
     {
         return [
-            MailManagerServiceProvider::class,
+            MessengerServiceProvider::class,
         ];
     }
 
     public function getEnvironmentSetUp($app): void
     {
         config()->set('database.default', 'testing');
-        config()->set('mail-manager.database.connection');
+        config()->set('messenger.database.connection');
         config()->set('queue.default', 'sync');
         config()->set('cache.default', 'array');
         config()->set('app.key', 'base64:'.base64_encode(random_bytes(32)));

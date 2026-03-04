@@ -8,7 +8,7 @@ it('tracks opens via pixel route', function () {
         'tracking_opens' => 0,
     ]);
 
-    $response = $this->get(route('mail-manager.tracking.open', ['hash' => 'openhash001']));
+    $response = $this->get(route('messenger.tracking.open', ['hash' => 'openhash001']));
 
     $response->assertOk();
     $response->assertHeader('Content-type', 'image/gif');
@@ -20,7 +20,7 @@ it('tracks opens via pixel route', function () {
 });
 
 it('tracks clicks and redirects', function () {
-    config()->set('mail-manager.tracking.inject_pixel', true);
+    config()->set('messenger.tracking.inject_pixel', true);
 
     $message = createMessage([
         'tracking_hash' => 'clickhash001',
@@ -29,7 +29,7 @@ it('tracks clicks and redirects', function () {
     ]);
 
     $url = 'https://example.com/next?foo=bar';
-    $signedUrl = URL::signedRoute('mail-manager.tracking.click', ['l' => $url, 'h' => 'clickhash001']);
+    $signedUrl = URL::signedRoute('messenger.tracking.click', ['l' => $url, 'h' => 'clickhash001']);
 
     $this->get($signedUrl)->assertRedirect($url);
 
@@ -43,15 +43,15 @@ it('tracks clicks and redirects', function () {
 });
 
 it('tracks opens and clicks for all messages sharing the same tracking hash', function () {
-    config()->set('mail-manager.tracking.inject_pixel', true);
+    config()->set('messenger.tracking.inject_pixel', true);
 
     $m1 = createMessage(['tracking_hash' => 'sharedhash001', 'tracking_opens' => 0, 'tracking_clicks' => 0]);
     $m2 = createMessage(['tracking_hash' => 'sharedhash001', 'tracking_opens' => 0, 'tracking_clicks' => 0]);
 
-    $this->get(route('mail-manager.tracking.open', ['hash' => 'sharedhash001']))->assertOk();
+    $this->get(route('messenger.tracking.open', ['hash' => 'sharedhash001']))->assertOk();
 
     $url = 'https://example.com/shared';
-    $signedUrl = URL::signedRoute('mail-manager.tracking.click', ['l' => $url, 'h' => 'sharedhash001']);
+    $signedUrl = URL::signedRoute('messenger.tracking.click', ['l' => $url, 'h' => 'sharedhash001']);
     $this->get($signedUrl)->assertRedirect($url);
 
     $m1->refresh();

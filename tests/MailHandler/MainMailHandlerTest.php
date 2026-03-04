@@ -1,8 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Mail;
-use Topoff\MailManager\Exceptions\ReceiverMissingException;
-use Topoff\MailManager\MailHandler\MainMailHandler;
+use Topoff\Messenger\Exceptions\ReceiverMissingException;
+use Topoff\Messenger\MailHandler\MainMailHandler;
 use Workbench\App\Models\TestMessagable;
 use Workbench\App\Models\TestReceiver;
 
@@ -32,7 +32,7 @@ it('reserves the message on construction', function () {
 it('sends a message successfully', function () {
     Mail::fake();
 
-    config()->set('mail-manager.sending.check_should_send', fn () => true);
+    config()->set('messenger.sending.check_should_send', fn () => true);
 
     $message = createMessage([
         'receiver_type' => TestReceiver::class,
@@ -55,7 +55,7 @@ it('sends a message successfully', function () {
 it('sets sent_at even when not sending in this environment', function () {
     Mail::fake();
 
-    config()->set('mail-manager.sending.check_should_send', fn () => false);
+    config()->set('messenger.sending.check_should_send', fn () => false);
 
     $message = createMessage([
         'receiver_type' => TestReceiver::class,
@@ -77,7 +77,7 @@ it('sets sent_at even when not sending in this environment', function () {
 it('aborts and deletes when messagable is missing', function () {
     Mail::fake();
 
-    config()->set('mail-manager.sending.check_should_send', fn () => true);
+    config()->set('messenger.sending.check_should_send', fn () => true);
 
     $message = createMessage([
         'receiver_type' => TestReceiver::class,
@@ -100,7 +100,7 @@ it('aborts and deletes when messagable is missing', function () {
 it('aborts and deletes when receiver email is invalid', function () {
     Mail::fake();
 
-    config()->set('mail-manager.sending.check_should_send', fn () => true);
+    config()->set('messenger.sending.check_should_send', fn () => true);
 
     $this->receiver->update(['email_invalid_at' => now()]);
 
@@ -125,7 +125,7 @@ it('aborts and deletes when receiver email is invalid', function () {
 it('handles ReceiverMissingException when receiver is null', function () {
     Mail::fake();
 
-    config()->set('mail-manager.sending.check_should_send', fn () => true);
+    config()->set('messenger.sending.check_should_send', fn () => true);
 
     $message = createMessage([
         'receiver_type' => TestReceiver::class,
@@ -149,7 +149,7 @@ it('handles ReceiverMissingException when receiver is null', function () {
 it('increments attempts on each send', function () {
     Mail::fake();
 
-    config()->set('mail-manager.sending.check_should_send', fn () => true);
+    config()->set('messenger.sending.check_should_send', fn () => true);
 
     $message = createMessage([
         'receiver_type' => TestReceiver::class,
@@ -170,7 +170,7 @@ it('uses check_should_send config callback', function () {
     Mail::fake();
 
     $called = false;
-    config()->set('mail-manager.sending.check_should_send', function () use (&$called) {
+    config()->set('messenger.sending.check_should_send', function () use (&$called) {
         $called = true;
 
         return true;
@@ -191,7 +191,7 @@ it('uses check_should_send config callback', function () {
 });
 
 it('defaults to production-only sending when check_should_send is null', function () {
-    config()->set('mail-manager.sending.check_should_send');
+    config()->set('messenger.sending.check_should_send');
 
     $handler = new MainMailHandler(
         createMessage([
@@ -226,7 +226,7 @@ it('builds data for bulk mail from message type', function () {
 it('uses mail class from message type', function () {
     Mail::fake();
 
-    config()->set('mail-manager.sending.check_should_send', fn () => true);
+    config()->set('messenger.sending.check_should_send', fn () => true);
 
     $message = createMessage([
         'receiver_type' => TestReceiver::class,
@@ -245,7 +245,7 @@ it('uses mail class from message type', function () {
 it('sends mail to the receiver email address', function () {
     Mail::fake();
 
-    config()->set('mail-manager.sending.check_should_send', fn () => true);
+    config()->set('messenger.sending.check_should_send', fn () => true);
 
     $receiver = createReceiver(['email' => 'specific@example.com']);
 

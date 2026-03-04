@@ -1,12 +1,12 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Topoff\MailManager\Http\Controllers\MailTrackingController;
-use Topoff\MailManager\Http\Controllers\MailTrackingSnsController;
+use Topoff\Messenger\Http\Controllers\MailTrackingController;
+use Topoff\Messenger\Http\Controllers\MailTrackingSnsController;
 
-$routeConfig = config('mail-manager.tracking.route', []);
+$routeConfig = config('messenger.tracking.route', []);
 Route::group($routeConfig, function (): void {
-    Route::get('t/{hash}', [MailTrackingController::class, 'open'])->name('mail-manager.tracking.open');
-    Route::get('n', [MailTrackingController::class, 'click'])->name('mail-manager.tracking.click')->middleware('signed');
-    Route::post('sns', [MailTrackingSnsController::class, 'callback'])->name('mail-manager.tracking.sns');
+    Route::get('t/{hash}', [MailTrackingController::class, 'open'])->name('messenger.tracking.open');
+    Route::get('n', [MailTrackingController::class, 'click'])->name('messenger.tracking.click')->middleware('signed');
+    Route::post('sns', [MailTrackingSnsController::class, 'callback'])->name('messenger.tracking.sns');
 });

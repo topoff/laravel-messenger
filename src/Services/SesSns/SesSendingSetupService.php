@@ -1,10 +1,10 @@
 <?php
 
-namespace Topoff\MailManager\Services\SesSns;
+namespace Topoff\Messenger\Services\SesSns;
 
 use Illuminate\Support\Arr;
 use RuntimeException;
-use Topoff\MailManager\Contracts\SesSnsProvisioningApi;
+use Topoff\Messenger\Contracts\SesSnsProvisioningApi;
 
 class SesSendingSetupService
 {
@@ -261,7 +261,7 @@ class SesSendingSetupService
             $this->addCheck($checks, 'tenant_exists', 'SES tenant exists', $tenantExists, $tenantName);
 
             if ($tenantExists) {
-                $region = (string) config('mail-manager.ses_sns.aws.region', 'eu-central-1');
+                $region = (string) config('messenger.ses_sns.aws.region', 'eu-central-1');
                 $accountId = $this->api->getCallerAccountId();
 
                 foreach ($identities as $identityKey => $identityConfig) {
@@ -315,10 +315,10 @@ class SesSendingSetupService
      */
     protected function identities(): array
     {
-        $identities = (array) config('mail-manager.ses_sns.sending.identities', []);
+        $identities = (array) config('messenger.ses_sns.sending.identities', []);
 
         if ($identities === []) {
-            throw new RuntimeException('No SES identities configured. Set mail-manager.ses_sns.sending.identities.');
+            throw new RuntimeException('No SES identities configured. Set messenger.ses_sns.sending.identities.');
         }
 
         return $identities;
@@ -347,10 +347,10 @@ class SesSendingSetupService
      */
     protected function configurationSets(): array
     {
-        $sets = (array) config('mail-manager.ses_sns.configuration_sets', []);
+        $sets = (array) config('messenger.ses_sns.configuration_sets', []);
 
         if ($sets === []) {
-            throw new RuntimeException('No configuration sets configured. Set mail-manager.ses_sns.configuration_sets.');
+            throw new RuntimeException('No configuration sets configured. Set messenger.ses_sns.configuration_sets.');
         }
 
         return $sets;
@@ -362,8 +362,8 @@ class SesSendingSetupService
      */
     protected function upsertDnsIfConfigured(string $identity, array $dnsRecords, array &$steps): void
     {
-        $route53Enabled = (bool) config('mail-manager.ses_sns.sending.route53.enabled', false);
-        $autoCreate = (bool) config('mail-manager.ses_sns.sending.route53.auto_create_records', false);
+        $route53Enabled = (bool) config('messenger.ses_sns.sending.route53.enabled', false);
+        $autoCreate = (bool) config('messenger.ses_sns.sending.route53.auto_create_records', false);
 
         if (! $route53Enabled || ! $autoCreate) {
             $steps[] = ['label' => 'Route53 DNS automation', 'ok' => true, 'details' => 'Skipped by configuration.'];
@@ -371,7 +371,7 @@ class SesSendingSetupService
             return;
         }
 
-        $hostedZoneId = (string) config('mail-manager.ses_sns.sending.route53.hosted_zone_id', '');
+        $hostedZoneId = (string) config('messenger.ses_sns.sending.route53.hosted_zone_id', '');
         if ($hostedZoneId === '') {
             $hostedZoneId = (string) $this->api->findHostedZoneIdByDomain($identityDomain = $this->identityDomainFromIdentity($identity));
             if ($hostedZoneId === '') {
@@ -379,7 +379,7 @@ class SesSendingSetupService
             }
         }
 
-        $ttl = (int) config('mail-manager.ses_sns.sending.route53.ttl', 300);
+        $ttl = (int) config('messenger.ses_sns.sending.route53.ttl', 300);
         foreach ($dnsRecords as $record) {
             $this->api->upsertRoute53Record(
                 $hostedZoneId,
@@ -424,7 +424,7 @@ class SesSendingSetupService
      */
     protected function buildMailFromDnsRecords(string $mailFromDomain): array
     {
-        $region = (string) config('mail-manager.ses_sns.aws.region', 'eu-central-1');
+        $region = (string) config('messenger.ses_sns.aws.region', 'eu-central-1');
 
         return [
             [
@@ -466,12 +466,12 @@ class SesSendingSetupService
 
     protected function mailFromBehaviorOnMxFailure(): string
     {
-        return (string) config('mail-manager.ses_sns.sending.mail_from_behavior_on_mx_failure', 'USE_DEFAULT_VALUE');
+        return (string) config('messenger.ses_sns.sending.mail_from_behavior_on_mx_failure', 'USE_DEFAULT_VALUE');
     }
 
     protected function tenantName(): ?string
     {
-        $value = trim((string) config('mail-manager.ses_sns.tenant.name', ''));
+        $value = trim((string) config('messenger.ses_sns.tenant.name', ''));
 
         return $value !== '' ? $value : null;
     }
@@ -497,7 +497,7 @@ class SesSendingSetupService
             $steps[] = ['label' => 'SES tenant', 'ok' => true, 'details' => 'Already exists: '.$tenantName];
         }
 
-        $region = (string) config('mail-manager.ses_sns.aws.region', 'eu-central-1');
+        $region = (string) config('messenger.ses_sns.aws.region', 'eu-central-1');
         $accountId = $this->api->getCallerAccountId();
 
         foreach ($identities as $identityKey => $identityConfig) {

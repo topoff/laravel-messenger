@@ -2,14 +2,14 @@
 
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Mail;
-use Topoff\MailManager\Jobs\SendMessageJob;
-use Topoff\MailManager\Models\Message;
+use Topoff\Messenger\Jobs\SendMessageJob;
+use Topoff\Messenger\Models\Message;
 use Workbench\App\Models\TestMessagable;
 use Workbench\App\Models\TestReceiver;
 
 beforeEach(function () {
     Mail::fake();
-    config()->set('mail-manager.sending.check_should_send', fn () => true);
+    config()->set('messenger.sending.check_should_send', fn () => true);
 
     $this->receiver = createReceiver();
     $this->messagable = createMessagable();
@@ -300,7 +300,7 @@ it('sends indirect messages as bulk when multiple messages per group', function 
     $job->handle();
 
     // Multiple messages for same receiver — should use BulkMail
-    Mail::assertSent(\Topoff\MailManager\Mail\BulkMail::class);
+    Mail::assertSent(\Topoff\Messenger\Mail\BulkMail::class);
 });
 
 it('has tries set to 1', function () {

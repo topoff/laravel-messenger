@@ -1,11 +1,11 @@
 <?php
 
-use Topoff\MailManager\Repositories\MessageTypeRepository;
+use Topoff\Messenger\Repositories\MessageTypeRepository;
 
 it('registers the package config', function () {
-    expect(config('mail-manager'))->toBeArray()
-        ->and(config('mail-manager.models.message'))->toBe(\Topoff\MailManager\Models\Message::class)
-        ->and(config('mail-manager.models.message_type'))->toBe(\Topoff\MailManager\Models\MessageType::class);
+    expect(config('messenger'))->toBeArray()
+        ->and(config('messenger.models.message'))->toBe(\Topoff\Messenger\Models\Message::class)
+        ->and(config('messenger.models.message_type'))->toBe(\Topoff\Messenger\Models\MessageType::class);
 });
 
 it('registers MessageTypeRepository as singleton', function () {
@@ -18,7 +18,7 @@ it('registers MessageTypeRepository as singleton', function () {
 
 it('registers package views', function () {
     $viewFactory = app('view');
-    expect($viewFactory->exists('mail-manager::bulkMail'))->toBeTrue();
+    expect($viewFactory->exists('messenger::bulkMail'))->toBeTrue();
 });
 
 it('runs the migration and creates tables', function () {

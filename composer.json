@@ -1,10 +1,10 @@
 {
-    "name": "topoff/laravel-mail-manager",
+    "name": "topoff/laravel-messenger",
     "description": "Manages mail templates and mail sending in Laravel",
     "keywords": [
-        "laravel mail manager"
+        "laravel messenger"
     ],
-    "homepage": "https://github.com/topoff/laravel-mail-manager",
+    "homepage": "https://github.com/topoff/laravel-messenger",
     "license": "MIT",
     "require": {
         "aws/aws-sdk-php": "^3.344",
@@ -29,13 +29,13 @@
     },
     "autoload": {
         "psr-4": {
-            "Topoff\\MailManager\\": "src/",
-            "Topoff\\MailManager\\Database\\Factories\\": "database/factories/"
+            "Topoff\\Messenger\\": "src/",
+            "Topoff\\Messenger\\Database\\Factories\\": "database/factories/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Topoff\\MailManager\\Tests\\": "tests/",
+            "Topoff\\Messenger\\Tests\\": "tests/",
             "Workbench\\App\\": "workbench/app/",
             "Workbench\\Database\\Factories\\": "workbench/database/factories/",
             "Workbench\\Database\\Seeders\\": "workbench/database/seeders/"
@@ -80,10 +80,10 @@
         },
         "laravel": {
             "providers": [
-                "Topoff\\MailManager\\MailManagerServiceProvider"
+                "Topoff\\Messenger\\MessengerServiceProvider"
             ],
             "aliases": {
-                "MailManager": "Topoff\\MailManager\\Facades\\MailManager"
+                "Messenger": "Topoff\\Messenger\\Facades\\Messenger"
             }
         }
     },

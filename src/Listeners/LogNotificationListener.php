@@ -1,12 +1,12 @@
 <?php
 
-namespace Topoff\MailManager\Listeners;
+namespace Topoff\Messenger\Listeners;
 
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Events\NotificationSent;
 use Illuminate\Support\Str;
-use Topoff\MailManager\Models\NotificationLog;
+use Topoff\Messenger\Models\NotificationLog;
 
 class LogNotificationListener implements ShouldQueue
 {
@@ -23,7 +23,7 @@ class LogNotificationListener implements ShouldQueue
                 default => data_get($notifiable, 'phone'),
             };
 
-            $notificationLogModelClass = config('mail-manager.models.notification_log', NotificationLog::class);
+            $notificationLogModelClass = config('messenger.models.notification_log', NotificationLog::class);
             $notificationLogModelClass::query()->create([
                 'channel' => Str::limit((string) $event->channel, 30, ''),
                 'notifyable_id' => Str::limit((string) data_get($notifiable, 'id', ''), 48, ''),

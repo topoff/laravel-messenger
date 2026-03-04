@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Nova\Resources;
+namespace Topoff\Messenger\Nova\Resources;
 
 use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\DateTime;
@@ -8,7 +8,7 @@ use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
-use Topoff\MailManager\Models\EmailLog as EmailLogModel;
+use Topoff\Messenger\Models\EmailLog as EmailLogModel;
 
 class EmailLog extends Resource
 {

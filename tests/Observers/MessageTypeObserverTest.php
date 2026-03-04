@@ -1,7 +1,7 @@
 <?php
 
-use Topoff\MailManager\Models\MessageType;
-use Topoff\MailManager\Repositories\MessageTypeRepository;
+use Topoff\Messenger\Models\MessageType;
+use Topoff\Messenger\Repositories\MessageTypeRepository;
 
 it('clears cache when a message type is created', function () {
     $repository = app(MessageTypeRepository::class);

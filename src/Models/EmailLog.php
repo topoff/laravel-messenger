@@ -1,9 +1,9 @@
 <?php
 
-namespace Topoff\MailManager\Models;
+namespace Topoff\Messenger\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Topoff\MailManager\Models\Traits\DateScopesTrait;
+use Topoff\Messenger\Models\Traits\DateScopesTrait;
 
 class EmailLog extends Model
 {
@@ -17,9 +17,9 @@ class EmailLog extends Model
     {
         parent::__construct($attributes);
 
-        $this->table = (string) config('mail-manager.logs.email_log_table', 'email_log');
+        $this->table = (string) config('messenger.logs.email_log_table', 'email_log');
 
-        $connection = config('mail-manager.logs.connection');
+        $connection = config('messenger.logs.connection');
         if (is_string($connection) && $connection !== '') {
             $this->connection = $connection;
         }

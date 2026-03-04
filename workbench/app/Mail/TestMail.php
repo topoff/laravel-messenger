@@ -5,7 +5,7 @@ namespace Workbench\App\Mail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
-use Topoff\MailManager\Models\Message;
+use Topoff\Messenger\Models\Message;
 
 class TestMail extends Mailable
 {

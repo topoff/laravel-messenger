@@ -1,35 +1,35 @@
 <?php
 
 use Illuminate\Support\Facades\URL;
-use Topoff\MailManager\Contracts\SesSnsProvisioningApi;
+use Topoff\Messenger\Contracts\SesSnsProvisioningApi;
 
 it('renders the ses sns dashboard with setup guidance', function () {
-    $url = URL::temporarySignedRoute('mail-manager.ses-sns.dashboard', now()->addMinutes(10));
+    $url = URL::temporarySignedRoute('messenger.ses-sns.dashboard', now()->addMinutes(10));
 
     $this->get($url)
         ->assertOk()
         ->assertSee('Amazon SES + SNS Dashboard')
         ->assertSee('Setup Commands')
-        ->assertSee('mail-manager:ses-sns:setup-sending')
-        ->assertSee('mail-manager:ses-sns:setup-tracking')
+        ->assertSee('messenger:ses-sns:setup-sending')
+        ->assertSee('messenger:ses-sns:setup-tracking')
         ->assertSee('Required Environment Variables');
 });
 
 it('renders healthy sending and tracking checks on the ses sns dashboard', function () {
-    config()->set('mail-manager.ses_sns.enabled', true);
-    config()->set('mail-manager.ses_sns.sending.enabled', true);
-    config()->set('mail-manager.ses_sns.aws.region', 'eu-central-1');
-    config()->set('mail-manager.ses_sns.topic_name', 'mail-manager-events');
-    config()->set('mail-manager.ses_sns.configuration_sets', [
+    config()->set('messenger.ses_sns.enabled', true);
+    config()->set('messenger.ses_sns.sending.enabled', true);
+    config()->set('messenger.ses_sns.aws.region', 'eu-central-1');
+    config()->set('messenger.ses_sns.topic_name', 'messenger-events');
+    config()->set('messenger.ses_sns.configuration_sets', [
         'default' => [
-            'configuration_set' => 'mail-manager-tracking',
-            'event_destination' => 'mail-manager-sns',
+            'configuration_set' => 'messenger-tracking',
+            'event_destination' => 'messenger-sns',
             'identity' => 'default',
         ],
     ]);
-    config()->set('mail-manager.ses_sns.callback_endpoint', 'https://backend.example.test/email/sns');
-    config()->set('mail-manager.ses_sns.event_types', ['SEND', 'BOUNCE', 'COMPLAINT', 'DELIVERY']);
-    config()->set('mail-manager.ses_sns.sending.identities', [
+    config()->set('messenger.ses_sns.callback_endpoint', 'https://backend.example.test/email/sns');
+    config()->set('messenger.ses_sns.event_types', ['SEND', 'BOUNCE', 'COMPLAINT', 'DELIVERY']);
+    config()->set('messenger.ses_sns.sending.identities', [
         'default' => [
             'identity_domain' => 'example.com',
             'mail_from_domain' => 'mail.example.com',
@@ -46,12 +46,12 @@ it('renders healthy sending and tracking checks on the ses sns dashboard', funct
 
         public function findTopicArnByName(string $topicName): string
         {
-            return 'arn:aws:sns:eu-central-1:123456789012:mail-manager-events';
+            return 'arn:aws:sns:eu-central-1:123456789012:messenger-events';
         }
 
         public function createTopic(string $topicName): string
         {
-            return 'arn:aws:sns:eu-central-1:123456789012:mail-manager-events';
+            return 'arn:aws:sns:eu-central-1:123456789012:messenger-events';
         }
 
         public function getTopicAttributes(string $topicArn): array
@@ -100,7 +100,7 @@ it('renders healthy sending and tracking checks on the ses sns dashboard', funct
                 'Name' => $eventDestinationName,
                 'Enabled' => true,
                 'MatchingEventTypes' => ['SEND', 'BOUNCE', 'COMPLAINT', 'DELIVERY'],
-                'SnsDestination' => ['TopicArn' => 'arn:aws:sns:eu-central-1:123456789012:mail-manager-events'],
+                'SnsDestination' => ['TopicArn' => 'arn:aws:sns:eu-central-1:123456789012:messenger-events'],
             ];
         }
 
@@ -156,7 +156,7 @@ it('renders healthy sending and tracking checks on the ses sns dashboard', funct
         public function upsertRoute53Record(string $hostedZoneId, string $recordName, string $recordType, array $values, int $ttl = 300): void {}
     });
 
-    $url = URL::temporarySignedRoute('mail-manager.ses-sns.dashboard', now()->addMinutes(10));
+    $url = URL::temporarySignedRoute('messenger.ses-sns.dashboard', now()->addMinutes(10));
 
     $this->get($url)
         ->assertOk()

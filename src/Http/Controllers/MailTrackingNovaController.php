@@ -1,23 +1,23 @@
 <?php
 
-namespace Topoff\MailManager\Http\Controllers;
+namespace Topoff\Messenger\Http\Controllers;
 
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
-use Topoff\MailManager\Models\Message;
+use Topoff\Messenger\Models\Message;
 
 class MailTrackingNovaController extends Controller
 {
     public function preview(int $id): Response
     {
-        $messageClass = config('mail-manager.models.message');
+        $messageClass = config('messenger.models.message');
         /** @var Message $message */
         $message = $messageClass::query()->findOrFail($id);
 
         $html = $message->tracking_content;
         if (! $html && $message->tracking_content_path) {
-            $disk = config('mail-manager.tracking.tracker_filesystem');
+            $disk = config('messenger.tracking.tracker_filesystem');
             try {
                 $html = $disk
                     ? (Storage::disk($disk)->exists($message->tracking_content_path) ? Storage::disk($disk)->get($message->tracking_content_path) : null)

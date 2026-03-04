@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Notifications;
+namespace Topoff\Messenger\Notifications;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;

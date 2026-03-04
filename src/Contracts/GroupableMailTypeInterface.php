@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Contracts;
+namespace Topoff\Messenger\Contracts;
 
 /**
  * This interface has to be implemented by all MailHandlers which should be groupable

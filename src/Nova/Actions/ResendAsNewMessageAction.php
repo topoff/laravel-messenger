@@ -1,14 +1,14 @@
 <?php
 
-namespace Topoff\MailManager\Nova\Actions;
+namespace Topoff\Messenger\Nova\Actions;
 
 use Illuminate\Support\Collection;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Actions\ActionResponse;
 use Laravel\Nova\Fields\ActionFields;
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Topoff\MailManager\Models\Message;
-use Topoff\MailManager\Tracking\MessageResender;
+use Topoff\Messenger\Models\Message;
+use Topoff\Messenger\Tracking\MessageResender;
 
 class ResendAsNewMessageAction extends Action
 {

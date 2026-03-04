@@ -1,12 +1,12 @@
 <?php
 
-namespace Topoff\MailManager\Services;
+namespace Topoff\Messenger\Services;
 
 use Carbon\Carbon;
-use Topoff\MailManager\Contracts\MessageReceiverInterface;
-use Topoff\MailManager\Models\Message;
-use Topoff\MailManager\Models\MessageType;
-use Topoff\MailManager\Repositories\MessageTypeRepository;
+use Topoff\Messenger\Contracts\MessageReceiverInterface;
+use Topoff\Messenger\Models\Message;
+use Topoff\Messenger\Models\MessageType;
+use Topoff\Messenger\Repositories\MessageTypeRepository;
 
 /**
  * One of these functions are necessary to be called at least: create(), changeScheduleOfExisting() or delete()
@@ -145,7 +145,7 @@ class MessageService
         $this->reportMissingParams();
 
         if (! $this->preventCreateMessage()) {
-            $messageClass = config('mail-manager.models.message');
+            $messageClass = config('messenger.models.message');
             $messageClass::create([
                 'sender_type' => $this->senderClass,
                 'sender_id' => $this->senderId,
@@ -171,7 +171,7 @@ class MessageService
      */
     public function change(): ?Message
     {
-        $messageClass = config('mail-manager.models.message');
+        $messageClass = config('messenger.models.message');
         $message = $messageClass::where('receiver_type', $this->receiverClass)->where('receiver_id', $this->receiverId)
             ->where('company_id', $this->companyId)
             ->where('message_type_id', $this->messageType->id)
@@ -202,7 +202,7 @@ class MessageService
         $this->locale ??= $this->resolveReceiverLocale();
         $this->reportMissingParams();
 
-        $messageClass = config('mail-manager.models.message');
+        $messageClass = config('messenger.models.message');
         $result = $messageClass::create([
             'sender_type' => $this->senderClass,
             'sender_id' => $this->senderId,
@@ -223,11 +223,11 @@ class MessageService
 
     /**
      * Determine if a message creation should be prevented.
-     * Configurable via config('mail-manager.sending.prevent_create_message').
+     * Configurable via config('messenger.sending.prevent_create_message').
      */
     protected function preventCreateMessage(): bool
     {
-        $checker = config('mail-manager.sending.prevent_create_message');
+        $checker = config('messenger.sending.prevent_create_message');
 
         if (is_callable($checker)) {
             return $checker($this->receiverClass, $this->receiverId);

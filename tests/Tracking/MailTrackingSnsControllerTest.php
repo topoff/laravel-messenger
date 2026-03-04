@@ -2,7 +2,7 @@
 
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
-use Topoff\MailManager\Events\SesSnsWebhookReceivedEvent;
+use Topoff\Messenger\Events\SesSnsWebhookReceivedEvent;
 
 it('records delivery notifications via sns callback', function () {
     Event::fake([SesSnsWebhookReceivedEvent::class]);
@@ -25,7 +25,7 @@ it('records delivery notifications via sns callback', function () {
         ]),
     ];
 
-    $this->postJson(route('mail-manager.tracking.sns'), $payload)->assertOk();
+    $this->postJson(route('messenger.tracking.sns'), $payload)->assertOk();
 
     $message->refresh();
 
@@ -58,7 +58,7 @@ it('records bounce notifications via sns callback', function () {
         ]),
     ];
 
-    $this->postJson(route('mail-manager.tracking.sns'), $payload)->assertOk();
+    $this->postJson(route('messenger.tracking.sns'), $payload)->assertOk();
 
     $message->refresh();
 
@@ -87,7 +87,7 @@ it('records complaint notifications via sns callback', function () {
         ]),
     ];
 
-    $this->postJson(route('mail-manager.tracking.sns'), $payload)->assertOk();
+    $this->postJson(route('messenger.tracking.sns'), $payload)->assertOk();
 
     $message->refresh();
 
@@ -95,7 +95,7 @@ it('records complaint notifications via sns callback', function () {
         ->and(data_get($message->tracking_meta, 'complaint_type'))->toBe('abuse');
 });
 
-it('processes mail-manager test notifications synchronously', function () {
+it('processes messenger test notifications synchronously', function () {
     Queue::fake();
 
     $message = createMessage([
@@ -110,7 +110,7 @@ it('processes mail-manager test notifications synchronously', function () {
             'mail' => [
                 'messageId' => 'delivery-mid-sync',
                 'tags' => [
-                    ['name' => 'mail_manager_test', 'value' => 'true'],
+                    ['name' => 'messenger_test', 'value' => 'true'],
                 ],
             ],
             'delivery' => [
@@ -121,7 +121,7 @@ it('processes mail-manager test notifications synchronously', function () {
         ]),
     ];
 
-    $this->postJson(route('mail-manager.tracking.sns'), $payload)->assertOk();
+    $this->postJson(route('messenger.tracking.sns'), $payload)->assertOk();
 
     $message->refresh();
 
@@ -146,10 +146,10 @@ it('processes eventType payload format from ses with tag map', function () {
             'mail' => [
                 'messageId' => 'delivery-mid-event-type',
                 'commonHeaders' => [
-                    'subject' => '[mail-manager][delivery] 2026-02-27 13:33:49',
+                    'subject' => '[messenger][delivery] 2026-02-27 13:33:49',
                 ],
                 'tags' => [
-                    'mail_manager_test' => ['true'],
+                    'messenger_test' => ['true'],
                     'scenario' => ['delivery'],
                 ],
             ],
@@ -161,7 +161,7 @@ it('processes eventType payload format from ses with tag map', function () {
         ]),
     ];
 
-    $this->postJson(route('mail-manager.tracking.sns'), $payload)->assertOk();
+    $this->postJson(route('messenger.tracking.sns'), $payload)->assertOk();
 
     $message->refresh();
 
@@ -197,7 +197,7 @@ it('extracts ses_tags from delivery notification into tracking_meta', function (
         ]),
     ];
 
-    $this->postJson(route('mail-manager.tracking.sns'), $payload)->assertOk();
+    $this->postJson(route('messenger.tracking.sns'), $payload)->assertOk();
 
     $message->refresh();
 
@@ -228,7 +228,7 @@ it('skips delivery event when recipient does not match tracking_recipient_contac
         ]),
     ];
 
-    $this->postJson(route('mail-manager.tracking.sns'), $payload)->assertOk();
+    $this->postJson(route('messenger.tracking.sns'), $payload)->assertOk();
 
     $message->refresh();
 
@@ -257,7 +257,7 @@ it('skips bounce event when recipient does not match tracking_recipient_contact'
         ]),
     ];
 
-    $this->postJson(route('mail-manager.tracking.sns'), $payload)->assertOk();
+    $this->postJson(route('messenger.tracking.sns'), $payload)->assertOk();
 
     $message->refresh();
 
@@ -286,7 +286,7 @@ it('skips complaint event when recipient does not match tracking_recipient_conta
         ]),
     ];
 
-    $this->postJson(route('mail-manager.tracking.sns'), $payload)->assertOk();
+    $this->postJson(route('messenger.tracking.sns'), $payload)->assertOk();
 
     $message->refresh();
 

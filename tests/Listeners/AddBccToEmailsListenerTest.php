@@ -2,7 +2,7 @@
 
 use Illuminate\Mail\Events\MessageSending;
 use Symfony\Component\Mime\Email;
-use Topoff\MailManager\Listeners\AddBccToEmailsListener;
+use Topoff\Messenger\Listeners\AddBccToEmailsListener;
 use Workbench\App\Models\TestMessagable;
 use Workbench\App\Models\TestReceiver;
 
@@ -12,7 +12,7 @@ beforeEach(function () {
 
 it('adds bcc when configured', function () {
     config()->set('mail.bcc.address', 'bcc@example.com');
-    config()->set('mail-manager.bcc.check_should_add_bcc');
+    config()->set('messenger.bcc.check_should_add_bcc');
 
     $email = new Email;
     $email->to('to@example.com');
@@ -28,7 +28,7 @@ it('adds bcc when configured', function () {
 
 it('does not add bcc when check_should_add_bcc returns false', function () {
     config()->set('mail.bcc.address', 'bcc@example.com');
-    config()->set('mail-manager.bcc.check_should_add_bcc', fn () => false);
+    config()->set('messenger.bcc.check_should_add_bcc', fn () => false);
 
     $email = new Email;
     $email->to('to@example.com');
@@ -42,7 +42,7 @@ it('does not add bcc when check_should_add_bcc returns false', function () {
 
 it('adds bcc when check_should_add_bcc returns true', function () {
     config()->set('mail.bcc.address', 'bcc@example.com');
-    config()->set('mail-manager.bcc.check_should_add_bcc', fn () => true);
+    config()->set('messenger.bcc.check_should_add_bcc', fn () => true);
 
     $email = new Email;
     $email->to('to@example.com');
@@ -58,7 +58,7 @@ it('adds bcc when check_should_add_bcc returns true', function () {
 
 it('does not add bcc when no bcc address is configured', function () {
     config()->set('mail.bcc.address');
-    config()->set('mail-manager.bcc.check_should_add_bcc');
+    config()->set('messenger.bcc.check_should_add_bcc');
 
     $email = new Email;
     $email->to('to@example.com');
@@ -72,7 +72,7 @@ it('does not add bcc when no bcc address is configured', function () {
 
 it('respects dev_bcc flag on message type when messageModel is present', function () {
     config()->set('mail.bcc.address', 'bcc@example.com');
-    config()->set('mail-manager.bcc.check_should_add_bcc');
+    config()->set('messenger.bcc.check_should_add_bcc');
 
     $messageType = createMessageType(['dev_bcc' => false]);
     $messageModel = createMessage([
@@ -96,7 +96,7 @@ it('respects dev_bcc flag on message type when messageModel is present', functio
 
 it('adds bcc when dev_bcc is true on message type', function () {
     config()->set('mail.bcc.address', 'bcc@example.com');
-    config()->set('mail-manager.bcc.check_should_add_bcc');
+    config()->set('messenger.bcc.check_should_add_bcc');
 
     $messageType = createMessageType(['dev_bcc' => true]);
     $messageModel = createMessage([

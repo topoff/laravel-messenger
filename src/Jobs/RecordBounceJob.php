@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Jobs;
+namespace Topoff\Messenger\Jobs;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -9,9 +9,9 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
-use Topoff\MailManager\Events\MessagePermanentBouncedEvent;
-use Topoff\MailManager\Events\MessageTransientBouncedEvent;
-use Topoff\MailManager\Jobs\Concerns\ExtractsSesMessageTags;
+use Topoff\Messenger\Events\MessagePermanentBouncedEvent;
+use Topoff\Messenger\Events\MessageTransientBouncedEvent;
+use Topoff\Messenger\Jobs\Concerns\ExtractsSesMessageTags;
 
 class RecordBounceJob implements ShouldQueue
 {
@@ -41,7 +41,7 @@ class RecordBounceJob implements ShouldQueue
             return;
         }
 
-        $messageClass = config('mail-manager.models.message');
+        $messageClass = config('messenger.models.message');
         $trackedMessages = $messageClass::query()->where('tracking_message_id', $messageId)->get();
         if ($trackedMessages->isEmpty()) {
             return;

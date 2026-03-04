@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Mail;
+namespace Topoff\Messenger\Mail;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;

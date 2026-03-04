@@ -8,7 +8,7 @@
 
 ## Key Facts
 
-- Namespace: `Topoff\MailManager\`
+- Namespace: `Topoff\Messenger\`
 - PHP ^8.3, Laravel 11/12, AWS SDK ^3.344
 - Tests: `composer test` (Pest 4.0)
 - Always use Blade block form `@php ... @endphp` — inline `@php()` breaks compiled views in this package
@@ -16,13 +16,13 @@
 
 ## Key Config Paths
 
-- `mail-manager.models.message` / `mail-manager.models.message_type` — model classes
-- `mail-manager.database.*` — connection, table names
-- `mail-manager.tracking.*` — pixel, link tracking, Nova, content storage
-- `mail-manager.ses_sns.*` — AWS SES/SNS provisioning & config sets
-- `mail-manager.bcc.*` — BCC addition control
-- `mail-manager.cleanup.*` — retention periods, schedule cron
-- `mail-manager.sending.*` — environment send check callable
+- `messenger.models.message` / `messenger.models.message_type` — model classes
+- `messenger.database.*` — connection, table names
+- `messenger.tracking.*` — pixel, link tracking, Nova, content storage
+- `messenger.ses_sns.*` — AWS SES/SNS provisioning & config sets
+- `messenger.bcc.*` — BCC addition control
+- `messenger.cleanup.*` — retention periods, schedule cron
+- `messenger.sending.*` — environment send check callable
 
 <laravel-boost-guidelines>
 === foundation rules ===

@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Nova\Lenses;
+namespace Topoff\Messenger\Nova\Lenses;
 
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Http\Request;

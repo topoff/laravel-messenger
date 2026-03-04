@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Nova\Actions;
+namespace Topoff\Messenger\Nova\Actions;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -19,7 +19,7 @@ class OpenSesSnsSiteAction extends Action
     public function handle(ActionFields $fields, Collection $models): mixed
     {
         $url = URL::temporarySignedRoute(
-            'mail-manager.ses-sns.dashboard',
+            'messenger.ses-sns.dashboard',
             now()->addMinutes(30)
         );
 

@@ -9,7 +9,7 @@ it('renders tracked html from nova preview route', function () {
     ]);
 
     $signedUrl = URL::temporarySignedRoute(
-        'mail-manager.tracking.nova.preview',
+        'messenger.tracking.nova.preview',
         now()->addMinutes(5),
         ['id' => $message->id]
     );
@@ -22,6 +22,6 @@ it('renders tracked html from nova preview route', function () {
 it('rejects unsigned nova preview requests', function () {
     $message = createMessage(['tracking_hash' => 'nova-preview-002']);
 
-    $this->get(route('mail-manager.tracking.nova.preview', ['id' => $message->id]))
+    $this->get(route('messenger.tracking.nova.preview', ['id' => $message->id]))
         ->assertForbidden();
 });

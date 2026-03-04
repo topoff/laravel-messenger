@@ -1,16 +1,16 @@
 <?php
 
-namespace Topoff\MailManager\Console;
+namespace Topoff\Messenger\Console;
 
 use Illuminate\Console\Command;
 use Throwable;
-use Topoff\MailManager\Services\SesSns\SesSnsSetupService;
+use Topoff\Messenger\Services\SesSns\SesSnsSetupService;
 
 class TeardownSesSnsTrackingCommand extends Command
 {
-    protected $signature = 'mail-manager:ses-sns:teardown {--force : Skip confirmation prompt}';
+    protected $signature = 'messenger:ses-sns:teardown {--force : Skip confirmation prompt}';
 
-    protected $description = 'Remove SES/SNS tracking resources created by mail-manager setup.';
+    protected $description = 'Remove SES/SNS tracking resources created by messenger setup.';
 
     public function handle(SesSnsSetupService $service): int
     {

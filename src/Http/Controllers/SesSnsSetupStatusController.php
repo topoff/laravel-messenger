@@ -1,15 +1,15 @@
 <?php
 
-namespace Topoff\MailManager\Http\Controllers;
+namespace Topoff\Messenger\Http\Controllers;
 
 use Illuminate\Routing\Controller;
-use Topoff\MailManager\Services\SesSns\SesSnsSetupService;
+use Topoff\Messenger\Services\SesSns\SesSnsSetupService;
 
 class SesSnsSetupStatusController extends Controller
 {
     public function __invoke(SesSnsSetupService $service)
     {
-        return view('mail-manager::ses-sns-status', [
+        return view('messenger::ses-sns-status', [
             'status' => $service->check(),
         ]);
     }

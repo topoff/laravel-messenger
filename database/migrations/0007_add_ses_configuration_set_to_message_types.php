@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function getConnection(): ?string
     {
-        return config('mail-manager.database.connection');
+        return config('messenger.database.connection');
     }
 
     public function up(): void

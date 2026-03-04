@@ -1,4 +1,4 @@
-# laravel-mail-manager — Architecture Notes
+# laravel-messenger — Architecture Notes
 
 ## Package Overview
 
@@ -148,13 +148,13 @@ Returns identity & DNS status:
 
 | Command | Purpose |
 |---|---|
-| `mail-manager:ses-sns:setup-all` | Provision all SES identities + SNS tracking in one go |
-| `mail-manager:ses-sns:setup-tracking` | Set up SNS topic, subscription, config set, event destination |
-| `mail-manager:ses-sns:check-tracking` | Validate tracking infrastructure health |
-| `mail-manager:ses-sns:setup-sending` | Set up SES identities with DKIM + MAIL FROM |
-| `mail-manager:ses-sns:check-sending` | Validate identity verification and DNS records |
-| `mail-manager:ses-sns:test-events` | Simulate SES events (bounce, complaint, delivery) for testing |
-| `mail-manager:ses-sns:teardown` | Remove all provisioned SES/SNS resources (requires `--force`) |
+| `messenger:ses-sns:setup-all` | Provision all SES identities + SNS tracking in one go |
+| `messenger:ses-sns:setup-tracking` | Set up SNS topic, subscription, config set, event destination |
+| `messenger:ses-sns:check-tracking` | Validate tracking infrastructure health |
+| `messenger:ses-sns:setup-sending` | Set up SES identities with DKIM + MAIL FROM |
+| `messenger:ses-sns:check-sending` | Validate identity verification and DNS records |
+| `messenger:ses-sns:test-events` | Simulate SES events (bounce, complaint, delivery) for testing |
+| `messenger:ses-sns:teardown` | Remove all provisioned SES/SNS resources (requires `--force`) |
 
 ## Nova Integration
 
@@ -204,7 +204,7 @@ Returns identity & DNS status:
 
 ### SES/SNS Dashboard
 
-Web-based dashboard at `/email-manager/nova/ses-sns-dashboard` (signed URL via `OpenSesSnsSiteAction`):
+Web-based dashboard at `/emessenger/nova/ses-sns-dashboard` (signed URL via `OpenSesSnsSiteAction`):
 - **Status overview cards** — sending, tracking, mail transport health
 - **Health checks tables** — detailed SES and SNS check results with ok/fail/warn badges
 - **DNS records table** — required DKIM, MAIL FROM, DMARC records with copy-to-clipboard buttons
@@ -213,7 +213,7 @@ Web-based dashboard at `/email-manager/nova/ses-sns-dashboard` (signed URL via `
 - **AWS Console links** — direct links to SES (dashboard, identities, config sets, reputation, tenants) and SNS (topics, subscriptions)
 - **Reference sections** — collapsible env vars, config snapshot, artisan commands
 
-## Configuration Reference (`config/mail-manager.php`)
+## Configuration Reference (`config/messenger.php`)
 
 | Section | Key Settings |
 |---|---|

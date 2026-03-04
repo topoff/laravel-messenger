@@ -1,8 +1,8 @@
 <?php
 
-namespace Topoff\MailManager\Events;
+namespace Topoff\Messenger\Events;
 
-use Topoff\MailManager\Models\Message;
+use Topoff\Messenger\Models\Message;
 
 class MessageTransientBouncedEvent
 {

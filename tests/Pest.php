@@ -1,6 +1,6 @@
 <?php
 
-use Topoff\MailManager\Tests\TestCase;
+use Topoff\Messenger\Tests\TestCase;
 
 uses(TestCase::class)->in(__DIR__);
 

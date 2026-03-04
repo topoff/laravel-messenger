@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Nova\Actions;
+namespace Topoff\Messenger\Nova\Actions;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -17,7 +17,7 @@ use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Topoff\MailManager\Notifications\NovaChannelNotification;
+use Topoff\Messenger\Notifications\NovaChannelNotification;
 
 class SendNotificationAction extends Action
 {
@@ -101,7 +101,7 @@ class SendNotificationAction extends Action
                 })
                 ->help('Effective SMS recipient phone number(s).'),
             Textarea::make(__('Message'), 'message')
-                ->default(fn (): string => (string) config('mail-manager.notifications.default_message_footer', ''))
+                ->default(fn (): string => (string) config('messenger.notifications.default_message_footer', ''))
                 ->rules('required'),
             Text::make(__('SMS Counter'), 'sms_counter')
                 ->readonly()

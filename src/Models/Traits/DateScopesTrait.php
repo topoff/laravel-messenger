@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Models\Traits;
+namespace Topoff\Messenger\Models\Traits;
 
 use Illuminate\Support\Facades\Date;
 

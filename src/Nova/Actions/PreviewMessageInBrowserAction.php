@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Nova\Actions;
+namespace Topoff\Messenger\Nova\Actions;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -19,7 +19,7 @@ class PreviewMessageInBrowserAction extends Action
     {
         foreach ($models as $message) {
             $previewUrl = URL::temporarySignedRoute(
-                'mail-manager.tracking.nova.preview-message',
+                'messenger.tracking.nova.preview-message',
                 now()->addMinutes(10),
                 ['message' => $message->id]
             );

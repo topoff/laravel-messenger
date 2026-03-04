@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Nova\Resources;
+namespace Topoff\Messenger\Nova\Resources;
 
 use Illuminate\Support\Str;
 use Laravel\Nova\Fields\Boolean;
@@ -11,10 +11,10 @@ use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
-use Topoff\MailManager\Models\MessageType as MessageTypeModel;
-use Topoff\MailManager\Nova\Actions\OpenSesSnsSiteAction;
-use Topoff\MailManager\Nova\Actions\PreviewMessageTypeInBrowserAction;
-use Topoff\MailManager\Nova\Lenses\MessagesByTypeTrackingLens;
+use Topoff\Messenger\Models\MessageType as MessageTypeModel;
+use Topoff\Messenger\Nova\Actions\OpenSesSnsSiteAction;
+use Topoff\Messenger\Nova\Actions\PreviewMessageTypeInBrowserAction;
+use Topoff\Messenger\Nova\Lenses\MessagesByTypeTrackingLens;
 
 class MessageType extends Resource
 {

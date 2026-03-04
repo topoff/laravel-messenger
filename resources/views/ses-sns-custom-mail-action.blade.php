@@ -31,8 +31,8 @@
         <a class="btn secondary" href="{{ $back_url }}">Back to SES/SNS Dashboard</a>
     </div>
 
-    @if(session()->has('mail_manager_custom_mail_result'))
-        @php($result = (array) session('mail_manager_custom_mail_result'))
+    @if(session()->has('messenger_custom_mail_result'))
+        @php($result = (array) session('messenger_custom_mail_result'))
         <div class="card">
             @if((bool) data_get($result, 'ok'))
                 <span class="badge ok">Sent</span>

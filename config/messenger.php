@@ -2,10 +2,10 @@
 
 return [
     'models' => [
-        'message' => \Topoff\MailManager\Models\Message::class,
-        'message_type' => \Topoff\MailManager\Models\MessageType::class,
-        'email_log' => \Topoff\MailManager\Models\EmailLog::class,
-        'notification_log' => \Topoff\MailManager\Models\NotificationLog::class,
+        'message' => \Topoff\Messenger\Models\Message::class,
+        'message_type' => \Topoff\Messenger\Models\MessageType::class,
+        'email_log' => \Topoff\Messenger\Models\EmailLog::class,
+        'notification_log' => \Topoff\Messenger\Models\NotificationLog::class,
     ],
 
     'database' => [
@@ -49,10 +49,10 @@ return [
     ],
 
     'mail' => [
-        'default_bulk_mail_class' => \Topoff\MailManager\Mail\BulkMail::class,
+        'default_bulk_mail_class' => \Topoff\Messenger\Mail\BulkMail::class,
 
         // View used by BulkMail. Override to use your own Blade template.
-        'bulk_mail_view' => 'mail-manager::bulkMail',
+        'bulk_mail_view' => 'messenger::bulkMail',
 
         // Callable or null. Resolves the subject line for bulk mails.
         // Signature: fn(MessageReceiverInterface $receiver, Collection $messages): string
@@ -63,7 +63,7 @@ return [
         'bulk_mail_url' => null,
 
         // View used by the package custom message mail action.
-        'custom_message_view' => 'mail-manager::customMessage',
+        'custom_message_view' => 'messenger::customMessage',
     ],
 
     'sending' => [
@@ -108,18 +108,18 @@ return [
             'register_resource' => false,
 
             // Override with your own resource class if needed.
-            'resource' => \Topoff\MailManager\Nova\Resources\Message::class,
+            'resource' => \Topoff\Messenger\Nova\Resources\Message::class,
 
             // Signed preview route used by the Nova action.
             'preview_route' => [
-                'prefix' => 'email-manager/nova',
+                'prefix' => 'emessenger/nova',
                 'middleware' => ['web', 'signed'],
             ],
         ],
 
         // Preview route used by the package "Send Custom Message" Nova action.
         'custom_preview_route' => [
-            'prefix' => 'email-manager/nova',
+            'prefix' => 'emessenger/nova',
             'middleware' => ['web', 'signed'],
         ],
 
@@ -134,7 +134,7 @@ return [
 
         // Filesystem disk used when log_content_strategy is filesystem.
         'tracker_filesystem' => null,
-        'tracker_filesystem_folder' => 'mail-manager-tracker',
+        'tracker_filesystem_folder' => 'messenger-tracker',
 
         // Queue used for tracking jobs. Null uses default queue.
         'tracker_queue' => null,
@@ -163,17 +163,17 @@ return [
         // This can be important for the domain reputation management.
         'configuration_sets' => [
             'default' => [
-                'configuration_set' => env('APP_TENANT').'-'.env('APP_ENV').'-mail-manager-tracking',
-                'event_destination' => env('APP_TENANT').'-'.env('APP_ENV').'-mail-manager-sns',
+                'configuration_set' => env('APP_TENANT').'-'.env('APP_ENV').'-messenger-tracking',
+                'event_destination' => env('APP_TENANT').'-'.env('APP_ENV').'-messenger-sns',
                 'identity' => 'default',
             ],
         ],
 
         // SNS resources managed by this package.
-        'topic_name' => env('APP_TENANT').'-'.env('APP_ENV').'-mail-manager-ses-events',
+        'topic_name' => env('APP_TENANT').'-'.env('APP_ENV').'-messenger-ses-events',
         'topic_arn' => null,
 
-        // If null, route('mail-manager.tracking.sns') is used.
+        // If null, route('messenger.tracking.sns') is used.
         'callback_endpoint' => null,
 
         // Event types bound to the SES event destination.

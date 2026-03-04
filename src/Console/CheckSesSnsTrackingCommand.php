@@ -1,16 +1,16 @@
 <?php
 
-namespace Topoff\MailManager\Console;
+namespace Topoff\Messenger\Console;
 
 use Illuminate\Console\Command;
 use Throwable;
-use Topoff\MailManager\Services\SesSns\SesSnsSetupService;
+use Topoff\Messenger\Services\SesSns\SesSnsSetupService;
 
 class CheckSesSnsTrackingCommand extends Command
 {
-    protected $signature = 'mail-manager:ses-sns:check-tracking';
+    protected $signature = 'messenger:ses-sns:check-tracking';
 
-    protected $aliases = ['mail-manager:ses-sns:check'];
+    protected $aliases = ['messenger:ses-sns:check'];
 
     protected $description = 'Check SES/SNS tracking provisioning state via AWS API.';
 

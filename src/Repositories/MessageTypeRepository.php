@@ -1,21 +1,21 @@
 <?php
 
-namespace Topoff\MailManager\Repositories;
+namespace Topoff\Messenger\Repositories;
 
 use Illuminate\Cache\TaggableStore;
 use Illuminate\Support\Facades\Cache;
-use Topoff\MailManager\Models\MessageType;
+use Topoff\Messenger\Models\MessageType;
 
 class MessageTypeRepository
 {
-    public const string CACHE_VERSION_KEY = 'mail-manager:message-type-repository:version';
+    public const string CACHE_VERSION_KEY = 'messenger:message-type-repository:version';
 
     /**
      * Get the MessageType ID by a type
      */
     public function getIdFromTypeAndCustomer(string $type): int
     {
-        $messageTypeClass = config('mail-manager.models.message_type');
+        $messageTypeClass = config('messenger.models.message_type');
 
         return $this->remember(
             static::class.':'.__FUNCTION__.':'.$type,
@@ -28,7 +28,7 @@ class MessageTypeRepository
      */
     public function getFromTypeAndCustomer(string $type): MessageType
     {
-        $messageTypeClass = config('mail-manager.models.message_type');
+        $messageTypeClass = config('messenger.models.message_type');
 
         return $this->remember(
             static::class.':'.__FUNCTION__.':'.$type,
@@ -41,7 +41,7 @@ class MessageTypeRepository
      */
     public function getFromId(int $id): MessageType
     {
-        $messageTypeClass = config('mail-manager.models.message_type');
+        $messageTypeClass = config('messenger.models.message_type');
 
         return $this->remember(
             static::class.':'.__FUNCTION__.':'.$id,
@@ -51,12 +51,12 @@ class MessageTypeRepository
 
     protected function remember(string $key, \Closure $callback): mixed
     {
-        $ttl = config('mail-manager.cache.ttl');
+        $ttl = config('messenger.cache.ttl');
         $prefixedKey = $this->cacheKey($key);
         $store = Cache::getStore();
 
         if ($store instanceof TaggableStore) {
-            return Cache::tags(config('mail-manager.cache.tag'))->remember($prefixedKey, $ttl, $callback);
+            return Cache::tags(config('messenger.cache.tag'))->remember($prefixedKey, $ttl, $callback);
         }
 
         return Cache::remember($prefixedKey, $ttl, $callback);
@@ -64,7 +64,7 @@ class MessageTypeRepository
 
     protected function cacheKey(string $key): string
     {
-        return 'mail-manager:message-types:v'.$this->cacheVersion().':'.$key;
+        return 'messenger:message-types:v'.$this->cacheVersion().':'.$key;
     }
 
     protected function cacheVersion(): int

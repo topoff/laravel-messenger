@@ -1,15 +1,15 @@
 <?php
 
-namespace Topoff\MailManager\Http\Controllers;
+namespace Topoff\Messenger\Http\Controllers;
 
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Response;
-use Topoff\MailManager\Events\MessageTrackingValidActionEvent;
-use Topoff\MailManager\Jobs\RecordLinkClickJob;
-use Topoff\MailManager\Jobs\RecordOpenJob;
+use Topoff\Messenger\Events\MessageTrackingValidActionEvent;
+use Topoff\Messenger\Jobs\RecordLinkClickJob;
+use Topoff\Messenger\Jobs\RecordOpenJob;
 
 class MailTrackingController extends Controller
 {
@@ -28,7 +28,7 @@ class MailTrackingController extends Controller
         $response->header('Last-Modified', 'Wed, 11 Jan 2006 12:59:00 GMT');
         $response->header('Pragma', 'no-cache');
 
-        $messageClass = config('mail-manager.models.message');
+        $messageClass = config('messenger.models.message');
         $messages = $messageClass::query()->where('tracking_hash', $hash)->get();
 
         if ($messages->isNotEmpty()) {
@@ -38,7 +38,7 @@ class MailTrackingController extends Controller
             if (! $event->skip) {
                 $ip = $request->ip();
                 $messages->each(function ($message) use ($ip): void {
-                    RecordOpenJob::dispatch($message->getKey(), $ip)->onQueue(config('mail-manager.tracking.tracker_queue'));
+                    RecordOpenJob::dispatch($message->getKey(), $ip)->onQueue(config('messenger.tracking.tracker_queue'));
 
                     if (! $message->tracking_opened_at) {
                         $message->tracking_opened_at = now();
@@ -53,10 +53,10 @@ class MailTrackingController extends Controller
 
     public function click(Request $request): RedirectResponse
     {
-        $url = (string) ($request->query('l') ?: config('mail-manager.tracking.redirect_missing_links_to', '/'));
+        $url = (string) ($request->query('l') ?: config('messenger.tracking.redirect_missing_links_to', '/'));
         $hash = (string) $request->query('h');
 
-        $messageClass = config('mail-manager.models.message');
+        $messageClass = config('messenger.models.message');
         $messages = $messageClass::query()->where('tracking_hash', $hash)->get();
 
         if ($messages->isNotEmpty()) {
@@ -66,9 +66,9 @@ class MailTrackingController extends Controller
             if (! $event->skip) {
                 $ip = $request->ip();
                 $messages->each(function ($message) use ($url, $ip): void {
-                    RecordLinkClickJob::dispatch($message->getKey(), $url, $ip)->onQueue(config('mail-manager.tracking.tracker_queue'));
+                    RecordLinkClickJob::dispatch($message->getKey(), $url, $ip)->onQueue(config('messenger.tracking.tracker_queue'));
 
-                    if (config('mail-manager.tracking.inject_pixel') && ! $message->tracking_opened_at) {
+                    if (config('messenger.tracking.inject_pixel') && ! $message->tracking_opened_at) {
                         $message->tracking_opened_at = now();
                     }
 

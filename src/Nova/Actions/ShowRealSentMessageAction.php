@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Nova\Actions;
+namespace Topoff\Messenger\Nova\Actions;
 
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\URL;
@@ -8,7 +8,7 @@ use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Actions\ActionResponse;
 use Laravel\Nova\Fields\ActionFields;
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Topoff\MailManager\Models\Message;
+use Topoff\Messenger\Models\Message;
 
 class ShowRealSentMessageAction extends Action
 {
@@ -23,7 +23,7 @@ class ShowRealSentMessageAction extends Action
         }
 
         $url = URL::temporarySignedRoute(
-            'mail-manager.tracking.nova.preview',
+            'messenger.tracking.nova.preview',
             now()->addMinutes(15),
             ['id' => $message->id]
         );

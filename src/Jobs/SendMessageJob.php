@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Jobs;
+namespace Topoff\Messenger\Jobs;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -14,9 +14,9 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
 use Throwable;
-use Topoff\MailManager\MailHandler\MainBulkMailHandler;
-use Topoff\MailManager\MailHandler\MainMailHandler;
-use Topoff\MailManager\Models\Message;
+use Topoff\Messenger\MailHandler\MainBulkMailHandler;
+use Topoff\Messenger\MailHandler\MainMailHandler;
+use Topoff\Messenger\Models\Message;
 
 class SendMessageJob implements ShouldQueue
 {
@@ -56,12 +56,12 @@ class SendMessageJob implements ShouldQueue
 
     protected function messageModel(): string
     {
-        return config('mail-manager.models.message');
+        return config('messenger.models.message');
     }
 
     protected function messageTypeModel(): string
     {
-        return config('mail-manager.models.message_type');
+        return config('messenger.models.message_type');
     }
 
     protected function messageTable(): string

@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Jobs;
+namespace Topoff\Messenger\Jobs;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -12,7 +12,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
-class CleanupMailManagerTablesJob implements ShouldQueue
+class CleanupMessengerTablesJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -26,12 +26,12 @@ class CleanupMailManagerTablesJob implements ShouldQueue
 
     protected function cleanupTrackingContent(): void
     {
-        $days = $this->nullableInt(config('mail-manager.cleanup.message_tracking_content_null_after_days'));
+        $days = $this->nullableInt(config('messenger.cleanup.message_tracking_content_null_after_days'));
         if ($days === null) {
             return;
         }
 
-        $messageModelClass = $this->modelClass('mail-manager.models.message');
+        $messageModelClass = $this->modelClass('messenger.models.message');
         $cutoff = now()->subDays($days);
 
         // Clean up database-stored tracking content
@@ -50,12 +50,12 @@ class CleanupMailManagerTablesJob implements ShouldQueue
 
     protected function cleanupMessages(): void
     {
-        $months = $this->nullableInt(config('mail-manager.cleanup.messages_delete_after_months'));
+        $months = $this->nullableInt(config('messenger.cleanup.messages_delete_after_months'));
         if ($months === null) {
             return;
         }
 
-        $messageModelClass = $this->modelClass('mail-manager.models.message');
+        $messageModelClass = $this->modelClass('messenger.models.message');
         $query = $this->queryWithTrashed($messageModelClass)
             ->where('created_at', '<', now()->subMonths($months));
 
@@ -67,12 +67,12 @@ class CleanupMailManagerTablesJob implements ShouldQueue
 
     protected function cleanupEmailLogs(): void
     {
-        $months = $this->nullableInt(config('mail-manager.cleanup.email_log_delete_after_months'));
+        $months = $this->nullableInt(config('messenger.cleanup.email_log_delete_after_months'));
         if ($months === null) {
             return;
         }
 
-        $emailLogModelClass = $this->modelClass('mail-manager.models.email_log');
+        $emailLogModelClass = $this->modelClass('messenger.models.email_log');
         $emailLogModelClass::query()
             ->where('created_at', '<', now()->subMonths($months))
             ->delete();
@@ -80,12 +80,12 @@ class CleanupMailManagerTablesJob implements ShouldQueue
 
     protected function cleanupNotificationLogs(): void
     {
-        $months = $this->nullableInt(config('mail-manager.cleanup.notification_log_delete_after_months'));
+        $months = $this->nullableInt(config('messenger.cleanup.notification_log_delete_after_months'));
         if ($months === null) {
             return;
         }
 
-        $notificationLogModelClass = $this->modelClass('mail-manager.models.notification_log');
+        $notificationLogModelClass = $this->modelClass('messenger.models.notification_log');
         $notificationLogModelClass::query()
             ->where('created_at', '<', now()->subMonths($months))
             ->delete();
@@ -93,7 +93,7 @@ class CleanupMailManagerTablesJob implements ShouldQueue
 
     protected function deleteTrackingFiles($query): void
     {
-        $disk = config('mail-manager.tracking.tracker_filesystem');
+        $disk = config('messenger.tracking.tracker_filesystem');
         $storage = $disk ? Storage::disk($disk) : Storage::disk();
 
         $query->whereNotNull('tracking_content_path')
@@ -110,13 +110,13 @@ class CleanupMailManagerTablesJob implements ShouldQueue
                     try {
                         $storage->delete($paths);
                     } catch (\Throwable $e) {
-                        Log::warning('CleanupMailManagerTablesJob: Failed to delete tracking files.', [
+                        Log::warning('CleanupMessengerTablesJob: Failed to delete tracking files.', [
                             'error' => $e->getMessage(),
                             'paths_count' => count($paths),
                         ]);
                     }
 
-                    $messageClass = config('mail-manager.models.message');
+                    $messageClass = config('messenger.models.message');
                     $messageClass::whereIn('id', $messages->pluck('id'))
                         ->update(['tracking_content_path' => null]);
                 }

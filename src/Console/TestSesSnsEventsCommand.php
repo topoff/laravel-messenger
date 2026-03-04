@@ -1,16 +1,16 @@
 <?php
 
-namespace Topoff\MailManager\Console;
+namespace Topoff\Messenger\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
-use Topoff\MailManager\Mail\SesTestMail;
-use Topoff\MailManager\Services\SesSns\SesEventSimulatorService;
+use Topoff\Messenger\Mail\SesTestMail;
+use Topoff\Messenger\Services\SesSns\SesEventSimulatorService;
 
 class TestSesSnsEventsCommand extends Command
 {
-    protected $signature = 'mail-manager:ses-sns:test-events
+    protected $signature = 'messenger:ses-sns:test-events
         {--from= : Sender email identity}
         {--scenario=* : Scenarios: delivery,bounce,complaint}
         {--configuration-set= : Override configuration set}
@@ -53,12 +53,12 @@ class TestSesSnsEventsCommand extends Command
         $waitSeconds = max(0, (int) $this->option('wait'));
         $pollInterval = max(1, (int) $this->option('poll-interval'));
 
-        $messageModelClass = config('mail-manager.models.message');
+        $messageModelClass = config('messenger.models.message');
         $messageIds = [];
 
         foreach ($scenarios as $scenario) {
             $recipient = $this->scenarioRecipients[$scenario];
-            $subject = '[mail-manager]['.$scenario.'] '.now()->toDateTimeString();
+            $subject = '[messenger]['.$scenario.'] '.now()->toDateTimeString();
             $body = 'SES simulator scenario: '.$scenario.' ('.Str::uuid()->toString().')';
 
             $messageId = $simulator->send(
@@ -69,7 +69,7 @@ class TestSesSnsEventsCommand extends Command
                 configurationSetName: $configurationSet,
                 tenantName: $tenantName,
                 tags: [
-                    ['Name' => 'mail_manager_test', 'Value' => 'true'],
+                    ['Name' => 'messenger_test', 'Value' => 'true'],
                     ['Name' => 'scenario', 'Value' => $scenario],
                 ],
             );
@@ -141,7 +141,7 @@ class TestSesSnsEventsCommand extends Command
             return $value;
         }
 
-        $identityAddress = trim((string) config('mail-manager.ses_sns.sending.identities.default.mail_from_address', ''));
+        $identityAddress = trim((string) config('messenger.ses_sns.sending.identities.default.mail_from_address', ''));
         if ($identityAddress !== '') {
             return $identityAddress;
         }
@@ -158,7 +158,7 @@ class TestSesSnsEventsCommand extends Command
             return $value;
         }
 
-        $configValue = trim((string) config('mail-manager.ses_sns.configuration_sets.default.configuration_set', ''));
+        $configValue = trim((string) config('messenger.ses_sns.configuration_sets.default.configuration_set', ''));
 
         return $configValue !== '' ? $configValue : null;
     }
@@ -170,7 +170,7 @@ class TestSesSnsEventsCommand extends Command
             return $value;
         }
 
-        $configValue = trim((string) config('mail-manager.ses_sns.tenant.name', ''));
+        $configValue = trim((string) config('messenger.ses_sns.tenant.name', ''));
 
         return $configValue !== '' ? $configValue : null;
     }
@@ -197,7 +197,7 @@ class TestSesSnsEventsCommand extends Command
     protected function createMessageRecord(string $messageModelClass, string $messageId, string $scenario, string $recipientEmail, string $subject): void
     {
         $messageTypeId = $this->ensureMessageTypeId();
-        $messageTypeModelClass = config('mail-manager.models.message_type');
+        $messageTypeModelClass = config('messenger.models.message_type');
 
         $messageModelClass::query()->create([
             'message_type_id' => $messageTypeId,
@@ -216,7 +216,7 @@ class TestSesSnsEventsCommand extends Command
 
     protected function ensureMessageTypeId(): int
     {
-        $messageTypeModelClass = config('mail-manager.models.message_type');
+        $messageTypeModelClass = config('messenger.models.message_type');
 
         /** @var Model $messageType */
         $messageType = $messageTypeModelClass::query()->firstOrCreate(

@@ -1,6 +1,6 @@
 <?php
 
-use Topoff\MailManager\Mail\BulkMail;
+use Topoff\Messenger\Mail\BulkMail;
 use Workbench\App\Models\TestMessagable;
 use Workbench\App\Models\TestReceiver;
 
@@ -10,7 +10,7 @@ beforeEach(function () {
 });
 
 it('sets the default subject from message count', function () {
-    config()->set('mail-manager.mail.bulk_mail_subject');
+    config()->set('messenger.mail.bulk_mail_subject');
 
     $messages = collect([
         createMessage([
@@ -36,7 +36,7 @@ it('sets the default subject from message count', function () {
 });
 
 it('uses custom subject resolver from config', function () {
-    config()->set('mail-manager.mail.bulk_mail_subject', fn ($receiver, $group) => 'Custom: '.$group->count().' items');
+    config()->set('messenger.mail.bulk_mail_subject', fn ($receiver, $group) => 'Custom: '.$group->count().' items');
 
     $messages = collect([
         createMessage([
@@ -55,7 +55,7 @@ it('uses custom subject resolver from config', function () {
 });
 
 it('sets url from config resolver', function () {
-    config()->set('mail-manager.mail.bulk_mail_url', fn ($receiver) => 'https://example.com/receiver/'.$receiver->id);
+    config()->set('messenger.mail.bulk_mail_url', fn ($receiver) => 'https://example.com/receiver/'.$receiver->id);
 
     $messages = collect([
         createMessage([
@@ -74,7 +74,7 @@ it('sets url from config resolver', function () {
 });
 
 it('url is null when no resolver is configured', function () {
-    config()->set('mail-manager.mail.bulk_mail_url');
+    config()->set('messenger.mail.bulk_mail_url');
 
     $messages = collect([
         createMessage([
@@ -93,7 +93,7 @@ it('url is null when no resolver is configured', function () {
 });
 
 it('uses the configured view', function () {
-    config()->set('mail-manager.mail.bulk_mail_view', 'mail-manager::bulkMail');
+    config()->set('messenger.mail.bulk_mail_view', 'messenger::bulkMail');
 
     $messages = collect([
         createMessage([

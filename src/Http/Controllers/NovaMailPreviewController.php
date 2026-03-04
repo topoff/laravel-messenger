@@ -1,16 +1,16 @@
 <?php
 
-namespace Topoff\MailManager\Http\Controllers;
+namespace Topoff\Messenger\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
-use Topoff\MailManager\Models\Message;
+use Topoff\Messenger\Models\Message;
 
 class NovaMailPreviewController
 {
     public function show(Request $request, int $message)
     {
-        $messageModelClass = config('mail-manager.models.message');
+        $messageModelClass = config('messenger.models.message');
         $resolvedMessage = $messageModelClass::query()->with('messageType')->find($message);
 
         if (! $resolvedMessage instanceof Message) {

@@ -1,15 +1,15 @@
 <?php
 
-namespace Topoff\MailManager\Http\Controllers;
+namespace Topoff\Messenger\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Http;
-use Topoff\MailManager\Events\SesSnsWebhookReceivedEvent;
-use Topoff\MailManager\Jobs\RecordBounceJob;
-use Topoff\MailManager\Jobs\RecordComplaintJob;
-use Topoff\MailManager\Jobs\RecordDeliveryJob;
-use Topoff\MailManager\Jobs\RecordRejectJob;
+use Topoff\Messenger\Events\SesSnsWebhookReceivedEvent;
+use Topoff\Messenger\Jobs\RecordBounceJob;
+use Topoff\Messenger\Jobs\RecordComplaintJob;
+use Topoff\Messenger\Jobs\RecordDeliveryJob;
+use Topoff\Messenger\Jobs\RecordRejectJob;
 
 class MailTrackingSnsController extends Controller
 {
@@ -36,12 +36,12 @@ class MailTrackingSnsController extends Controller
         }
 
         $message = is_array($payload['Message']) ? $payload['Message'] : (json_decode((string) $payload['Message'], true) ?: []);
-        if (config('mail-manager.tracking.sns_topic') && ($payload['TopicArn'] ?? null) !== config('mail-manager.tracking.sns_topic')) {
+        if (config('messenger.tracking.sns_topic') && ($payload['TopicArn'] ?? null) !== config('messenger.tracking.sns_topic')) {
             return 'invalid topic ARN';
         }
 
         $notificationType = $message['notificationType'] ?? $message['eventType'] ?? null;
-        $processSynchronously = $this->isMailManagerTestNotification($message);
+        $processSynchronously = $this->isMessengerTestNotification($message);
         event(new SesSnsWebhookReceivedEvent($payload, $message, $notificationType, $processSynchronously));
 
         match ($notificationType) {
@@ -67,22 +67,22 @@ class MailTrackingSnsController extends Controller
             return;
         }
 
-        $jobClass::dispatch($message)->onQueue(config('mail-manager.tracking.tracker_queue'));
+        $jobClass::dispatch($message)->onQueue(config('messenger.tracking.tracker_queue'));
     }
 
     /**
      * @param  array<string, mixed>  $message
      */
-    protected function isMailManagerTestNotification(array $message): bool
+    protected function isMessengerTestNotification(array $message): bool
     {
-        $mailManagerTestTag = $this->extractMailTagValue($message, 'mail_manager_test');
+        $mailManagerTestTag = $this->extractMailTagValue($message, 'messenger_test');
         if ($mailManagerTestTag !== null) {
             return in_array(strtolower($mailManagerTestTag), ['1', 'true', 'yes'], true);
         }
 
         $subject = (string) data_get($message, 'mail.commonHeaders.subject', '');
 
-        return str_starts_with($subject, '[mail-manager][');
+        return str_starts_with($subject, '[messenger][');
     }
 
     /**

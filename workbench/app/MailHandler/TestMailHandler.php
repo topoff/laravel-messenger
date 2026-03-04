@@ -2,6 +2,6 @@
 
 namespace Workbench\App\MailHandler;
 
-use Topoff\MailManager\MailHandler\MainMailHandler;
+use Topoff\Messenger\MailHandler\MainMailHandler;
 
 class TestMailHandler extends MainMailHandler {}

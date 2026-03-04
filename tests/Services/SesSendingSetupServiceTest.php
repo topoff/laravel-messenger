@@ -1,26 +1,26 @@
 <?php
 
-use Topoff\MailManager\Contracts\SesSnsProvisioningApi;
-use Topoff\MailManager\Services\SesSns\SesSendingSetupService;
+use Topoff\Messenger\Contracts\SesSnsProvisioningApi;
+use Topoff\Messenger\Services\SesSns\SesSendingSetupService;
 
 it('creates ses domain identity and returns required dns records', function () {
-    config()->set('mail-manager.ses_sns.sending.enabled', true);
-    config()->set('mail-manager.ses_sns.sending.identities', [
+    config()->set('messenger.ses_sns.sending.enabled', true);
+    config()->set('messenger.ses_sns.sending.identities', [
         'default' => [
             'identity_domain' => 'example.com',
             'mail_from_domain' => 'mail.example.com',
             'mail_from_address' => 'noreply@example.com',
         ],
     ]);
-    config()->set('mail-manager.ses_sns.aws.region', 'eu-central-1');
-    config()->set('mail-manager.ses_sns.configuration_sets', [
+    config()->set('messenger.ses_sns.aws.region', 'eu-central-1');
+    config()->set('messenger.ses_sns.configuration_sets', [
         'default' => [
-            'configuration_set' => 'mail-manager-tracking',
-            'event_destination' => 'mail-manager-sns',
+            'configuration_set' => 'messenger-tracking',
+            'event_destination' => 'messenger-sns',
             'identity' => 'default',
         ],
     ]);
-    config()->set('mail-manager.ses_sns.tenant.name', 'topofferten');
+    config()->set('messenger.ses_sns.tenant.name', 'topofferten');
 
     $fake = new class implements SesSnsProvisioningApi
     {
@@ -170,30 +170,30 @@ it('creates ses domain identity and returns required dns records', function () {
         ->and($fake->configurationSetExists)->toBeTrue()
         ->and($fake->assignedConfigurationSets)->toContain([
             'identity' => 'example.com',
-            'configuration_set' => 'mail-manager-tracking',
+            'configuration_set' => 'messenger-tracking',
         ])
         ->and($fake->tenantExists)->toBeTrue()
         ->and($fake->associatedResources)->toContain(
             'arn:aws:ses:eu-central-1:123:identity/example.com',
-            'arn:aws:ses:eu-central-1:123:configuration-set/mail-manager-tracking',
+            'arn:aws:ses:eu-central-1:123:configuration-set/messenger-tracking',
         );
 });
 
 it('checks if mail_from_address matches ses identity', function () {
-    config()->set('mail-manager.ses_sns.sending.identities', [
+    config()->set('messenger.ses_sns.sending.identities', [
         'default' => [
             'identity_email' => 'sender@example.com',
             'mail_from_address' => 'sender@example.com',
         ],
     ]);
-    config()->set('mail-manager.ses_sns.configuration_sets', [
+    config()->set('messenger.ses_sns.configuration_sets', [
         'default' => [
-            'configuration_set' => 'mail-manager-tracking',
-            'event_destination' => 'mail-manager-sns',
+            'configuration_set' => 'messenger-tracking',
+            'event_destination' => 'messenger-sns',
             'identity' => 'default',
         ],
     ]);
-    config()->set('mail-manager.ses_sns.tenant.name');
+    config()->set('messenger.ses_sns.tenant.name');
 
     $fake = new class implements SesSnsProvisioningApi
     {

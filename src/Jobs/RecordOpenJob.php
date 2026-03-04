@@ -1,14 +1,14 @@
 <?php
 
-namespace Topoff\MailManager\Jobs;
+namespace Topoff\Messenger\Jobs;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Event;
-use Topoff\MailManager\Events\MessageOpenedEvent;
-use Topoff\MailManager\Models\Message;
+use Topoff\Messenger\Events\MessageOpenedEvent;
+use Topoff\Messenger\Models\Message;
 
 class RecordOpenJob implements ShouldQueue
 {
@@ -29,7 +29,7 @@ class RecordOpenJob implements ShouldQueue
     public function handle(): void
     {
         /** @var class-string<Message> $messageClass */
-        $messageClass = config('mail-manager.models.message');
+        $messageClass = config('messenger.models.message');
 
         $message = $messageClass::on((new $messageClass)->getConnectionName())
             ->findOrFail($this->messageId);

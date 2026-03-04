@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Models;
+namespace Topoff\Messenger\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
@@ -10,8 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Date;
-use Topoff\MailManager\Contracts\MessageReceiverInterface;
-use Topoff\MailManager\Models\Traits\DateScopesTrait;
+use Topoff\Messenger\Contracts\MessageReceiverInterface;
+use Topoff\Messenger\Models\Traits\DateScopesTrait;
 
 /**
  * @property int $id
@@ -66,13 +66,13 @@ class Message extends Model
     {
         parent::__construct($attributes);
 
-        if ($connection = config('mail-manager.database.connection')) {
+        if ($connection = config('messenger.database.connection')) {
             $this->connection = $connection;
         }
     }
 
     /**
-     * Only MessageTypes with @see \Topoff\MailManager\Models\MessageType::scopeDirect()
+     * Only MessageTypes with @see \Topoff\Messenger\Models\MessageType::scopeDirect()
      */
     public function directMessageTypes()
     {
@@ -92,7 +92,7 @@ class Message extends Model
 
     public function messageType(): BelongsTo
     {
-        return $this->belongsTo(config('mail-manager.models.message_type'));
+        return $this->belongsTo(config('messenger.models.message_type'));
     }
 
     /**

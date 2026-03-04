@@ -1,15 +1,15 @@
 <?php
 
-namespace Topoff\MailManager\Console;
+namespace Topoff\Messenger\Console;
 
 use Illuminate\Console\Command;
 use Throwable;
-use Topoff\MailManager\Services\SesSns\SesSendingSetupService;
-use Topoff\MailManager\Services\SesSns\SesSnsSetupService;
+use Topoff\Messenger\Services\SesSns\SesSendingSetupService;
+use Topoff\Messenger\Services\SesSns\SesSnsSetupService;
 
 class SetupSesSnsAllCommand extends Command
 {
-    protected $signature = 'mail-manager:ses-sns:setup-all';
+    protected $signature = 'messenger:ses-sns:setup-all';
 
     protected $description = 'Provision SES sending + SES/SNS tracking (one-shot setup).';
 

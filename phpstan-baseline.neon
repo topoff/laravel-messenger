@@ -49,13 +49,13 @@ parameters:
 			path: src/Models/Message.php
 
 		-
-			message: '#^PHPDoc tag @return with type Illuminate\\Database\\Eloquent\\Model\|Illuminate\\Database\\Eloquent\\Relations\\MorphTo\|Topoff\\MailManager\\Contracts\\MessageReceiverInterface is not subtype of native type Illuminate\\Database\\Eloquent\\Relations\\MorphTo\.$#'
+			message: '#^PHPDoc tag @return with type Illuminate\\Database\\Eloquent\\Model\|Illuminate\\Database\\Eloquent\\Relations\\MorphTo\|Topoff\\Messenger\\Contracts\\MessageReceiverInterface is not subtype of native type Illuminate\\Database\\Eloquent\\Relations\\MorphTo\.$#'
 			identifier: return.phpDocType
 			count: 1
 			path: src/Models/Message.php
 
 		-
-			message: '#^Method Topoff\\MailManager\\Notifications\\NovaChannelNotification\:\:toVonage\(\) has invalid return type Illuminate\\Notifications\\Messages\\VonageMessage\.$#'
+			message: '#^Method Topoff\\Messenger\\Notifications\\NovaChannelNotification\:\:toVonage\(\) has invalid return type Illuminate\\Notifications\\Messages\\VonageMessage\.$#'
 			identifier: class.notFound
 			count: 1
 			path: src/Notifications/NovaChannelNotification.php

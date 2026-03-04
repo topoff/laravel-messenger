@@ -1,14 +1,14 @@
 <?php
 
-namespace Topoff\MailManager\Console;
+namespace Topoff\Messenger\Console;
 
 use Illuminate\Console\Command;
 use Throwable;
-use Topoff\MailManager\Services\SesSns\SesSendingSetupService;
+use Topoff\Messenger\Services\SesSns\SesSendingSetupService;
 
 class SetupSesSendingCommand extends Command
 {
-    protected $signature = 'mail-manager:ses-sns:setup-sending';
+    protected $signature = 'messenger:ses-sns:setup-sending';
 
     protected $description = 'Provision SES sending identity and DNS requirements.';
 

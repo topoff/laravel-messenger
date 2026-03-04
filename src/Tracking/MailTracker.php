@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Tracking;
+namespace Topoff\Messenger\Tracking;
 
 use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Mail\Events\MessageSent;
@@ -16,7 +16,7 @@ use Symfony\Component\Mime\Part\Multipart\AlternativePart;
 use Symfony\Component\Mime\Part\Multipart\MixedPart;
 use Symfony\Component\Mime\Part\Multipart\RelatedPart;
 use Symfony\Component\Mime\Part\TextPart;
-use Topoff\MailManager\Models\Message;
+use Topoff\Messenger\Models\Message;
 
 class MailTracker
 {
@@ -103,7 +103,7 @@ class MailTracker
 
     protected function messageModelClass(): string
     {
-        return config('mail-manager.models.message');
+        return config('messenger.models.message');
     }
 
     protected function generateHash(): string
@@ -167,19 +167,19 @@ class MailTracker
     {
         $result = $html;
 
-        if (config('mail-manager.tracking.inject_pixel')) {
-            $pixelUrl = route('mail-manager.tracking.open', ['hash' => $hash]);
+        if (config('messenger.tracking.inject_pixel')) {
+            $pixelUrl = route('messenger.tracking.open', ['hash' => $hash]);
             $pixelTag = '<img border=0 width=1 alt="" height=1 src="'.$pixelUrl.'" />';
             $result = preg_match('/^(.*<body[^>]*>)(.*)$/is', $result, $matches)
                 ? $matches[1].$pixelTag.$matches[2]
                 : $result.$pixelTag;
         }
 
-        if (config('mail-manager.tracking.track_links')) {
+        if (config('messenger.tracking.track_links')) {
             $result = preg_replace_callback('/(<a[^>]*href=["\'])([^"\']*)/i', function (array $matches) use ($hash): string {
                 $url = $matches[2] !== '' ? str_replace('&amp;', '&', $matches[2]) : url('/');
 
-                return $matches[1].URL::signedRoute('mail-manager.tracking.click', [
+                return $matches[1].URL::signedRoute('messenger.tracking.click', [
                     'l' => $url,
                     'h' => $hash,
                 ]);
@@ -208,7 +208,7 @@ class MailTracker
             $messageModel->tracking_clicks = 0;
             $messageModel->tracking_meta ??= [];
 
-            if ($mutated && config('mail-manager.tracking.log_content')) {
+            if ($mutated && config('messenger.tracking.log_content')) {
                 $this->storeOriginalContent($messageModel, $hash, $originalHtml);
             }
 
@@ -218,11 +218,11 @@ class MailTracker
 
     protected function storeOriginalContent(Message $messageModel, string $hash, string $html): void
     {
-        $strategy = config('mail-manager.tracking.log_content_strategy', 'database');
+        $strategy = config('messenger.tracking.log_content_strategy', 'database');
 
         if ($strategy === 'filesystem') {
-            $disk = config('mail-manager.tracking.tracker_filesystem');
-            $folder = trim((string) config('mail-manager.tracking.tracker_filesystem_folder', 'mail-manager-tracker'), '/');
+            $disk = config('messenger.tracking.tracker_filesystem');
+            $folder = trim((string) config('messenger.tracking.tracker_filesystem_folder', 'messenger-tracker'), '/');
             $path = $folder.'/'.$hash.'.html';
 
             if ($disk) {
@@ -237,7 +237,7 @@ class MailTracker
             return;
         }
 
-        $maxSize = (int) config('mail-manager.tracking.content_max_size', 65535);
+        $maxSize = (int) config('messenger.tracking.content_max_size', 65535);
         $messageModel->tracking_content = mb_substr($html, 0, $maxSize);
         $messageModel->tracking_content_path = null;
     }
@@ -256,7 +256,7 @@ class MailTracker
             return;
         }
 
-        $sets = (array) config('mail-manager.ses_sns.configuration_sets', []);
+        $sets = (array) config('messenger.ses_sns.configuration_sets', []);
         $awsName = $sets[$configSetKey]['configuration_set'] ?? null;
 
         if (! $awsName) {
@@ -278,13 +278,13 @@ class MailTracker
             return;
         }
 
-        $sets = (array) config('mail-manager.ses_sns.configuration_sets', []);
+        $sets = (array) config('messenger.ses_sns.configuration_sets', []);
         $identityKey = $sets[$configSetKey]['identity'] ?? null;
         if (! $identityKey) {
             return;
         }
 
-        $identities = (array) config('mail-manager.ses_sns.sending.identities', []);
+        $identities = (array) config('messenger.ses_sns.sending.identities', []);
         $mailFromAddress = trim((string) ($identities[$identityKey]['mail_from_address'] ?? ''));
         if ($mailFromAddress === '') {
             return;
@@ -310,7 +310,7 @@ class MailTracker
             return;
         }
 
-        $tenantName = trim((string) config('mail-manager.ses_sns.tenant.name', ''));
+        $tenantName = trim((string) config('messenger.ses_sns.tenant.name', ''));
         $mailClass = class_basename($messageModels->first()?->messageType->notification_class ?? '');
 
         $tags = collect([

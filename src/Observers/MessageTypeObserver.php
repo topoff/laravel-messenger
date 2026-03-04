@@ -1,10 +1,10 @@
 <?php
 
-namespace Topoff\MailManager\Observers;
+namespace Topoff\Messenger\Observers;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
-use Topoff\MailManager\Repositories\MessageTypeRepository;
+use Topoff\Messenger\Repositories\MessageTypeRepository;
 
 class MessageTypeObserver
 {
@@ -56,7 +56,7 @@ class MessageTypeObserver
         $store = Cache::getStore();
 
         if ($store instanceof \Illuminate\Cache\TaggableStore) {
-            Cache::tags([config('mail-manager.cache.tag')])->flush();
+            Cache::tags([config('messenger.cache.tag')])->flush();
         } else {
             Cache::forever(MessageTypeRepository::CACHE_VERSION_KEY, ((int) Cache::get(MessageTypeRepository::CACHE_VERSION_KEY, 1)) + 1);
         }

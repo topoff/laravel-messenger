@@ -3,7 +3,7 @@
 namespace Workbench\App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Topoff\MailManager\Contracts\MessageReceiverInterface;
+use Topoff\Messenger\Contracts\MessageReceiverInterface;
 
 class TestReceiver extends Model implements MessageReceiverInterface
 {

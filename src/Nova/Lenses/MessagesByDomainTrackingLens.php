@@ -1,6 +1,6 @@
 <?php
 
-namespace Topoff\MailManager\Nova\Lenses;
+namespace Topoff\Messenger\Nova\Lenses;
 
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -9,8 +9,8 @@ use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\LensRequest;
 use Laravel\Nova\Lenses\Lens;
-use Topoff\MailManager\Nova\Filters\DateFilter;
-use Topoff\MailManager\Nova\Filters\MessagesMessageTypeFilter;
+use Topoff\Messenger\Nova\Filters\DateFilter;
+use Topoff\Messenger\Nova\Filters\MessagesMessageTypeFilter;
 
 class MessagesByDomainTrackingLens extends Lens
 {
@@ -19,7 +19,7 @@ class MessagesByDomainTrackingLens extends Lens
      */
     public static function query(LensRequest $request, Builder $query): Builder
     {
-        $messageTable = (new (config('mail-manager.models.message')))->getTable();
+        $messageTable = (new (config('messenger.models.message')))->getTable();
         $domainExpr = static::domainExpression("{$messageTable}.tracking_recipient_contact");
 
         $query = $query->from($messageTable)->select([
@@ -81,7 +81,7 @@ class MessagesByDomainTrackingLens extends Lens
      */
     public function filters(Request $request): array
     {
-        $messageTable = (new (config('mail-manager.models.message')))->getTable();
+        $messageTable = (new (config('messenger.models.message')))->getTable();
 
         return [
             new DateFilter("{$messageTable}.created_at", '30-days'),

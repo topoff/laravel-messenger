@@ -1,16 +1,16 @@
 <?php
 
-use Topoff\MailManager\Services\SesSns\SesEventSimulatorService;
+use Topoff\Messenger\Services\SesSns\SesEventSimulatorService;
 
 it('sends simulator scenarios and creates message records', function () {
     config()->set('mail.from.address', 'sender@example.com');
-    config()->set('mail-manager.ses_sns.configuration_sets', [
+    config()->set('messenger.ses_sns.configuration_sets', [
         'default' => [
-            'configuration_set' => 'mail-manager-tracking',
-            'event_destination' => 'mail-manager-sns',
+            'configuration_set' => 'messenger-tracking',
+            'event_destination' => 'messenger-sns',
         ],
     ]);
-    config()->set('mail-manager.ses_sns.tenant.name', 'tenant-a');
+    config()->set('messenger.ses_sns.tenant.name', 'tenant-a');
 
     $fake = new class extends SesEventSimulatorService
     {
@@ -45,7 +45,7 @@ it('sends simulator scenarios and creates message records', function () {
 
     app()->instance(SesEventSimulatorService::class, $fake);
 
-    $this->artisan('mail-manager:ses-sns:test-events', [
+    $this->artisan('messenger:ses-sns:test-events', [
         '--scenario' => ['delivery', 'bounce', 'complaint'],
         '--create-message-record' => true,
         '--wait' => 0,
@@ -56,10 +56,10 @@ it('sends simulator scenarios and creates message records', function () {
         ->and($fake->calls[1]['to'])->toBe('bounce@simulator.amazonses.com')
         ->and($fake->calls[2]['to'])->toBe('complaint@simulator.amazonses.com')
         ->and($fake->calls[0]['from'])->toBe('sender@example.com')
-        ->and($fake->calls[0]['configuration_set'])->toBe('mail-manager-tracking')
+        ->and($fake->calls[0]['configuration_set'])->toBe('messenger-tracking')
         ->and($fake->calls[0]['tenant'])->toBe('tenant-a');
 
-    $messageClass = config('mail-manager.models.message');
+    $messageClass = config('messenger.models.message');
     expect($messageClass::query()->whereNotNull('tracking_message_id')->count())->toBe(3)
         ->and($messageClass::query()->where('tracking_message_id', 'sim-message-1')->exists())->toBeTrue()
         ->and($messageClass::query()->where('tracking_message_id', 'sim-message-2')->exists())->toBeTrue()

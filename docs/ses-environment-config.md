@@ -55,4 +55,4 @@ Each identity domain needs DKIM records (created automatically by SES). Each MAI
 
 Same pattern applies to all MAIL FROM domains (`mail.outreach.top-offerten.ch`, `mail.staging.top-offerten.ch`, etc.).
 
-The `mail-manager:ses-sns:setup-all` command provisions identities and can auto-create Route53 records if configured.
+The `messenger:ses-sns:setup-all` command provisions identities and can auto-create Route53 records if configured.
