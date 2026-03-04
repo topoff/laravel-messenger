@@ -23,7 +23,29 @@ php artisan vendor:publish --tag="messenger-config"
 
 ## Usage
 
-Documentation coming soon.
+### Scheduling SendMessageJob
+
+The package does **not** schedule `SendMessageJob` automatically. You must schedule it in your application's `routes/console.php` (or equivalent):
+
+```php
+use Topoff\Messenger\Jobs\SendMessageJob;
+
+Schedule::job(new SendMessageJob, 'messages')->everyMinute();
+```
+
+The constructor accepts an optional `$isRetryCallForMessagesWithError` flag. A common pattern is to run it frequently for new messages and less often for retries:
+
+```php
+// Send new messages every minute
+Schedule::job(new SendMessageJob, 'messages')
+    ->name(SendMessageJob::class)
+    ->withoutOverlapping()
+    ->everyMinute();
+
+// Retry failed messages every 10 minutes
+Schedule::job(new SendMessageJob(isRetryCallForMessagesWithError: true), 'messages')
+    ->everyTenMinutes();
+```
 
 ### SES/SNS Auto Setup (SES v2 Configuration Sets)
 
