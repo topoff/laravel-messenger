@@ -5,37 +5,87 @@
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/topoff/laravel-messenger/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/topoff/laravel-messenger/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/topoff/laravel-messenger.svg?style=flat-square)](https://packagist.org/packages/topoff/laravel-messenger)
 
-This package provides a comprehensive solution for managing mail templates and mail sending in Laravel applications.
+Template-driven message sending for Laravel with SES/SNS tracking (opens, clicks, delivery, bounce, complaint), automatic retries with exponential backoff, and Nova integration.
 
 ## Installation
-
-You can install the package via composer:
 
 ```bash
 composer require topoff/laravel-messenger
 ```
 
-You can publish the config file with:
+Publish the config and migrations:
 
 ```bash
 php artisan vendor:publish --tag="messenger-config"
+php artisan vendor:publish --tag="messenger-migrations"
+php artisan migrate
 ```
+
+## Core Concepts
+
+### Models
+
+**Message** — represents a single outgoing message (email or notification):
+- Polymorphic relations: `receiver`, `sender`, `messagable` (MorphTo), `messageType` (BelongsTo)
+- Status timestamps: `scheduled_at`, `reserved_at`, `error_at`, `sent_at`, `failed_at`
+- Tracking fields: `tracking_hash`, `tracking_message_id`, `tracking_opens`, `tracking_clicks`, `tracking_opened_at`, `tracking_clicked_at`, `tracking_content`
+- Error fields: `error_code`, `error_message`, `attempts`
+- SoftDeletes enabled
+
+**MessageType** — defines how a message is sent:
+- `channel` (mail/vonage), `notification_class`, `single_handler`, `bulk_handler`, `direct` flag
+- Per-type config: `dev_bcc`, `error_stop_send_minutes`, `max_retry_attempts` (default: 10), `configuration_set`
+- Cached via `MessageTypeRepository` (30-day TTL, `messageType` cache tag)
+
+### Contracts
+
+Your receiver models must implement `MessageReceiverInterface`:
+
+```php
+use Topoff\Messenger\Contracts\MessageReceiverInterface;
+
+class User extends Model implements MessageReceiverInterface
+{
+    public function getEmail(): string { /* ... */ }
+    public function getResourceUri(): string { /* ... */ }
+    public function setEmailToInvalid(bool $isManualCall = true): void { /* ... */ }
+    public function getEmailIsValid(): bool { /* ... */ }
+    public function preferredLocale(): string { /* ... */ }
+}
+```
+
+Mail handlers that support grouping into bulk mails implement `GroupableMailTypeInterface`.
 
 ## Usage
 
+### Creating Messages
+
+Use the fluent `MessageService` builder:
+
+```php
+use Topoff\Messenger\Services\MessageService;
+
+$service = app(MessageService::class);
+
+$service
+    ->setSender(User::class, $user->id)
+    ->setReceiver(Company::class, $company->id)
+    ->setMessagable(Lead::class, $lead->id)
+    ->setMessageTypeClass(NewLeadToCustomerMailHandler::class)
+    ->setCompanyId($company->id)
+    ->setScheduled(now()->addMinutes(5))
+    ->setParams(['key' => 'value'])
+    ->setLocale('de')
+    ->create();
+```
+
 ### Scheduling SendMessageJob
 
-The package does **not** schedule `SendMessageJob` automatically. You must schedule it in your application's `routes/console.php` (or equivalent):
+The package does **not** schedule `SendMessageJob` automatically. You must add it to your application's `routes/console.php`:
 
 ```php
 use Topoff\Messenger\Jobs\SendMessageJob;
 
-Schedule::job(new SendMessageJob, 'messages')->everyMinute();
-```
-
-The constructor accepts an optional `$isRetryCallForMessagesWithError` flag. A common pattern is to run it frequently for new messages and less often for retries:
-
-```php
 // Send new messages every minute
 Schedule::job(new SendMessageJob, 'messages')
     ->name(SendMessageJob::class)
@@ -47,16 +97,113 @@ Schedule::job(new SendMessageJob(isRetryCallForMessagesWithError: true), 'messag
     ->everyTenMinutes();
 ```
 
-### SES/SNS Auto Setup (SES v2 Configuration Sets)
+### Sending Flow
 
-The package can provision SES/SNS tracking resources via AWS API:
+1. **MessageService** — fluent builder, persists a `Message` record
+2. **SendMessageJob** — picks up pending messages in chunks of 250, routes to single or bulk handler
+3. **MainMailHandler** — single message: reserve -> send -> mark sent
+4. **MainBulkMailHandler** — groups messages by receiver -> sends `BulkMail`
 
-- SES Configuration Set
-- SES Event Destination (SNS)
-- SNS Topic policy for SES publish
-- SNS HTTPS subscription to `messenger.tracking.sns`
+### Retry Mechanism
 
-Enable it in config:
+Failed messages are retried with exponential backoff (`min(2^(attempts-1) * 15, 960)` minutes):
+
+| Attempt | Backoff |
+|---|---|
+| 1 | 15 min |
+| 2 | 30 min |
+| 3 | 1 hour |
+| 4 | 2 hours |
+| 5 | 4 hours |
+| 6 | 8 hours |
+| 7+ | 16 hours (capped) |
+
+Retries stop when `attempts >= max_retry_attempts`, `created_at` exceeds `error_stop_send_minutes`, or the message is marked as permanently failed.
+
+### Permanent Failure Detection
+
+These SMTP codes cause immediate permanent failure (`failed_at` is set, no further retries):
+
+| Code | Meaning |
+|---|---|
+| 550 | Mailbox doesn't exist / unroutable |
+| 553 | Mailbox name not allowed |
+| 521 | Host does not accept mail |
+| 556 | Domain does not accept mail |
+| — | Exception contains "MessageRejected" (SES rejection) |
+
+## Tracking
+
+### Open & Click Tracking
+
+When enabled, the `MailTracker` listener hooks into `MessageSending`:
+- Injects a 1x1 tracking pixel (`<img>`)
+- Rewrites links to signed tracking URLs
+- Injects `X-SES-CONFIGURATION-SET` and `X-SES-MESSAGE-TAGS` headers
+- On `MessageSent`: captures the SES message ID from response headers
+- Respects `X-No-Track` header to skip tracking
+
+Config keys:
+
+```php
+'tracking' => [
+    'inject_pixel' => true,
+    'track_links' => true,
+    'log_content' => true,             // store rendered HTML
+    'log_content_strategy' => 'database', // or 'filesystem'
+],
+```
+
+### Tracking Routes
+
+| Method | URI | Purpose |
+|---|---|---|
+| GET | `/email/t/{hash}` | Open pixel — returns 1x1 GIF, increments opens |
+| GET | `/email/n?l=...&h=...` | Link click — validates signature, increments clicks, redirects |
+| POST | `/email/sns` | SNS webhook — processes delivery/bounce/complaint/reject events |
+
+Route prefix and middleware are configurable via `tracking.route`.
+
+### SNS Event Processing
+
+SNS notifications are dispatched to dedicated jobs:
+
+| Event | Job | Effect |
+|---|---|---|
+| Delivery | `RecordDeliveryJob` | Sets `success: true`, `delivered_at` |
+| Bounce | `RecordBounceJob` | Sets `success: false`, dispatches Permanent/Transient event |
+| Complaint | `RecordComplaintJob` | Sets `complaint: true`, `success: false` |
+| Reject | `RecordRejectJob` | Sets `success: false`, `failed_at` (permanent) |
+| Open | `RecordOpenJob` | Increments opens, sets `tracking_opened_at` |
+| Click | `RecordLinkClickJob` | Increments clicks, sets `tracking_clicked_at` |
+
+### BCC Recipient Filtering
+
+When BCC is added (via `AddBccToEmailsListener`), both TO and BCC recipients share the same SES message ID. The SNS event jobs guard against this by comparing event recipient(s) against `tracking_recipient_contact`. Events for non-matching recipients are skipped. This is case-insensitive and null-safe.
+
+### Events
+
+- `MessageOpenedEvent`, `MessageLinkClickedEvent` — user interaction
+- `MessageDeliveredEvent`, `MessagePermanentBouncedEvent`, `MessageTransientBouncedEvent` — delivery status
+- `MessageComplaintEvent`, `MessageRejectedEvent` — negative outcomes
+- `SesSnsWebhookReceivedEvent` — raw SNS webhook payload
+
+### Listeners
+
+| Listener | Trigger | Purpose |
+|---|---|---|
+| `LogEmailsListener` | `MessageSent` | Logs to `email_log` table |
+| `LogNotificationListener` | `NotificationSent` | Logs to `notification_log` table |
+| `AddBccToEmailsListener` | `MessageSending` | Adds BCC (respects `dev_bcc` per MessageType) |
+
+## SES/SNS Auto Setup
+
+The package can provision all required AWS SES/SNS resources:
+- SES Configuration Set + Event Destination (SNS)
+- SNS Topic + HTTPS subscription
+- SES identities with DKIM + MAIL FROM domains
+
+Enable in config:
 
 ```php
 'ses_sns' => [
@@ -64,88 +211,94 @@ Enable it in config:
 ],
 ```
 
-Then run:
+### Artisan Commands
 
-```bash
-php artisan messenger:ses-sns:setup-tracking
-php artisan messenger:ses-sns:check-tracking
-php artisan messenger:ses-sns:setup-sending
-php artisan messenger:ses-sns:check-sending
-php artisan messenger:ses-sns:teardown --force
+| Command | Purpose |
+|---|---|
+| `messenger:ses-sns:setup-all` | Provision all SES identities + SNS tracking in one go |
+| `messenger:ses-sns:setup-tracking` | Set up SNS topic, subscription, config set, event destination |
+| `messenger:ses-sns:check-tracking` | Validate tracking infrastructure health |
+| `messenger:ses-sns:setup-sending` | Set up SES identities with DKIM + MAIL FROM |
+| `messenger:ses-sns:check-sending` | Validate identity verification and DNS records |
+| `messenger:ses-sns:test-events` | Simulate SES events (bounce, complaint, delivery) |
+| `messenger:ses-sns:teardown` | Remove all provisioned resources (requires `--force`) |
+
+## Automatic Cleanup
+
+The package schedules `CleanupMessengerTablesJob` automatically (configurable via `cleanup.schedule`):
+
+```php
+'cleanup' => [
+    'messages_delete_after_months' => 24,
+    'email_log_delete_after_months' => 24,
+    'notification_log_delete_after_months' => 24,
+    'message_tracking_content_null_after_days' => 60,
+    'schedule' => [
+        'enabled' => true,
+        'cron' => '17 3 * * *',
+    ],
+],
 ```
 
-In Nova (`Message Types` resource), use action `Setup SES/SNS Tracking` to run setup and open the status/check page.
+## Nova Integration
 
-### BCC Recipient Filtering
+When Laravel Nova is installed, the package provides:
 
-When BCC is added to an email (e.g. via `AddBccToEmailsListener`), both the TO and BCC recipients share the same SES message ID. SNS event notifications (delivery, bounce, complaint) are matched to `Message` records by `tracking_message_id`, so without filtering, events for the BCC recipient would corrupt the original recipient's tracking data (e.g. a BCC bounce setting `success: false` on the original message).
+**Resources:** Message (full CRUD with tracking fields), MessageType, EmailLog, NotificationLog
 
-The SNS event jobs (`RecordDeliveryJob`, `RecordBounceJob`, `RecordComplaintJob`) guard against this by comparing the event's recipient email(s) against the message's `tracking_recipient_email`. If they don't match, the event is skipped for that message. This comparison is case-insensitive and null-safe — messages without a `tracking_recipient_email` process all events as before.
+**Actions:**
+- Resend failed/errored message as new copy
+- Preview rendered HTML of sent messages (signed URL)
+- Preview message type templates
+- Compose ad-hoc custom emails with markdown editor
+- Send SMS/email notifications via AnonymousNotifiable
+- Open SES/SNS dashboard
 
-`RecordRejectJob` is unaffected since reject notifications carry no per-recipient data.
+**Filters:** Date range, status, message type, receiver type, messagable type
 
-### Nova Integration
+**Lenses:** Tracking stats by message type, by recipient domain, per-message details
 
-If Laravel Nova is installed, the package can auto-register a tracked messages resource with preview and resend actions.
+**SES/SNS Dashboard** — web UI at `/emessenger/nova/ses-sns-dashboard` with health checks, DNS records, identity details, AWS Console links, and command buttons.
 
-Configuration keys:
+Config:
 
-- `messenger.tracking.nova.enabled`
-- `messenger.tracking.nova.register_resource`
-- `messenger.tracking.nova.resource`
-- `messenger.tracking.nova.preview_route`
+```php
+'tracking' => [
+    'nova' => [
+        'enabled' => true,
+        'register_resource' => false, // auto-register in Nova
+        'resource' => \Topoff\Messenger\Nova\Resources\Message::class,
+    ],
+],
+```
 
-The preview action uses a temporary signed URL and the package route `messenger.tracking.nova.preview`.
+## Configuration Reference
+
+| Section | Key Settings |
+|---|---|
+| `models.*` | Configurable model classes (message, message_type, email_log, notification_log) |
+| `database.*` | Connection name |
+| `logs.*` | Connection, table names for email_log / notification_log |
+| `cache.*` | Tag (`messageType`), TTL (30 days) |
+| `cleanup.*` | Retention periods, tracking_content nullification, schedule cron |
+| `mail.*` | Bulk mail class/view/subject/url, custom message view |
+| `sending.*` | `check_should_send` callable, `prevent_create_message` callable |
+| `bcc.*` | `check_should_add_bcc` callable |
+| `tracking.*` | Pixel/link injection, route prefix/middleware, Nova config, content storage, SNS topic |
+| `ses_sns.*` | AWS credentials, configuration sets, SNS topic, event types, tenant, Route53 automation |
 
 ## Development
 
-### Code Quality Tools
-
-This package uses several tools to maintain code quality:
-
-#### Laravel Pint (Code Formatting)
-
-Format code according to Laravel standards:
-
 ```bash
-composer format
+composer test          # Run Pest test suite
+composer format        # Laravel Pint
+composer analyse       # PHPStan
+composer lint          # Pint + PHPStan
+composer rector-dry    # Preview Rector refactorings
+composer rector        # Apply Rector refactorings
 ```
 
-#### Rector (Automated Refactoring)
-
-Preview potential code improvements:
-
-```bash
-composer rector-dry
-```
-
-Apply automated refactorings:
-
-```bash
-composer rector
-```
-
-#### PHPStan (Static Analysis)
-
-Run static analysis:
-
-```bash
-composer analyse
-```
-
-#### Run All Quality Checks
-
-```bash
-composer lint
-```
-
-This runs both Pint and PHPStan.
-
-### Testing
-
-```bash
-composer test
-```
+The package uses Orchestra Testbench. `php artisan` works in the package root directory.
 
 ## Changelog
 

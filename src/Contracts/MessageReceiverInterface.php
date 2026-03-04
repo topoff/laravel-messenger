@@ -10,9 +10,9 @@ interface MessageReceiverInterface
     public function getEmail(): string;
 
     /**
-     * The my-vipany URI for the model, used for direct email links
+     * The URI for the model, used for direct email links
      */
-    public function getMyVipanyUri(): string;
+    public function getResourceUri(): string;
 
     /**
      * Set the Email to invalid on the Receiver Model, that we can prevent sending emails to invalid addresses

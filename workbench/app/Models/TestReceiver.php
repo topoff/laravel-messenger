@@ -16,7 +16,7 @@ class TestReceiver extends Model implements MessageReceiverInterface
         return $this->email;
     }
 
-    public function getMyVipanyUri(): string
+    public function getResourceUri(): string
     {
         return '/receiver/'.$this->id;
     }
