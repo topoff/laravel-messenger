@@ -25,8 +25,8 @@ return new class extends Migration
         });
 
         // (b) Fix stale namespace references: Topoff\MailManager -> Topoff\Messenger
-        $stalePrefix = 'Topoff\\MailManager\\';
-        $newPrefix = 'Topoff\\Messenger\\';
+        $stalePrefix = 'MailManager';
+        $newPrefix = 'Messenger';
 
         foreach (['notification_class', 'single_handler', 'bulk_handler'] as $column) {
             if (! Schema::connection($connection)->hasColumn('message_types', $column)) {
@@ -35,7 +35,7 @@ return new class extends Migration
 
             DB::connection($connection)
                 ->table('message_types')
-                ->where($column, 'LIKE', $stalePrefix.'%')
+                ->where($column, 'LIKE', '%'.$stalePrefix.'%')
                 ->get()
                 ->each(function (object $row) use ($connection, $column, $stalePrefix, $newPrefix): void {
                     DB::connection($connection)
