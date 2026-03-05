@@ -23,6 +23,7 @@ use Topoff\Messenger\Jobs\CleanupMessengerTablesJob;
 use Topoff\Messenger\Listeners\AddBccToEmailsListener;
 use Topoff\Messenger\Listeners\LogEmailToMessageLogListener;
 use Topoff\Messenger\Listeners\LogNotificationToMessageLogListener;
+use Topoff\Messenger\Listeners\RecordNotificationSentListener;
 use Topoff\Messenger\Nova\Resources\Message;
 use Topoff\Messenger\Nova\Resources\MessageLog as MessageLogResource;
 use Topoff\Messenger\Nova\Resources\MessageType as MessageTypeResource;
@@ -77,6 +78,7 @@ class MessengerServiceProvider extends PackageServiceProvider
         Event::listen(MessageSent::class, fn (MessageSent $event) => app(MailTracker::class)->messageSent($event));
         Event::listen(MessageSent::class, LogEmailToMessageLogListener::class);
         Event::listen(NotificationSent::class, LogNotificationToMessageLogListener::class);
+        Event::listen(NotificationSent::class, RecordNotificationSentListener::class);
     }
 
     protected function registerCleanupSchedule(): void

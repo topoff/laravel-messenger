@@ -111,6 +111,7 @@ class MainNotificationHandler
 
             $notificationClass = $this->notificationClass();
             $notification = new $notificationClass(...$this->getNotificationParameters());
+            $notification->messengerMessageId = $this->message->id;
 
             if ($this->shouldBeSentInThisEnvironment()) {
                 $receiver->notify($notification);

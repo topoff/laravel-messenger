@@ -141,6 +141,11 @@ return [
 
         // Optional: restrict SNS notifications to this topic ARN.
         'sns_topic' => null,
+
+        // Vonage SMS delivery receipt (DLR) webhook.
+        'vonage_dlr' => [
+            'enabled' => false,
+        ],
     ],
 
     'ses_sns' => [
