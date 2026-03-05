@@ -6,35 +6,33 @@ use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Fields\Number;
-use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\LensRequest;
 use Laravel\Nova\Lenses\Lens;
+use Topoff\Messenger\Nova\Filters\CompanyFilter;
 use Topoff\Messenger\Nova\Filters\DateFilter;
 
-class MessagesByTypeTrackingLens extends Lens
+class CompanyTrackingMetricsLens extends Lens
 {
     /**
      * Get the query builder / paginator for the lens.
      */
     public static function query(LensRequest $request, Builder $query): Builder
     {
-        $messageTypeTable = (new (config('messenger.models.message_type')))->getTable();
         $messageTable = (new (config('messenger.models.message')))->getTable();
 
         $query = $query->from($messageTable)->select([
-            "{$messageTable}.message_type_id",
-            DB::raw("{$messageTypeTable}.notification_class"),
+            "{$messageTable}.company_id",
             DB::raw('COUNT(*) as total_messages'),
             DB::raw("COUNT(CASE WHEN {$messageTable}.sent_at IS NOT NULL THEN 1 END) as total_sent"),
             DB::raw("SUM({$messageTable}.tracking_opens) as total_opens"),
             DB::raw("SUM({$messageTable}.tracking_clicks) as total_clicks"),
             DB::raw("COUNT(CASE WHEN {$messageTable}.tracking_opened_at IS NOT NULL THEN 1 END) as unique_opened"),
             DB::raw("COUNT(CASE WHEN {$messageTable}.tracking_clicked_at IS NOT NULL THEN 1 END) as unique_clicked"),
-            DB::raw("ROUND(COUNT(CASE WHEN {$messageTable}.tracking_opened_at IS NOT NULL THEN 1 END) / NULLIF(COUNT(CASE WHEN {$messageTable}.sent_at IS NOT NULL THEN 1 END), 0) * 100, 2) as open_rate"),
-            DB::raw("ROUND(COUNT(CASE WHEN {$messageTable}.tracking_clicked_at IS NOT NULL THEN 1 END) / NULLIF(COUNT(CASE WHEN {$messageTable}.sent_at IS NOT NULL THEN 1 END), 0) * 100, 2) as click_rate"),
+            DB::raw("ROUND(COUNT(CASE WHEN {$messageTable}.tracking_opened_at IS NOT NULL THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN {$messageTable}.sent_at IS NOT NULL THEN 1 END), 0), 2) as open_rate"),
+            DB::raw("ROUND(COUNT(CASE WHEN {$messageTable}.tracking_clicked_at IS NOT NULL THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN {$messageTable}.sent_at IS NOT NULL THEN 1 END), 0), 2) as click_rate"),
         ])
-            ->join($messageTypeTable, "{$messageTable}.message_type_id", '=', "{$messageTypeTable}.id")
-            ->groupBy("{$messageTable}.message_type_id", "{$messageTypeTable}.notification_class");
+            ->whereNotNull("{$messageTable}.company_id")
+            ->groupBy("{$messageTable}.company_id");
 
         return $request->withOrdering(
             $request->withFilters($query),
@@ -50,7 +48,7 @@ class MessagesByTypeTrackingLens extends Lens
     public function fields(Request $request): array
     {
         return [
-            Text::make('Message Type', 'notification_class')->sortable(),
+            Number::make('Company ID', 'company_id')->sortable(),
             Number::make('Total Messages', 'total_messages')->sortable(),
             Number::make('Total Sent', 'total_sent')->sortable(),
             Number::make('Total Opens', 'total_opens')->sortable(),
@@ -71,6 +69,7 @@ class MessagesByTypeTrackingLens extends Lens
 
         return [
             new DateFilter("{$messageTable}.created_at", '30-days'),
+            new CompanyFilter,
         ];
     }
 
@@ -84,6 +83,6 @@ class MessagesByTypeTrackingLens extends Lens
 
     public function name(): string
     {
-        return 'Tracking Metrics By Type';
+        return 'Company Tracking Metrics';
     }
 }

@@ -21,6 +21,7 @@ use Topoff\Messenger\Nova\Filters\MessagesMessageableTypeFilter;
 use Topoff\Messenger\Nova\Filters\MessagesMessageTypeFilter;
 use Topoff\Messenger\Nova\Filters\MessagesReceiverTypeFilter;
 use Topoff\Messenger\Nova\Filters\MessagesStatusFilter;
+use Topoff\Messenger\Nova\Lenses\CompanyTrackingMetricsLens;
 use Topoff\Messenger\Nova\Lenses\MessagesByDomainTrackingLens;
 use Topoff\Messenger\Nova\Lenses\MessagesByTypeTrackingLens;
 use Topoff\Messenger\Nova\Lenses\MessagesTrackingLens;
@@ -135,6 +136,7 @@ class Message extends Resource
         return [
             new MessagesByTypeTrackingLens,
             new MessagesByDomainTrackingLens,
+            new CompanyTrackingMetricsLens,
             new MessagesTrackingLens,
         ];
     }
