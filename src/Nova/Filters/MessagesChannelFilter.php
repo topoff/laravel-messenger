@@ -27,14 +27,12 @@ class MessagesChannelFilter extends Filter
     {
         $messageModel = config('messenger.models.message');
 
-        return Cache::remember('messenger.channels', now()->addDays(7), function () use ($messageModel) {
-            return (new $messageModel)
-                ->newQuery()
-                ->select('channel')
-                ->whereNotNull('channel')
-                ->distinct()
-                ->pluck('channel', 'channel')
-                ->toArray();
-        });
+        return Cache::remember('messenger.channels', now()->addDays(7), fn () => (new $messageModel)
+            ->newQuery()
+            ->select('channel')
+            ->whereNotNull('channel')
+            ->distinct()
+            ->pluck('channel', 'channel')
+            ->toArray());
     }
 }

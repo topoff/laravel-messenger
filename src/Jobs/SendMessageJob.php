@@ -266,12 +266,22 @@ class SendMessageJob implements ShouldQueue
             $messageGroup = $messageGroupQuery->get();
 
             if ($messageGroup->isEmpty()) {
+                Log::error('SendMessageJob: Message group query returned empty after grouping.', [
+                    'receiver_type' => $group->receiver_type,
+                    'receiver_id' => $group->receiver_id,
+                ]);
+
                 continue;
             }
 
             if ($group->bulk_handler && $group->receiver_id && (int) $group->message_count > 1) {
                 // in case an account meanwhile is deleted
                 if (! $messageGroup->first()->receiver) {
+                    Log::error('SendMessageJob: Receiver deleted, removing messages from group.', [
+                        'receiver_type' => $group->receiver_type,
+                        'receiver_id' => $group->receiver_id,
+                        'message_count' => $messageGroup->count(),
+                    ]);
                     $messageGroup->each(fn (Message $message) => $message->delete());
                 } else {
                     /** @var MainBulkMailHandler $bulkMailHandler */

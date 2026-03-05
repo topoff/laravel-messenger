@@ -5,6 +5,7 @@ namespace Topoff\Messenger\Listeners;
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Events\NotificationSent;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Topoff\Messenger\Models\MessageLog;
 
@@ -31,8 +32,8 @@ class LogNotificationToMessageLogListener implements ShouldQueue
                 'notifyable_id' => Str::limit((string) data_get($notifiable, 'id', ''), 48, ''),
                 'notification_id' => Str::limit((string) $event->notification->id, 48, ''),
             ]);
-        } catch (Exception) {
-            // Intentionally swallow errors: logging should never break notifications.
+        } catch (Exception $e) {
+            Log::error('LogNotificationToMessageLogListener: Failed to log notification to message_log.', ['error' => $e->getMessage()]);
         }
     }
 }

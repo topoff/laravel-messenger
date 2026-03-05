@@ -4,6 +4,7 @@ namespace Topoff\Messenger\Listeners;
 
 use Exception;
 use Illuminate\Mail\Events\MessageSent;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Topoff\Messenger\Models\MessageLog;
 
@@ -28,8 +29,8 @@ class LogEmailToMessageLogListener
                 'bcc' => Str::limit($message->getHeaders()->get('Bcc')?->toString() ?? '', 57),
                 'has_attachment' => (bool) $message->getAttachments(),
             ]);
-        } catch (Exception) {
-            // Intentionally swallow errors: logging should never block mail delivery.
+        } catch (Exception $e) {
+            Log::error('LogEmailToMessageLogListener: Failed to log email to message_log.', ['error' => $e->getMessage()]);
         }
     }
 }

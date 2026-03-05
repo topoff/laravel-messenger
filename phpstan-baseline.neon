@@ -21,13 +21,13 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$receiver_id\.$#'
 			identifier: property.notFound
-			count: 2
+			count: 3
 			path: src/Jobs/SendMessageJob.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$receiver_type\.$#'
 			identifier: property.notFound
-			count: 1
+			count: 3
 			path: src/Jobs/SendMessageJob.php
 
 		-

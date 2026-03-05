@@ -3,6 +3,7 @@
 namespace Topoff\Messenger\Services;
 
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 use Topoff\Messenger\Contracts\MessageReceiverInterface;
 use Topoff\Messenger\Models\Message;
 use Topoff\Messenger\Models\MessageType;
@@ -53,7 +54,10 @@ class MessageService
     public function __destruct()
     {
         if ($this->actionMissing) {
-            report(static::class.':'.__FUNCTION__.': Has not made a call to create(), change() or delete(), one of them is necessary to take any action.');
+            Log::error('MessageService: Destroyed without calling create(), change() or delete().', [
+                'message_type_class' => $this->messageTypeClass,
+                'receiver' => $this->receiverClass.' '.$this->receiverId,
+            ]);
         }
     }
 
@@ -188,6 +192,14 @@ class MessageService
             return $message;
         }
 
+        Log::error('MessageService::change(): No existing message found to reschedule.', [
+            'receiver_class' => $this->receiverClass,
+            'receiver_id' => $this->receiverId,
+            'message_type_id' => $this->messageType->id,
+            'messagable_class' => $this->messagableClass,
+            'messagable_id' => $this->messagableId,
+        ]);
+
         return null;
 
     }
@@ -200,6 +212,7 @@ class MessageService
     public function delete(): ?bool
     {
         $this->locale ??= $this->resolveReceiverLocale();
+
         $this->reportMissingParams();
 
         $messageClass = config('messenger.models.message');
@@ -250,37 +263,61 @@ class MessageService
     private function reportMissingParams(): bool
     {
         if ($this->messageType->required_messagable && (in_array($this->messagableClass, [null, '', '0'], true) || ($this->messagableId === null || $this->messagableId === 0))) {
-            report(static::class.':'.__FUNCTION__.': The Messagable parameter has been missing, the message has supposedly not been saved to the messages table. MessageType: '.$this->messageTypeClass.' Sender: '.$this->senderClass.' '.$this->senderId.' Receiver: '.$this->receiverClass.' '.$this->receiverId);
+            Log::error('MessageService: Required Messagable parameter is missing, message will not be created.', [
+                'message_type_class' => $this->messageTypeClass,
+                'sender' => $this->senderClass.' '.$this->senderId,
+                'receiver' => $this->receiverClass.' '.$this->receiverId,
+            ]);
 
             return false;
         }
 
         if ($this->messageType->required_sender && (in_array($this->senderClass, [null, '', '0'], true) || ($this->senderId === null || $this->senderId === 0))) {
-            report(static::class.':'.__FUNCTION__.': The Sender parameter has been missing, the message has supposedly not been saved to the messages table. MessageType: '.$this->messageTypeClass.' Sender: '.$this->senderClass.' '.$this->senderId.' Receiver: '.$this->receiverClass.' '.$this->receiverId);
+            Log::error('MessageService: Required Sender parameter is missing, message will not be created.', [
+                'message_type_class' => $this->messageTypeClass,
+                'sender' => $this->senderClass.' '.$this->senderId,
+                'receiver' => $this->receiverClass.' '.$this->receiverId,
+            ]);
 
             return false;
         }
 
         if ($this->messageType->required_company_id && ($this->companyId === null || $this->companyId === 0)) {
-            report(static::class.':'.__FUNCTION__.': The CompanyId parameter has been missing, the message has supposedly not been saved to the messages table. MessageType: '.$this->messageTypeClass.' Sender: '.$this->senderClass.' '.$this->senderId.' Receiver: '.$this->receiverClass.' '.$this->receiverId);
+            Log::error('MessageService: Required CompanyId parameter is missing, message will not be created.', [
+                'message_type_class' => $this->messageTypeClass,
+                'sender' => $this->senderClass.' '.$this->senderId,
+                'receiver' => $this->receiverClass.' '.$this->receiverId,
+            ]);
 
             return false;
         }
 
         if ($this->messageType->required_text && in_array(data_get($this->params, 'text'), [null, '', '0'], true)) {
-            report(static::class.':'.__FUNCTION__.': The MailText parameter has been missing, the message has supposedly not been saved to the messages table. MessageType: '.$this->messageTypeClass.' Sender: '.$this->senderClass.' '.$this->senderId.' Receiver: '.$this->receiverClass.' '.$this->receiverId);
+            Log::error('MessageService: Required MailText parameter is missing, message will not be created.', [
+                'message_type_class' => $this->messageTypeClass,
+                'sender' => $this->senderClass.' '.$this->senderId,
+                'receiver' => $this->receiverClass.' '.$this->receiverId,
+            ]);
 
             return false;
         }
 
         if ($this->messageType->required_scheduled && ! $this->scheduled instanceof Carbon) {
-            report(static::class.':'.__FUNCTION__.': The Scheduled parameter has been missing, the message has supposedly not been saved to the messages table. MessageType: '.$this->messageTypeClass.' Sender: '.$this->senderClass.' '.$this->senderId.' Receiver: '.$this->receiverClass.' '.$this->receiverId);
+            Log::error('MessageService: Required Scheduled parameter is missing, message will not be created.', [
+                'message_type_class' => $this->messageTypeClass,
+                'sender' => $this->senderClass.' '.$this->senderId,
+                'receiver' => $this->receiverClass.' '.$this->receiverId,
+            ]);
 
             return false;
         }
 
         if ($this->messageType->required_params && ($this->params === null || $this->params === [])) {
-            report(static::class.':'.__FUNCTION__.': The Params parameter has been missing, the message has supposedly not been saved to the messages table. MessageType: '.$this->messageTypeClass.' Sender: '.$this->senderClass.' '.$this->senderId.' Receiver: '.$this->receiverClass.' '.$this->receiverId);
+            Log::error('MessageService: Required Params parameter is missing, message will not be created.', [
+                'message_type_class' => $this->messageTypeClass,
+                'sender' => $this->senderClass.' '.$this->senderId,
+                'receiver' => $this->receiverClass.' '.$this->receiverId,
+            ]);
 
             return false;
         }

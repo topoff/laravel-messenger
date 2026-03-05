@@ -41,6 +41,8 @@ class RecordVonageDlrJob implements ShouldQueue
             ->first();
 
         if (! $message) {
+            Log::error('RecordVonageDlrJob: No message found for tracking_message_id.', ['vonageMessageId' => $vonageMessageId]);
+
             return;
         }
 

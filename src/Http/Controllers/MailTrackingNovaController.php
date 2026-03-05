@@ -4,6 +4,7 @@ namespace Topoff\Messenger\Http\Controllers;
 
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Topoff\Messenger\Models\Message;
 
@@ -22,7 +23,12 @@ class MailTrackingNovaController extends Controller
                 $html = $disk
                     ? (Storage::disk($disk)->exists($message->tracking_content_path) ? Storage::disk($disk)->get($message->tracking_content_path) : null)
                     : (Storage::exists($message->tracking_content_path) ? Storage::get($message->tracking_content_path) : null);
-            } catch (\Throwable) {
+            } catch (\Throwable $e) {
+                Log::error('MailTrackingNovaController: Failed to read tracking content from storage.', [
+                    'message_id' => $message->id,
+                    'path' => $message->tracking_content_path,
+                    'error' => $e->getMessage(),
+                ]);
                 $html = null;
             }
         }

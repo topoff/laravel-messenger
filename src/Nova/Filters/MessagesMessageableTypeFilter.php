@@ -27,14 +27,12 @@ class MessagesMessageableTypeFilter extends Filter
     {
         $messageModel = config('messenger.models.message');
 
-        return Cache::remember('messenger.messageable_types', now()->addDay(), function () use ($messageModel) {
-            return (new $messageModel)
-                ->newQuery()
-                ->select('messagable_type')
-                ->whereNotNull('messagable_type')
-                ->distinct()
-                ->pluck('messagable_type', 'messagable_type')
-                ->toArray();
-        });
+        return Cache::remember('messenger.messageable_types', now()->addDay(), fn () => (new $messageModel)
+            ->newQuery()
+            ->select('messagable_type')
+            ->whereNotNull('messagable_type')
+            ->distinct()
+            ->pluck('messagable_type', 'messagable_type')
+            ->toArray());
     }
 }

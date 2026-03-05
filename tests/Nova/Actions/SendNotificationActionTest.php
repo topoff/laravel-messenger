@@ -83,7 +83,7 @@ it('sets messengerMessageId enabling vonage tracking', function (): void {
 
     // Simulate the NotificationSent event with a vonage response containing a message ID
     $vonageMessageId = 'vonage-msg-'.uniqid();
-    $sentSms = new class($vonageMessageId) implements \IteratorAggregate
+    $sentSms = new readonly class($vonageMessageId) implements \IteratorAggregate
     {
         public function __construct(private string $messageId) {}
 

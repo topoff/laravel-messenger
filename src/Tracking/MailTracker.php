@@ -25,6 +25,11 @@ class MailTracker
         try {
             $messageModels = $this->resolveMessageModels($event);
             if ($messageModels->isEmpty()) {
+                Log::error('MailTracker: No message models resolved, email will be sent without tracking.', [
+                    'to' => collect($event->message->getTo())->map(fn ($a) => $a->getAddress())->implode(', '),
+                    'subject' => $event->message->getSubject(),
+                ]);
+
                 return;
             }
 

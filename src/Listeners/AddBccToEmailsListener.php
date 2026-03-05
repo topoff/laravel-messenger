@@ -41,7 +41,7 @@ class AddBccToEmailsListener
             }
 
         } catch (Throwable $t) {
-            Log::debug(static::class.':'.__FUNCTION__.': Catched Exception: '.$t->getMessage(), $t->getTrace());
+            Log::error('AddBccToEmailsListener: Failed to add BCC.', ['error' => $t->getMessage()]);
         }
     }
 }

@@ -27,11 +27,9 @@ class MessagesMessageTypeFilter extends Filter
     {
         $messageTypeModel = config('messenger.models.message_type');
 
-        return Cache::remember('messenger.message_types', now()->addDay(), function () use ($messageTypeModel) {
-            return (new $messageTypeModel)
-                ->newQuery()
-                ->pluck('id', 'notification_class')
-                ->toArray();
-        });
+        return Cache::remember('messenger.message_types', now()->addDay(), fn () => (new $messageTypeModel)
+            ->newQuery()
+            ->pluck('id', 'notification_class')
+            ->toArray());
     }
 }

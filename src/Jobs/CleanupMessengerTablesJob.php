@@ -96,10 +96,12 @@ class CleanupMessengerTablesJob implements ShouldQueue
                     try {
                         $storage->delete($paths);
                     } catch (\Throwable $e) {
-                        Log::warning('CleanupMessengerTablesJob: Failed to delete tracking files.', [
+                        Log::error('CleanupMessengerTablesJob: Failed to delete tracking files, skipping DB update to avoid orphaned files.', [
                             'error' => $e->getMessage(),
                             'paths_count' => count($paths),
                         ]);
+
+                        return;
                     }
 
                     $messageClass = config('messenger.models.message');

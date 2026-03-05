@@ -43,6 +43,8 @@ class RecordComplaintJob implements ShouldQueue
         $messageClass = config('messenger.models.message');
         $trackedMessages = $messageClass::query()->where('tracking_message_id', $messageId)->get();
         if ($trackedMessages->isEmpty()) {
+            Log::error('RecordComplaintJob: No message found for tracking_message_id.', ['messageId' => $messageId]);
+
             return;
         }
 

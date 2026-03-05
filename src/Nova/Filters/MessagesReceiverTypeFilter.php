@@ -27,14 +27,12 @@ class MessagesReceiverTypeFilter extends Filter
     {
         $messageModel = config('messenger.models.message');
 
-        return Cache::remember('messenger.receiver_types', now()->addDay(), function () use ($messageModel) {
-            return (new $messageModel)
-                ->newQuery()
-                ->select('receiver_type')
-                ->whereNotNull('receiver_type')
-                ->distinct()
-                ->pluck('receiver_type', 'receiver_type')
-                ->toArray();
-        });
+        return Cache::remember('messenger.receiver_types', now()->addDay(), fn () => (new $messageModel)
+            ->newQuery()
+            ->select('receiver_type')
+            ->whereNotNull('receiver_type')
+            ->distinct()
+            ->pluck('receiver_type', 'receiver_type')
+            ->toArray());
     }
 }

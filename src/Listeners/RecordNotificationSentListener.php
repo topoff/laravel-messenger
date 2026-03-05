@@ -22,6 +22,11 @@ class RecordNotificationSentListener
 
             $response = $event->response;
             if (! is_object($response) || ! ($response instanceof \Traversable)) {
+                Log::error('RecordNotificationSentListener: Vonage response is not traversable.', [
+                    'messengerMessageId' => $messengerMessageId,
+                    'response_type' => get_debug_type($response),
+                ]);
+
                 return;
             }
 
@@ -33,12 +38,19 @@ class RecordNotificationSentListener
             }
 
             if (! $sentSms || ! method_exists($sentSms, 'getMessageId')) {
+                Log::error('RecordNotificationSentListener: Vonage response item missing getMessageId method.', [
+                    'messengerMessageId' => $messengerMessageId,
+                    'item_type' => $sentSms ? $sentSms::class : 'null',
+                ]);
+
                 return;
             }
 
             $messageClass = config('messenger.models.message');
             $message = $messageClass::find($messengerMessageId);
             if (! $message) {
+                Log::error('RecordNotificationSentListener: Message not found.', ['messengerMessageId' => $messengerMessageId]);
+
                 return;
             }
 
