@@ -77,9 +77,7 @@ class RecordComplaintJob implements ShouldQueue
             $trackedMessage->tracking_meta = $meta->toArray();
             $trackedMessage->save();
 
-            foreach ((array) data_get($this->message, 'complaint.complainedRecipients', []) as $recipient) {
-                Event::dispatch(new MessageComplaintEvent((string) data_get($recipient, 'emailAddress', ''), $trackedMessage));
-            }
+            Event::dispatch(new MessageComplaintEvent($trackedMessage));
         });
     }
 }

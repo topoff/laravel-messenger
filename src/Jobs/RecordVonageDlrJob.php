@@ -7,7 +7,10 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
+use Topoff\Messenger\Events\MessageDeliveredEvent;
+use Topoff\Messenger\Events\MessageRejectedEvent;
 
 class RecordVonageDlrJob implements ShouldQueue
 {
@@ -49,6 +52,12 @@ class RecordVonageDlrJob implements ShouldQueue
         $meta->put('dlr_timestamp', $this->data['message-timestamp'] ?? null);
         $meta->put('dlr_price', $this->data['price'] ?? null);
         $meta->put('dlr_network_code', $this->data['network-code'] ?? null);
+
+        if ($status === 'delivered') {
+            $meta->put('success', true);
+            $meta->put('delivered_at', $this->data['message-timestamp'] ?? now()->toIso8601String());
+        }
+
         $message->tracking_meta = $meta->toArray();
 
         $permanentFailureStatuses = ['failed', 'rejected', 'expired'];
@@ -58,5 +67,13 @@ class RecordVonageDlrJob implements ShouldQueue
         }
 
         $message->save();
+
+        if ($status === 'delivered') {
+            Event::dispatch(new MessageDeliveredEvent($message));
+        }
+
+        if (in_array($status, $permanentFailureStatuses, true)) {
+            Event::dispatch(new MessageRejectedEvent($status, $message));
+        }
     }
 }

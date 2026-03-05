@@ -71,9 +71,7 @@ class RecordDeliveryJob implements ShouldQueue
             $trackedMessage->tracking_meta = $meta->toArray();
             $trackedMessage->save();
 
-            foreach ((array) data_get($this->message, 'delivery.recipients', []) as $recipient) {
-                Event::dispatch(new MessageDeliveredEvent((string) $recipient, $trackedMessage));
-            }
+            Event::dispatch(new MessageDeliveredEvent($trackedMessage));
         });
     }
 }

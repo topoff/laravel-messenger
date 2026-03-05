@@ -71,6 +71,58 @@ Permanent failures set `failed_at = now()` and skip `onError()`. Transient failu
 
 Creates a new message copying all data from original, resets all status fields (`scheduled_at`, `reserved_at`, `error_at`, `sent_at`, `failed_at`), resets tracking fields, stores `resent_from_message_id` in `tracking_meta`. Dispatches `ResendMessageJob`. If original had `error_at` or `failed_at`, it is soft-deleted.
 
+## Notification Sending Flow (SMS / Vonage)
+
+The notification channel mirrors the mail channel for non-email delivery (currently SMS via Vonage).
+
+### Handler: `MainNotificationHandler`
+
+Lifecycle:
+1. Constructor sets `reserved_at = now()`
+2. `send()`: validates receiver has `notify()` (Notifiable trait), instantiates notification class, tags it with `$notification->messengerMessageId = $this->message->id`, calls `$receiver->notify($notification)`
+3. On success: sets `sent_at = now()`, calls `onSuccessfulSent()` hook
+
+Overridable methods: `shouldBeSentNow()`, `shouldBeSentInThisEnvironment()`, `abortAndDeleteWhen()`, `onSuccessfulSent()`, `onError()`, `getNotificationParameters()`.
+
+Key differences from `MainMailHandler`:
+- No bulk handler variant (SMS is always direct/single)
+- No automatic tracking injection (no pixel/link tracking for SMS)
+- No content storage (`tracking_content`) — SMS body lives in `params`
+- No BCC guard needed (SMS is point-to-point)
+- Permanent failure detection happens via DLR webhook, not at send-time
+
+### Capturing Vonage Response at Send-Time
+
+`RecordNotificationSentListener` listens to `NotificationSent` and:
+- Skips non-messenger notifications (no `messengerMessageId` on the notification)
+- Skips non-vonage channels
+- Extracts from the Vonage `Collection` response: message ID, recipient phone, status, network, price
+- Stores: `tracking_message_id`, `tracking_recipient_contact`, `tracking_meta` (vonage_status, vonage_network, vonage_message_price)
+
+### Vonage DLR (Delivery Receipt) Webhook
+
+Route: `GET|POST {prefix}/vonage-dlr` — receives Vonage delivery receipts.
+
+Controlled by `config('messenger.tracking.vonage_dlr.enabled')` (default: `false`). Controller returns early if disabled.
+
+`RecordVonageDlrJob` processes the raw webhook payload:
+- Finds Message by `tracking_message_id` = Vonage `messageId`
+- Updates `tracking_meta`: `dlr_status`, `dlr_err_code`, `dlr_timestamp`, `dlr_price`, `dlr_network_code`
+- On `delivered` status: sets `tracking_meta.success = true` and `delivered_at`
+- On `failed`/`rejected`/`expired`: sets `failed_at = now()` (permanent, no retry)
+
+### Mail vs SMS Tracking Comparison
+
+| Aspect | Mail (SES) | SMS (Vonage) |
+|--------|-----------|--------------|
+| Send response capture | `MailTracker::messageSent()` | `RecordNotificationSentListener` |
+| Tracking ID source | SES `X-SES-Message-ID` header | Vonage `SentSMS::getMessageId()` |
+| Delivery confirmation | SNS → `RecordDeliveryJob` | DLR → `RecordVonageDlrJob` |
+| Bounce/complaint | SNS → `RecordBounceJob` / `RecordComplaintJob` | DLR status `failed`/`rejected` → `failed_at` |
+| Pixel/link tracking | Yes (injected into HTML) | N/A |
+| Content storage | `tracking_content` / `tracking_content_path` | N/A (body in `params`) |
+| BCC guard | Yes (per-recipient filtering) | N/A (point-to-point) |
+
 ## Tracking Flow
 
 ### Injection (`src/Tracking/MailTracker.php`)
@@ -121,6 +173,7 @@ All use `ExtractsSesMessageTags` trait for SES tag extraction.
 - `LogEmailToMessageLogListener` — logs to `message_log` table on `MessageSent` (channel=mail)
 - `LogNotificationToMessageLogListener` — logs to `message_log` table on `NotificationSent` (queued)
 - `AddBccToEmailsListener` — adds BCC on `MessageSending` (respects `dev_bcc` flag per MessageType)
+- `RecordNotificationSentListener` — captures Vonage SMS response on `NotificationSent` (message ID, phone, status, network, price)
 
 ## SES/SNS Provisioning
 
@@ -226,7 +279,7 @@ Web-based dashboard at `/emessenger/nova/ses-sns-dashboard` (signed URL via `Ope
 | `mail.*` | default_bulk_mail_class, bulk_mail_view/subject/url, custom_message_view |
 | `sending.*` | `check_should_send` callable (null = production only) |
 | `bcc.*` | `check_should_add_bcc` callable (null = always add when provided) |
-| `tracking.*` | inject_pixel, track_links, nova resource class, preview route config, content storage |
+| `tracking.*` | inject_pixel, track_links, nova resource class, preview route config, content storage, vonage_dlr (enabled) |
 | `ses_sns.*` | AWS region/credentials, configuration_sets (keyed by name with identity + event_destination), topic name, event types, callback endpoint, tenant config, Route53 automation |
 
 ## Migrations (10 total)

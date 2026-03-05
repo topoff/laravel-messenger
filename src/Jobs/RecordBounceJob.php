@@ -78,19 +78,14 @@ class RecordBounceJob implements ShouldQueue
             $trackedMessage->save();
 
             $bounceType = (string) data_get($this->message, 'bounce.bounceType');
-            foreach ((array) data_get($this->message, 'bounce.bouncedRecipients', []) as $recipient) {
-                $email = (string) data_get($recipient, 'emailAddress', '');
-
-                if ($bounceType === 'Permanent') {
-                    Event::dispatch(new MessagePermanentBouncedEvent($email, $trackedMessage));
-                } else {
-                    Event::dispatch(new MessageTransientBouncedEvent(
-                        $email,
-                        (string) data_get($this->message, 'bounce.bounceSubType', ''),
-                        (string) data_get($recipient, 'diagnosticCode', ''),
-                        $trackedMessage
-                    ));
-                }
+            if ($bounceType === 'Permanent') {
+                Event::dispatch(new MessagePermanentBouncedEvent($trackedMessage));
+            } else {
+                Event::dispatch(new MessageTransientBouncedEvent(
+                    (string) data_get($this->message, 'bounce.bounceSubType', ''),
+                    (string) data_get(collect(data_get($this->message, 'bounce.bouncedRecipients', []))->first(), 'diagnosticCode', ''),
+                    $trackedMessage
+                ));
             }
         });
     }
