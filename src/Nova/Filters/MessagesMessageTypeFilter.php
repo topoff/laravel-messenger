@@ -3,6 +3,7 @@
 namespace Topoff\Messenger\Nova\Filters;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
 
@@ -26,9 +27,11 @@ class MessagesMessageTypeFilter extends Filter
     {
         $messageTypeModel = config('messenger.models.message_type');
 
-        return (new $messageTypeModel)
-            ->newQuery()
-            ->pluck('id', 'notification_class')
-            ->toArray();
+        return Cache::remember('messenger.message_types', now()->addDay(), function () use ($messageTypeModel) {
+            return (new $messageTypeModel)
+                ->newQuery()
+                ->pluck('id', 'notification_class')
+                ->toArray();
+        });
     }
 }

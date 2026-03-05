@@ -3,6 +3,7 @@
 namespace Topoff\Messenger\Nova\Filters;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
 
@@ -26,12 +27,14 @@ class MessagesReceiverTypeFilter extends Filter
     {
         $messageModel = config('messenger.models.message');
 
-        return (new $messageModel)
-            ->newQuery()
-            ->select('receiver_type')
-            ->whereNotNull('receiver_type')
-            ->distinct()
-            ->pluck('receiver_type', 'receiver_type')
-            ->toArray();
+        return Cache::remember('messenger.receiver_types', now()->addDay(), function () use ($messageModel) {
+            return (new $messageModel)
+                ->newQuery()
+                ->select('receiver_type')
+                ->whereNotNull('receiver_type')
+                ->distinct()
+                ->pluck('receiver_type', 'receiver_type')
+                ->toArray();
+        });
     }
 }

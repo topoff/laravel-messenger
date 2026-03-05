@@ -8,6 +8,7 @@ use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Str;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Actions\ActionResponse;
@@ -17,7 +18,10 @@ use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Throwable;
+use Topoff\Messenger\Models\Message;
 use Topoff\Messenger\Notifications\NovaChannelNotification;
+use Topoff\Messenger\Repositories\MessageTypeRepository;
 
 class SendNotificationAction extends Action
 {
@@ -43,12 +47,37 @@ class SendNotificationAction extends Action
             return Action::danger('Subject is required for email notifications.');
         }
 
+        $sender = $this->resolveSender();
+        $messageType = resolve(MessageTypeRepository::class)
+            ->getFromTypeAndCustomer(NovaChannelNotification::class);
+
         // Standalone mode: send to manually entered recipient
         $recipientPhone = trim((string) $fields->get('recipient_phone'));
         if ($models->isEmpty() && $recipientPhone !== '') {
-            $notifiable = new AnonymousNotifiable;
-            $notifiable->route($channel, Str::replace(' ', '', $recipientPhone));
-            $notifiable->notify(new NovaChannelNotification($subject, $message, $channel));
+            $messageRecord = $this->createMessageRecord(
+                channel: $channel,
+                messageTypeId: $messageType->id,
+                sender: $sender,
+                params: ['subject' => $subject, 'message' => $message],
+            );
+
+            $notification = new NovaChannelNotification($subject, $message, $channel);
+            $notification->messengerMessageId = $messageRecord->id;
+
+            try {
+                $notifiable = new AnonymousNotifiable;
+                $notifiable->route($channel, Str::replace(' ', '', $recipientPhone));
+                $notifiable->notify($notification);
+
+                $messageRecord->sent_at = Date::now();
+                $messageRecord->save();
+            } catch (Throwable $e) {
+                $messageRecord->error_at = Date::now();
+                $messageRecord->error_message = Str::limit($e->getMessage(), 245);
+                $messageRecord->save();
+
+                return Action::danger('Failed to send notification: '.Str::limit($e->getMessage(), 100));
+            }
 
             return Action::message('Notification sent to '.$recipientPhone.'.');
         }
@@ -65,9 +94,32 @@ class SendNotificationAction extends Action
                 continue;
             }
 
-            $notifiable = new AnonymousNotifiable;
-            $notifiable->route($channel, $route);
-            $notifiable->notify(new NovaChannelNotification($subject, $message, $channel));
+            $messageRecord = $this->createMessageRecord(
+                channel: $channel,
+                messageTypeId: $messageType->id,
+                sender: $sender,
+                params: ['subject' => $subject, 'message' => $message],
+                receiverType: $model::class,
+                receiverId: (int) $model->id,
+                messagableType: $model::class,
+                messagableId: (int) $model->id,
+            );
+
+            $notification = new NovaChannelNotification($subject, $message, $channel);
+            $notification->messengerMessageId = $messageRecord->id;
+
+            try {
+                $notifiable = new AnonymousNotifiable;
+                $notifiable->route($channel, $route);
+                $notifiable->notify($notification);
+
+                $messageRecord->sent_at = Date::now();
+                $messageRecord->save();
+            } catch (Throwable $e) {
+                $messageRecord->error_at = Date::now();
+                $messageRecord->error_message = Str::limit($e->getMessage(), 245);
+                $messageRecord->save();
+            }
 
             $sentCount++;
         }
@@ -137,6 +189,50 @@ class SendNotificationAction extends Action
                 })
                 ->help('Shows SMS length and if the message fits into one SMS. Schweiz: 6.7rp / sms'),
         ];
+    }
+
+    /**
+     * @return array{class: string|null, id: int|null}
+     */
+    protected function resolveSender(): array
+    {
+        $user = request()->user();
+
+        if ($user && isset($user->id) && is_numeric($user->id)) {
+            return ['class' => $user::class, 'id' => (int) $user->id];
+        }
+
+        return ['class' => null, 'id' => null];
+    }
+
+    /**
+     * @param  array{class: string|null, id: int|null}  $sender
+     */
+    protected function createMessageRecord(
+        string $channel,
+        int $messageTypeId,
+        array $sender,
+        array $params,
+        ?string $receiverType = null,
+        ?int $receiverId = null,
+        ?string $messagableType = null,
+        ?int $messagableId = null,
+    ): Message {
+        /** @var class-string<Message> $messageClass */
+        $messageClass = config('messenger.models.message');
+
+        return $messageClass::create([
+            'channel' => $channel,
+            'message_type_id' => $messageTypeId,
+            'sender_type' => $sender['class'],
+            'sender_id' => $sender['id'],
+            'receiver_type' => $receiverType,
+            'receiver_id' => $receiverId,
+            'messagable_type' => $messagableType,
+            'messagable_id' => $messagableId,
+            'params' => $params,
+            'scheduled_at' => Date::now(),
+        ]);
     }
 
     /**

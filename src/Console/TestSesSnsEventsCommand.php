@@ -197,12 +197,9 @@ class TestSesSnsEventsCommand extends Command
     protected function createMessageRecord(string $messageModelClass, string $messageId, string $scenario, string $recipientEmail, string $subject): void
     {
         $messageTypeId = $this->ensureMessageTypeId();
-        $messageTypeModelClass = config('messenger.models.message_type');
 
         $messageModelClass::query()->create([
             'message_type_id' => $messageTypeId,
-            'messagable_type' => $messageTypeModelClass,
-            'messagable_id' => $messageTypeId,
             'tracking_message_id' => $messageId,
             'tracking_recipient_contact' => $recipientEmail,
             'tracking_subject' => $subject,

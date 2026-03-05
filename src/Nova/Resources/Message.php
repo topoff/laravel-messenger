@@ -16,6 +16,7 @@ use Topoff\Messenger\Nova\Actions\SendCustomMailAction;
 use Topoff\Messenger\Nova\Actions\SendNotificationAction;
 use Topoff\Messenger\Nova\Actions\ShowRealSentMessageAction;
 use Topoff\Messenger\Nova\Filters\DateFilter;
+use Topoff\Messenger\Nova\Filters\MessagesChannelFilter;
 use Topoff\Messenger\Nova\Filters\MessagesMessageableTypeFilter;
 use Topoff\Messenger\Nova\Filters\MessagesMessageTypeFilter;
 use Topoff\Messenger\Nova\Filters\MessagesReceiverTypeFilter;
@@ -117,10 +118,12 @@ class Message extends Resource
             new DateFilter('created_at', 'today'),
             new DateFilter('sent_at', null),
             new DateFilter('error_at', null),
+            new DateFilter('failed_at', null),
             new MessagesStatusFilter,
             new MessagesReceiverTypeFilter,
             new MessagesMessageTypeFilter,
             new MessagesMessageableTypeFilter,
+            new MessagesChannelFilter,
         ];
     }
 

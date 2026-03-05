@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Cache;
 use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
 
-class MessagesMessageableTypeFilter extends Filter
+class MessagesChannelFilter extends Filter
 {
     /**
      * @var string
@@ -20,20 +20,20 @@ class MessagesMessageableTypeFilter extends Filter
      */
     public function apply(NovaRequest $request, $query, $value): Builder
     {
-        return $query->where('messagable_type', $value);
+        return $query->where('channel', $value);
     }
 
     public function options(NovaRequest $request): array
     {
         $messageModel = config('messenger.models.message');
 
-        return Cache::remember('messenger.messageable_types', now()->addDay(), function () use ($messageModel) {
+        return Cache::remember('messenger.channels', now()->addDays(7), function () use ($messageModel) {
             return (new $messageModel)
                 ->newQuery()
-                ->select('messagable_type')
-                ->whereNotNull('messagable_type')
+                ->select('channel')
+                ->whereNotNull('channel')
                 ->distinct()
-                ->pluck('messagable_type', 'messagable_type')
+                ->pluck('channel', 'channel')
                 ->toArray();
         });
     }

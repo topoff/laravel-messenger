@@ -11,6 +11,8 @@ class NovaChannelNotification extends Notification
 {
     use Queueable;
 
+    public ?int $messengerMessageId = null;
+
     public function __construct(
         protected string $subject,
         protected string $message,
