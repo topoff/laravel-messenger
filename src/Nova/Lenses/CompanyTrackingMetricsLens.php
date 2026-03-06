@@ -3,12 +3,15 @@
 namespace Topoff\Messenger\Nova\Lenses;
 
 use Illuminate\Contracts\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Http\Requests\LensRequest;
 use Laravel\Nova\Lenses\Lens;
+use Topoff\Messenger\Nova\Filters\CompanyDeletedAtFilter;
 use Topoff\Messenger\Nova\Filters\CompanyFilter;
+use Topoff\Messenger\Nova\Filters\CompanyStatusFilter;
 use Topoff\Messenger\Nova\Filters\DateFilter;
 
 class CompanyTrackingMetricsLens extends Lens
@@ -20,7 +23,7 @@ class CompanyTrackingMetricsLens extends Lens
     {
         $messageTable = (new (config('messenger.models.message')))->getTable();
 
-        $query = $query->from($messageTable)->select([
+        $query = $query->withoutGlobalScope(SoftDeletingScope::class)->from($messageTable)->select([
             "{$messageTable}.company_id",
             DB::raw('COUNT(*) as total_messages'),
             DB::raw("COUNT(CASE WHEN {$messageTable}.sent_at IS NOT NULL THEN 1 END) as total_sent"),
@@ -70,6 +73,8 @@ class CompanyTrackingMetricsLens extends Lens
         return [
             new DateFilter("{$messageTable}.created_at", '30-days'),
             new CompanyFilter,
+            new CompanyStatusFilter,
+            new CompanyDeletedAtFilter,
         ];
     }
 

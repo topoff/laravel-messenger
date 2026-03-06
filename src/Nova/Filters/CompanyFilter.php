@@ -35,7 +35,7 @@ class CompanyFilter extends Filter
             ->distinct()
             ->orderBy('company_id')
             ->pluck('company_id', 'company_id')
-            ->mapWithKeys(fn (int $id): array => ["Company {$id}" => $id])
+            ->mapWithKeys(fn (int $id): array => ["{$id}" => $id])
             ->toArray();
     }
 }
