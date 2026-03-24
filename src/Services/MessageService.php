@@ -5,6 +5,7 @@ namespace Topoff\Messenger\Services;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Topoff\Messenger\Contracts\MessageReceiverInterface;
+use Topoff\Messenger\MailHandler\MainMailHandler;
 use Topoff\Messenger\Models\Message;
 use Topoff\Messenger\Models\MessageType;
 use Topoff\Messenger\Repositories\MessageTypeRepository;
@@ -163,6 +164,47 @@ class MessageService
                 'locale' => $this->locale,
                 'scheduled_at' => $this->scheduled,
             ]);
+        }
+
+        $this->resetVars();
+    }
+
+    /**
+     * Create the Message DB Record and immediately send it (synchronously).
+     * Useful for time-sensitive emails like password resets.
+     */
+    public function createAndSendNow(): void
+    {
+        $this->scheduled ??= $this->getScheduled();
+        $this->locale ??= $this->resolveReceiverLocale();
+
+        $this->reportMissingParams();
+
+        if (! $this->preventCreateMessage()) {
+            $messageClass = config('messenger.models.message');
+            /** @var Message $message */
+            $message = $messageClass::create([
+                'sender_type' => $this->senderClass,
+                'sender_id' => $this->senderId,
+                'receiver_type' => $this->receiverClass,
+                'receiver_id' => $this->receiverId,
+                'company_id' => $this->companyId,
+                'message_type_id' => $this->messageType->id,
+                'messagable_type' => $this->messagableClass,
+                'messagable_id' => $this->messagableId,
+                'params' => $this->params,
+                'locale' => $this->locale,
+                'scheduled_at' => null,
+            ]);
+
+            $message->load('messageType');
+            $handlerClass = $message->messageType->single_handler;
+
+            if ($handlerClass && class_exists($handlerClass)) {
+                /** @var MainMailHandler $handler */
+                $handler = new $handlerClass($message);
+                $handler->send();
+            }
         }
 
         $this->resetVars();

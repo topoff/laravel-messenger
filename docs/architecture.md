@@ -27,7 +27,9 @@ Mail management package: template-driven sending via SES, SNS event tracking (op
 
 ## Mail Sending Flow
 
-1. **MessageService** — fluent builder: `setSender()`, `setReceiver()`, etc. → `create()` persists Message
+1. **MessageService** — fluent builder: `setSender()`, `setReceiver()`, etc.
+   - `create()` — persists Message to DB; sending is deferred to `SendMessageJob`
+   - `createAndSendNow()` — persists Message and immediately invokes the mail handler synchronously (bypasses queue). Use for time-sensitive emails like password resets or email verification where the user expects instant delivery. Forces `scheduled_at = null`.
 2. **SendMessageJob** — processes direct (single handler) & indirect (bulk handler) messages
    - Chunks of 250, exponential backoff retry
    - Supports MySQL, PostgreSQL, SQLite, SQL Server date calculations
