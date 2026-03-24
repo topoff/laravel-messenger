@@ -33,7 +33,7 @@ class CompanyStatusFilter extends Filter
 
     public function options(NovaRequest $request): array
     {
-        return DB::connection('auth')
+        return DB::connection(config('messenger.database.connection'))
             ->table('companies')
             ->select('status')
             ->whereNotNull('status')
