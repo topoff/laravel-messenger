@@ -40,11 +40,8 @@ class SendCustomMailAction extends Action
         $markdown = trim((string) $fields->get('markdown'));
         $isPreview = (bool) $fields->get('preview_only');
         $scheduledAt = $this->resolveScheduledAt($fields->get('scheduled_at'));
-        $mailer = $fields->get('mailer');
-
-        if ($mailer) {
-            config(['mail.default' => $mailer]);
-        }
+        $mailer = $fields->get('mailer') ?: null;
+        $configSetKey = $fields->get('ses_configuration_set') ?: null;
 
         if ($isPreview) {
             $previewKey = 'messenger:nova-custom-preview:'.Str::uuid();
@@ -76,9 +73,11 @@ class SendCustomMailAction extends Action
                 'message_type_id' => $messageType->id,
                 'sender_type' => $sender['class'],
                 'sender_id' => $sender['id'],
-                'params' => ['subject' => $subject, 'text' => $markdown],
+                'params' => array_filter(['subject' => $subject, 'text' => $markdown, 'mailer' => $mailer, 'ses_configuration_set' => $configSetKey]),
                 'scheduled_at' => $scheduledAt,
             ]);
+
+            $messageRecord->load('messageType');
 
             try {
                 Mail::to($recipientEmail)->send(new CustomMessageMail($messageRecord));
@@ -116,7 +115,7 @@ class SendCustomMailAction extends Action
                 ->setMessagable($model::class, (int) $model->id)
                 ->setMessageTypeClass(CustomMessageMail::class)
                 ->setScheduled($scheduledAt)
-                ->setParams(['subject' => $subject, 'text' => $markdown])
+                ->setParams(array_filter(['subject' => $subject, 'text' => $markdown, 'mailer' => $mailer, 'ses_configuration_set' => $configSetKey]))
                 ->create();
 
             $sentCount++;
@@ -160,13 +159,22 @@ class SendCustomMailAction extends Action
     {
         return [
             Select::make(__('Mailer'), 'mailer')
-                ->options([
-                    'smtp' => 'SMTP',
-                    'ses' => 'SES',
-                ])
+                ->options(fn () => collect(config('mail.mailers', []))
+                    ->keys()
+                    ->mapWithKeys(fn (string $name) => [$name => strtoupper($name)])
+                    ->toArray())
                 ->default(config('mail.default'))
                 ->rules('required')
-                ->help(__('Select the mail transport to use for sending.')),
+                ->help(__('Select the mail transport to use for sending. Stored per message, works with queued sending.')),
+
+            Select::make(__('SES Configuration Set'), 'ses_configuration_set')
+                ->options(fn () => collect(config('messenger.ses_sns.configuration_sets', []))
+                    ->keys()
+                    ->mapWithKeys(fn (string $key) => [$key => $key])
+                    ->prepend('— none —', '')
+                    ->toArray())
+                ->nullable()
+                ->help(__('Optional. Overrides the message type\'s default configuration set for SES tracking & reputation.')),
 
             Text::make(__('Recipient Email'), 'recipient_email')
                 ->rules('nullable', 'email', 'max:255')

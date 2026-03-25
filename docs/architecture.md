@@ -69,6 +69,34 @@ Retries stop when:
 
 Permanent failures set `failed_at = now()` and skip `onError()`. Transient failures set `error_at = now()` and call `onError()`.
 
+### CustomMessageMail (`src/Mail/CustomMessageMail.php`)
+
+A generic Mailable for ad-hoc emails with markdown content. Used by `SendCustomMailAction` (Nova) and can be used programmatically via `MessageService`.
+
+**Params** (stored in `Message.params`):
+
+| Key | Required | Description |
+|-----|----------|-------------|
+| `subject` | yes | Email subject line |
+| `text` | yes | Markdown body content |
+| `mailer` | no | Mail transport override (e.g. `smtp`, `ses`). Persisted per message, so it works correctly when sent via queued `SendMessageJob` / Horizon. |
+| `ses_configuration_set` | no | SES configuration set key override (must match a key in `messenger.ses_sns.configuration_sets`). Overrides the MessageType's default. Used by MailTracker to inject `X-SES-CONFIGURATION-SET` header. |
+
+**Example — sending programmatically:**
+
+```php
+resolve(MessageService::class)
+    ->setReceiver(Company::class, $company->id)
+    ->setMessageTypeClass(CustomMessageMail::class)
+    ->setParams([
+        'subject' => 'Important update',
+        'text' => '**Hello!** This is a markdown email.',
+        'mailer' => 'ses',
+        'ses_configuration_set' => 'transactional',
+    ])
+    ->create(); // queued, or ->createAndSendNow() for immediate
+```
+
 ### Message Resending (`src/Tracking/MessageResender.php`)
 
 Creates a new message copying all data from original, resets all status fields (`scheduled_at`, `reserved_at`, `error_at`, `sent_at`, `failed_at`), resets tracking fields, stores `resent_from_message_id` in `tracking_meta`. Dispatches `ResendMessageJob`. If original had `error_at` or `failed_at`, it is soft-deleted.
@@ -237,7 +265,7 @@ Returns identity & DNS status:
 | `ShowRealSentMessageAction` | View rendered HTML of actually sent message (signed URL, 15 min expiry) |
 | `PreviewMessageInBrowserAction` | Preview message template rendering (signed URL, 10 min expiry) |
 | `PreviewMessageTypeInBrowserAction` | Preview a message type's template (requires selecting a message) |
-| `SendCustomMailAction` | Compose ad-hoc emails with markdown editor, supports preview-only and scheduling |
+| `SendCustomMailAction` | Compose ad-hoc emails with markdown editor, supports preview-only, scheduling, mailer selection, and SES configuration set override |
 | `SendNotificationAction` | Send SMS/email notifications via AnonymousNotifiable (mail & vonage channels) |
 | `OpenSesSnsSiteAction` | Open SES/SNS dashboard (standalone action, signed URL, 30 min expiry) |
 
