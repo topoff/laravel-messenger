@@ -139,7 +139,11 @@ class MainMailHandler implements GroupableMailTypeInterface
             $mailClass = $this->mailClass();
             $mail = new $mailClass(...$this->getMailParameters());
             if ($this->shouldBeSentInThisEnvironment()) {
-                Mail::to($this->receiver->getEmail())->locale($this->receiverLocale())->send($mail);
+                $mailerName = $this->resolveMailerName();
+                $pendingMail = $mailerName
+                    ? Mail::mailer($mailerName)->to($this->receiver->getEmail())
+                    : Mail::to($this->receiver->getEmail());
+                $pendingMail->locale($this->receiverLocale())->send($mail);
             }
             $this->setMessageSent();
             $this->onSuccessfulSent();
@@ -250,6 +254,17 @@ class MainMailHandler implements GroupableMailTypeInterface
     protected function receiverLocale(): string
     {
         return $this->message->locale ?: $this->receiver->preferredLocale();
+    }
+
+    /**
+     * Resolve a custom mailer name from the message params.
+     * Returns null to use the application default mailer.
+     */
+    protected function resolveMailerName(): ?string
+    {
+        $mailer = data_get($this->message->params, 'mailer');
+
+        return ($mailer && is_string($mailer)) ? $mailer : null;
     }
 
     /**

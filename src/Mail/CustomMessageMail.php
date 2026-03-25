@@ -17,12 +17,7 @@ class CustomMessageMail extends Mailable
     {
         $subject = (string) data_get($this->messageModel->params, 'subject', 'Custom Message');
         $view = (string) config('messenger.mail.custom_message_view', 'messenger::customMessage');
-        $mailer = data_get($this->messageModel->params, 'mailer');
         $configSet = data_get($this->messageModel->params, 'ses_configuration_set');
-
-        if ($mailer && is_string($mailer)) {
-            $this->mailer($mailer);
-        }
 
         if ($configSet && is_string($configSet) && $this->messageModel->relationLoaded('messageType')) {
             $this->messageModel->messageType->ses_configuration_set = $configSet;
