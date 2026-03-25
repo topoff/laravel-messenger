@@ -67,9 +67,10 @@ class MainMailHandler implements GroupableMailTypeInterface
      */
     public function abortAndDeleteWhen(): bool
     {
+        $messageType = $this->message->messageType;
         $messagable = $this->message->messagable;
-        if (! $messagable) {
-            $this->message->error_message = 'Message has been deleted, because the Messagable itself is missing.';
+        if ($messageType->required_messagable && ! $messagable) {
+            $this->message->error_message = 'Message has been deleted, because the Messagable itself is missing but required.';
             $this->message->save();
 
             return true;
