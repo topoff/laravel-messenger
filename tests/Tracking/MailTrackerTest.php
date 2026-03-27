@@ -318,3 +318,57 @@ it('does not override existing Reply-To header', function () {
     $replyTo = collect($email->getReplyTo())->first();
     expect($replyTo->getAddress())->toBe('custom-reply@example.com');
 });
+
+it('skips tracking when X-No-Track header is present', function () {
+    config()->set('messenger.tracking.inject_pixel', true);
+    config()->set('messenger.tracking.track_links', true);
+
+    $messageModel = createMessage();
+
+    $email = (new Email)
+        ->from(new Address('sender@example.com', 'Sender'))
+        ->to(new Address('receiver@example.com', 'Receiver'))
+        ->subject('No Track Test')
+        ->html('<html><body><a href="https://example.com">Link</a></body></html>');
+
+    $email->getHeaders()->addTextHeader('X-No-Track', '1');
+
+    $event = new MessageSending($email, ['messageModel' => $messageModel]);
+    app(MailTracker::class)->messageSending($event);
+
+    $messageModel->refresh();
+    expect($messageModel->tracking_hash)->toBeNull();
+
+    $body = $email->getBody()->getBody() ?? '';
+    expect($body)->not->toContain('/email/t/');
+});
+
+it('stores content to filesystem when log_content_strategy is filesystem', function () {
+    Illuminate\Support\Facades\Storage::fake('local');
+
+    config()->set('messenger.tracking.inject_pixel', false);
+    config()->set('messenger.tracking.track_links', false);
+    config()->set('messenger.tracking.log_content', true);
+    config()->set('messenger.tracking.log_content_strategy', 'filesystem');
+    config()->set('messenger.tracking.tracker_filesystem', 'local');
+    config()->set('messenger.tracking.tracker_filesystem_folder', 'tracker');
+
+    $messageModel = createMessage();
+
+    $html = '<html><body>Filesystem content test</body></html>';
+    $email = (new Email)
+        ->from(new Address('sender@example.com', 'Sender'))
+        ->to(new Address('receiver@example.com', 'Receiver'))
+        ->subject('Filesystem Test')
+        ->html($html);
+
+    $event = new MessageSending($email, ['messageModel' => $messageModel]);
+    app(MailTracker::class)->messageSending($event);
+
+    $messageModel->refresh();
+    expect($messageModel->tracking_content)->toBeNull()
+        ->and($messageModel->tracking_content_path)->toStartWith('tracker/')
+        ->and($messageModel->tracking_content_path)->toEndWith('.html');
+
+    Illuminate\Support\Facades\Storage::disk('local')->assertExists($messageModel->tracking_content_path);
+});

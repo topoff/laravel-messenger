@@ -303,6 +303,36 @@ it('blocks creation when required_params is missing', function () {
     expect(Message::count())->toBe(0);
 });
 
+it('createAndSendNow creates message and dispatches handler', function () {
+    Illuminate\Support\Facades\Mail::fake();
+
+    $service = new MessageService;
+    $service->setReceiver(TestReceiver::class, $this->receiver->id)
+        ->setMessagable(TestMessagable::class, $this->messagable->id)
+        ->setMessageTypeClass(\Workbench\App\Mail\TestMail::class)
+        ->createAndSendNow();
+
+    expect(Message::count())->toBe(1);
+
+    $message = Message::first();
+    expect($message->scheduled_at)->toBeNull();
+});
+
+it('createAndSendNow blocks creation when required fields are missing', function () {
+    createMessageType([
+        'notification_class' => 'App\\Mail\\RequiresSenderNow',
+        'required_sender' => true,
+    ]);
+
+    $service = new MessageService;
+    $service->setReceiver(TestReceiver::class, $this->receiver->id)
+        ->setMessagable(TestMessagable::class, $this->messagable->id)
+        ->setMessageTypeClass('App\\Mail\\RequiresSenderNow')
+        ->createAndSendNow();
+
+    expect(Message::count())->toBe(0);
+});
+
 it('passes validation when all required fields are provided', function () {
     createMessageType([
         'notification_class' => 'App\\Mail\\RequiresAll',

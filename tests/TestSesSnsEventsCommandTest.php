@@ -69,3 +69,27 @@ it('sends simulator scenarios and creates message records', function () {
         ->and($messageClass::query()->where('tracking_message_id', 'sim-message-2')->exists())->toBeTrue()
         ->and($messageClass::query()->where('tracking_message_id', 'sim-message-3')->exists())->toBeTrue();
 });
+
+it('fails when no from address is configured', function () {
+    config()->set('mail.from.address', '');
+    config()->set('messenger.ses_sns.sending.identities.default.mail_from_address', null);
+
+    $this->mock(SesEventSimulatorService::class);
+
+    $this->artisan('messenger:ses-sns:test-events', ['--wait' => 0])
+        ->assertFailed()
+        ->expectsOutputToContain('Missing sender email');
+});
+
+it('fails when invalid scenarios are provided', function () {
+    config()->set('mail.from.address', 'sender@example.com');
+    config()->set('messenger.ses_sns.sending.identities.default.mail_from_address', null);
+
+    $this->mock(SesEventSimulatorService::class);
+
+    $this->artisan('messenger:ses-sns:test-events', [
+        '--scenario' => ['nonexistent'],
+        '--wait' => 0,
+    ])->assertFailed()
+        ->expectsOutputToContain('No valid scenarios');
+});

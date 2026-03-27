@@ -341,3 +341,51 @@ it('deletes indirect messages when receiver no longer exists', function () {
 
     Mail::assertNothingSent();
 });
+
+it('sets error_at when single_handler class does not exist', function () {
+    $messageType = createMessageType([
+        'direct' => true,
+        'single_handler' => 'App\\NonExistent\\Handler',
+    ]);
+
+    $message = createMessage([
+        'receiver_type' => TestReceiver::class,
+        'receiver_id' => $this->receiver->id,
+        'message_type_id' => $messageType->id,
+        'messagable_type' => TestMessagable::class,
+        'messagable_id' => $this->messagable->id,
+    ]);
+
+    $job = new SendMessageJob;
+    $job->handle();
+
+    $message->refresh();
+    expect($message->error_at)->not->toBeNull()
+        ->and($message->sent_at)->toBeNull();
+
+    Mail::assertNothingSent();
+});
+
+it('sets error_at when single_handler is null', function () {
+    $messageType = createMessageType([
+        'direct' => true,
+        'single_handler' => null,
+    ]);
+
+    $message = createMessage([
+        'receiver_type' => TestReceiver::class,
+        'receiver_id' => $this->receiver->id,
+        'message_type_id' => $messageType->id,
+        'messagable_type' => TestMessagable::class,
+        'messagable_id' => $this->messagable->id,
+    ]);
+
+    $job = new SendMessageJob;
+    $job->handle();
+
+    $message->refresh();
+    expect($message->error_at)->not->toBeNull()
+        ->and($message->sent_at)->toBeNull();
+
+    Mail::assertNothingSent();
+});
