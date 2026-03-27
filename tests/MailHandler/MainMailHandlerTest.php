@@ -79,10 +79,12 @@ it('aborts and deletes when messagable is missing', function () {
 
     config()->set('messenger.sending.check_should_send', fn () => true);
 
+    $messageType = createMessageType(['required_messagable' => true]);
+
     $message = createMessage([
         'receiver_type' => TestReceiver::class,
         'receiver_id' => $this->receiver->id,
-        'message_type_id' => $this->messageType->id,
+        'message_type_id' => $messageType->id,
         'messagable_type' => TestMessagable::class,
         'messagable_id' => 99999, // non-existent
     ]);

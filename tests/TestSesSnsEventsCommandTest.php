@@ -4,6 +4,7 @@ use Topoff\Messenger\Services\SesSns\SesEventSimulatorService;
 
 it('sends simulator scenarios and creates message records', function () {
     config()->set('mail.from.address', 'sender@example.com');
+    config()->set('messenger.ses_sns.sending.identities.default.mail_from_address', null);
     config()->set('messenger.ses_sns.configuration_sets', [
         'default' => [
             'configuration_set' => 'messenger-tracking',

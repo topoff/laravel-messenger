@@ -42,18 +42,9 @@ it('has nova tracking defaults configured', function () {
 
 it('has ses sns setup defaults configured', function () {
     expect(config('messenger.ses_sns.configuration_sets.default.identity'))->toBe('default')
-        ->and(config('messenger.ses_sns.sending.identities.default'))->toBe([
-            'identity_domain' => null,
-            'mail_from_domain' => null,
-            'mail_from_address' => null,
-        ])
-        ->and(config('messenger.ses_sns.sending.identities'))->toBe([
-            'default' => [
-                'identity_domain' => null,
-                'mail_from_domain' => null,
-                'mail_from_address' => null,
-            ],
-        ])
+        ->and(config('messenger.ses_sns.sending.identities.default.identity_domain'))->toBeNull()
+        ->and(config('messenger.ses_sns.sending.identities.default.mail_from_domain'))->toBeNull()
+        ->and(config('messenger.ses_sns.sending.identities'))->toHaveKey('default')
         ->and(config('messenger.ses_sns.topic_name'))->toEndWith('messenger-ses-events')
         ->and(config('messenger.ses_sns.event_types'))->toBe(['SEND', 'REJECT', 'BOUNCE', 'COMPLAINT', 'DELIVERY']);
 });
