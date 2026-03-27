@@ -2,7 +2,7 @@
 
 namespace Topoff\Messenger\Services;
 
-use Carbon\Carbon;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Topoff\Messenger\Contracts\MessageReceiverInterface;
 use Topoff\Messenger\MailHandler\MainMailHandler;
