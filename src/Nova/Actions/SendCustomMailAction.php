@@ -80,7 +80,10 @@ class SendCustomMailAction extends Action
             $messageRecord->load('messageType');
 
             try {
-                Mail::to($recipientEmail)->send(new CustomMessageMail($messageRecord));
+                $pendingMail = $mailer
+                    ? Mail::mailer($mailer)->to($recipientEmail)
+                    : Mail::to($recipientEmail);
+                $pendingMail->send(new CustomMessageMail($messageRecord));
 
                 $messageRecord->sent_at = Date::now();
                 $messageRecord->save();
