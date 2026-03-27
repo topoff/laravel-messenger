@@ -17,7 +17,7 @@ it('sends simulator scenarios and creates message records', function () {
     {
         public int $counter = 0;
 
-        /** @var array<int, array{from:string,to:string,subject:string,configuration_set:?string,tenant:?string}> */
+        /** @var array<int, array{from:string,to:string,subject:string,configuration_set:?string,tenant:?string,tags:array}> */
         public array $calls = [];
 
         public function __construct() {}
@@ -38,6 +38,7 @@ it('sends simulator scenarios and creates message records', function () {
                 'subject' => $subject,
                 'configuration_set' => $configurationSetName,
                 'tenant' => $tenantName,
+                'tags' => $tags,
             ];
 
             return 'sim-message-'.$this->counter;
@@ -58,7 +59,9 @@ it('sends simulator scenarios and creates message records', function () {
         ->and($fake->calls[2]['to'])->toBe('complaint@simulator.amazonses.com')
         ->and($fake->calls[0]['from'])->toBe('sender@example.com')
         ->and($fake->calls[0]['configuration_set'])->toBe('messenger-tracking')
-        ->and($fake->calls[0]['tenant'])->toBe('tenant-a');
+        ->and($fake->calls[0]['tenant'])->toBe('tenant-a')
+        ->and($fake->calls[0]['tags'])->toContain(['Name' => 'messenger_test', 'Value' => 'true'])
+        ->and($fake->calls[0]['tags'])->toContain(['Name' => 'scenario', 'Value' => 'delivery']);
 
     $messageClass = config('messenger.models.message');
     expect($messageClass::query()->whereNotNull('tracking_message_id')->count())->toBe(3)

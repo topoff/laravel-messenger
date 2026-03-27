@@ -21,8 +21,16 @@ it('registers package views', function () {
     expect($viewFactory->exists('messenger::bulkMail'))->toBeTrue();
 });
 
-it('runs the migration and creates tables', function () {
+it('runs package migrations and creates tables with expected columns', function () {
     expect(\Illuminate\Support\Facades\Schema::hasTable('message_types'))->toBeTrue()
         ->and(\Illuminate\Support\Facades\Schema::hasTable('messages'))->toBeTrue()
-        ->and(\Illuminate\Support\Facades\Schema::hasTable('message_log'))->toBeTrue();
+        ->and(\Illuminate\Support\Facades\Schema::hasTable('message_log'))->toBeTrue()
+        ->and(\Illuminate\Support\Facades\Schema::hasColumns('message_types', [
+            'channel', 'notification_class', 'single_handler', 'bulk_handler',
+            'ses_configuration_set', 'max_retry_attempts', 'required_messagable',
+        ]))->toBeTrue()
+        ->and(\Illuminate\Support\Facades\Schema::hasColumns('messages', [
+            'channel', 'failed_at', 'error_code', 'error_message',
+            'tracking_sender_contact', 'tracking_recipient_contact',
+        ]))->toBeTrue();
 });

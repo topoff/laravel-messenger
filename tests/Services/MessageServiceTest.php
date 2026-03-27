@@ -214,7 +214,7 @@ it('deletes a message', function () {
         ->and(Message::withTrashed()->count())->toBe(1);
 });
 
-it('reports when required_messagable is missing', function () {
+it('blocks creation when required_messagable is missing', function () {
     createMessageType([
         'notification_class' => 'App\\Mail\\RequiresMsgable',
         'required_messagable' => true,
@@ -225,11 +225,10 @@ it('reports when required_messagable is missing', function () {
         ->setMessageTypeClass('App\\Mail\\RequiresMsgable')
         ->create();
 
-    // checkAllParamsAreSet() reports but does not block — message is still created
-    expect(Message::count())->toBe(1);
+    expect(Message::count())->toBe(0);
 });
 
-it('reports when required_sender is missing', function () {
+it('blocks creation when required_sender is missing', function () {
     createMessageType([
         'notification_class' => 'App\\Mail\\RequiresSender',
         'required_sender' => true,
@@ -241,10 +240,10 @@ it('reports when required_sender is missing', function () {
         ->setMessageTypeClass('App\\Mail\\RequiresSender')
         ->create();
 
-    expect(Message::count())->toBe(1);
+    expect(Message::count())->toBe(0);
 });
 
-it('reports when required_company_id is missing', function () {
+it('blocks creation when required_company_id is missing', function () {
     createMessageType([
         'notification_class' => 'App\\Mail\\RequiresCompany',
         'required_company_id' => true,
@@ -256,10 +255,10 @@ it('reports when required_company_id is missing', function () {
         ->setMessageTypeClass('App\\Mail\\RequiresCompany')
         ->create();
 
-    expect(Message::count())->toBe(1);
+    expect(Message::count())->toBe(0);
 });
 
-it('reports when required_text is missing', function () {
+it('blocks creation when required_text is missing', function () {
     createMessageType([
         'notification_class' => 'App\\Mail\\RequiresText',
         'required_text' => true,
@@ -271,10 +270,10 @@ it('reports when required_text is missing', function () {
         ->setMessageTypeClass('App\\Mail\\RequiresText')
         ->create();
 
-    expect(Message::count())->toBe(1);
+    expect(Message::count())->toBe(0);
 });
 
-it('reports when required_scheduled is missing', function () {
+it('blocks creation when required_scheduled is missing', function () {
     createMessageType([
         'notification_class' => 'App\\Mail\\RequiresScheduled',
         'required_scheduled' => true,
@@ -286,10 +285,10 @@ it('reports when required_scheduled is missing', function () {
         ->setMessageTypeClass('App\\Mail\\RequiresScheduled')
         ->create();
 
-    expect(Message::count())->toBe(1);
+    expect(Message::count())->toBe(0);
 });
 
-it('reports when required_params is missing', function () {
+it('blocks creation when required_params is missing', function () {
     createMessageType([
         'notification_class' => 'App\\Mail\\RequiresParams',
         'required_params' => true,
@@ -301,7 +300,7 @@ it('reports when required_params is missing', function () {
         ->setMessageTypeClass('App\\Mail\\RequiresParams')
         ->create();
 
-    expect(Message::count())->toBe(1);
+    expect(Message::count())->toBe(0);
 });
 
 it('passes validation when all required fields are provided', function () {
@@ -321,9 +320,8 @@ it('passes validation when all required fields are provided', function () {
         ->setMessagable(TestMessagable::class, $this->messagable->id)
         ->setMessageTypeClass('App\\Mail\\RequiresAll')
         ->setCompanyId(1)
-        ->setMailText('Hello')
         ->setScheduled(Carbon::now())
-        ->setParams(['key' => 'value'])
+        ->setParams(['key' => 'value', 'text' => 'Hello'])
         ->create();
 
     expect(Message::count())->toBe(1);

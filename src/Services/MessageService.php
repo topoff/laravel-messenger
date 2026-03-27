@@ -147,7 +147,11 @@ class MessageService
         $this->scheduled ??= $this->getScheduled();
         $this->locale ??= $this->resolveReceiverLocale();
 
-        $this->reportMissingParams();
+        if (! $this->reportMissingParams()) {
+            $this->resetVars();
+
+            return;
+        }
 
         if (! $this->preventCreateMessage()) {
             $messageClass = config('messenger.models.message');
@@ -178,7 +182,11 @@ class MessageService
         $this->scheduled ??= $this->getScheduled();
         $this->locale ??= $this->resolveReceiverLocale();
 
-        $this->reportMissingParams();
+        if (! $this->reportMissingParams()) {
+            $this->resetVars();
+
+            return;
+        }
 
         if (! $this->preventCreateMessage()) {
             $messageClass = config('messenger.models.message');
