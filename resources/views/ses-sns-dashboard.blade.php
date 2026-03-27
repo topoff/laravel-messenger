@@ -322,6 +322,7 @@
                         <th>Value</th>
                     </tr>
                     @php $dkimDomain = (string) data_get($detail, 'domain', ''); @endphp
+                    @php $dkimRegion = (string) config('messenger.ses_sns.aws.region', 'eu-central-1'); @endphp
                     @foreach($dkimTokens as $token)
                         <tr>
                             <td><code>CNAME</code></td>
@@ -330,7 +331,7 @@
                                 <button class="copy-btn" onclick="copyValue(this)">Copy</button>
                             </td>
                             <td class="copyable">
-                                <code>{{ $token }}.dkim.amazonses.com</code>
+                                <code>{{ $token }}.dkim.{{ $dkimRegion }}.amazonses.com</code>
                                 <button class="copy-btn" onclick="copyValue(this)">Copy</button>
                             </td>
                         </tr>
