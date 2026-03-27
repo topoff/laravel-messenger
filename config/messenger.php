@@ -198,6 +198,7 @@ return [
                     'identity_domain' => env('AWS_SES_IDENTITY_DOMAIN'),
                     'mail_from_domain' => env('AWS_SES_MAIL_FROM_DOMAIN'),
                     'mail_from_address' => env('MAIL_FROM_ADDRESS'),
+                    // 'reply_to_address' => env('...'),  // Optional: override Reply-To for this identity.
                 ],
             ],
 

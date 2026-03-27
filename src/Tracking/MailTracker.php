@@ -45,6 +45,7 @@ class MailTracker
 
             $this->injectConfigurationSetHeader($messageModels, $message);
             $this->injectFromAddressOverride($messageModels, $message);
+            $this->injectReplyToOverride($messageModels, $message);
             $this->persistTrackingMetadata($messageModels, $message, $hash, $html, $mutated);
             $this->injectMessageTags($messageModels, $message);
         } catch (\Throwable $e) {
@@ -299,6 +300,35 @@ class MailTracker
         $currentName = $currentFrom?->getName() ?? '';
 
         $message->from(new \Symfony\Component\Mime\Address($mailFromAddress, $currentName));
+    }
+
+    /**
+     * @param  Collection<int, Message>  $messageModels
+     */
+    protected function injectReplyToOverride(Collection $messageModels, Email $message): void
+    {
+        if ($message->getReplyTo() !== []) {
+            return;
+        }
+
+        $configSetKey = $messageModels->first()?->messageType?->ses_configuration_set;
+        if (! $configSetKey) {
+            return;
+        }
+
+        $sets = (array) config('messenger.ses_sns.configuration_sets', []);
+        $identityKey = $sets[$configSetKey]['identity'] ?? null;
+        if (! $identityKey) {
+            return;
+        }
+
+        $identities = (array) config('messenger.ses_sns.sending.identities', []);
+        $replyToAddress = trim((string) ($identities[$identityKey]['reply_to_address'] ?? ''));
+        if ($replyToAddress === '') {
+            return;
+        }
+
+        $message->replyTo($replyToAddress);
     }
 
     /**

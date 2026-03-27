@@ -22,9 +22,9 @@ Verwende separate (Sub-)Domains für verschiedene E-Mail-Streams, um die Absende
 | Stream | Identity | Zweck |
 |---|---|---|
 | Transaktional | `example.com` | Passwort-Resets, Bestätigungen, Rechnungen |
-| Outreach | `outreach.example.com` | Marketing, Newsletter, Kampagnen |
+| Outreach | `business.example.com` | Cold Outreach, Partner-Akquise |
 
-Bounces und Spam-Beschwerden auf `outreach.example.com` beeinflussen die Zustellbarkeit von `example.com` nicht.
+Bounces und Spam-Beschwerden auf `business.example.com` beeinflussen die Zustellbarkeit von `example.com` nicht.
 
 Jede Identity braucht eigene DKIM-Verifizierung und MAIL FROM-Subdomain:
 
@@ -33,9 +33,11 @@ Jede Identity braucht eigene DKIM-Verifizierung und MAIL FROM-Subdomain:
 AWS_SES_IDENTITY_DOMAIN=example.com
 AWS_SES_MAIL_FROM_DOMAIN=mail.example.com
 
-# Outreach
-AWS_SES_OUTREACH_IDENTITY_DOMAIN=outreach.example.com
-AWS_SES_OUTREACH_MAIL_FROM_DOMAIN=mail.outreach.example.com
+# Outreach (separate Identity + eigene From-Adresse + Reply-To)
+AWS_SES_OUTREACH_IDENTITY_DOMAIN=business.example.com
+AWS_SES_OUTREACH_MAIL_FROM_DOMAIN=bounce.business.example.com
+AWS_SES_OUTREACH_FROM_ADDRESS=welcome@business.example.com
+AWS_SES_OUTREACH_REPLY_TO_ADDRESS=info@example.com
 ```
 
 Der Befehl `messenger:ses-sns:setup-all` provisioniert alle konfigurierten Identities automatisch.

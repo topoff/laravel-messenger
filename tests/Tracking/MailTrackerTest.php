@@ -250,3 +250,71 @@ it('does not override From when identity has no mail_from_address', function () 
     $from = collect($email->getFrom())->first();
     expect($from->getAddress())->toBe('original@example.com');
 });
+
+it('injects Reply-To from identity config when configured', function () {
+    config()->set('messenger.ses_sns.configuration_sets', [
+        'outreach' => [
+            'configuration_set' => 'my-tenant-prod-outreach',
+            'event_destination' => 'my-tenant-prod-outreach-sns',
+            'identity' => 'outreach',
+        ],
+    ]);
+    config()->set('messenger.ses_sns.sending.identities', [
+        'outreach' => [
+            'identity_domain' => 'business.example.com',
+            'mail_from_domain' => 'bounce.business.example.com',
+            'mail_from_address' => 'welcome@business.example.com',
+            'reply_to_address' => 'info@example.com',
+        ],
+    ]);
+
+    $messageType = createMessageType(['ses_configuration_set' => 'outreach']);
+    $messageModel = createMessage(['message_type_id' => $messageType->id]);
+
+    $email = (new Email)
+        ->from(new Address('original@example.com', 'Original Name'))
+        ->to(new Address('receiver@example.com', 'Receiver'))
+        ->subject('Reply-To Test')
+        ->text('Plain text');
+
+    $event = new MessageSending($email, ['messageModel' => $messageModel]);
+    app(MailTracker::class)->messageSending($event);
+
+    $replyTo = collect($email->getReplyTo())->first();
+    expect($replyTo)->not->toBeNull()
+        ->and($replyTo->getAddress())->toBe('info@example.com');
+});
+
+it('does not override existing Reply-To header', function () {
+    config()->set('messenger.ses_sns.configuration_sets', [
+        'outreach' => [
+            'configuration_set' => 'my-tenant-prod-outreach',
+            'event_destination' => 'my-tenant-prod-outreach-sns',
+            'identity' => 'outreach',
+        ],
+    ]);
+    config()->set('messenger.ses_sns.sending.identities', [
+        'outreach' => [
+            'identity_domain' => 'business.example.com',
+            'mail_from_domain' => 'bounce.business.example.com',
+            'mail_from_address' => 'welcome@business.example.com',
+            'reply_to_address' => 'info@example.com',
+        ],
+    ]);
+
+    $messageType = createMessageType(['ses_configuration_set' => 'outreach']);
+    $messageModel = createMessage(['message_type_id' => $messageType->id]);
+
+    $email = (new Email)
+        ->from(new Address('original@example.com', 'Original Name'))
+        ->to(new Address('receiver@example.com', 'Receiver'))
+        ->replyTo(new Address('custom-reply@example.com'))
+        ->subject('Existing Reply-To Test')
+        ->text('Plain text');
+
+    $event = new MessageSending($email, ['messageModel' => $messageModel]);
+    app(MailTracker::class)->messageSending($event);
+
+    $replyTo = collect($email->getReplyTo())->first();
+    expect($replyTo->getAddress())->toBe('custom-reply@example.com');
+});
