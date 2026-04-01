@@ -46,13 +46,13 @@ it('records vonage response on messenger notification', function () {
         }
     };
 
-    $response = new readonly class($sentSms) implements \IteratorAggregate
+    $response = new readonly class($sentSms) implements IteratorAggregate
     {
         public function __construct(private object $item) {}
 
-        public function getIterator(): \ArrayIterator
+        public function getIterator(): ArrayIterator
         {
-            return new \ArrayIterator([$this->item]);
+            return new ArrayIterator([$this->item]);
         }
     };
 

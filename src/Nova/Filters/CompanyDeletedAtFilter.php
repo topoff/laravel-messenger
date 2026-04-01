@@ -3,6 +3,7 @@
 namespace Topoff\Messenger\Nova\Filters;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
 
@@ -16,7 +17,7 @@ class CompanyDeletedAtFilter extends Filter
     public $name = 'Company deleted_at';
 
     /**
-     * @param  Builder<\Illuminate\Database\Eloquent\Model>  $query
+     * @param  Builder<Model>  $query
      * @param  mixed  $value
      */
     public function apply(NovaRequest $request, $query, $value): Builder

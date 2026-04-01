@@ -4,7 +4,7 @@ use Topoff\Messenger\Services\SesSns\SesEventSimulatorService;
 
 it('sends simulator scenarios and creates message records', function () {
     config()->set('mail.from.address', 'sender@example.com');
-    config()->set('messenger.ses_sns.sending.identities.default.mail_from_address', null);
+    config()->set('messenger.ses_sns.sending.identities.default.mail_from_address');
     config()->set('messenger.ses_sns.configuration_sets', [
         'default' => [
             'configuration_set' => 'messenger-tracking',
@@ -72,7 +72,7 @@ it('sends simulator scenarios and creates message records', function () {
 
 it('fails when no from address is configured', function () {
     config()->set('mail.from.address', '');
-    config()->set('messenger.ses_sns.sending.identities.default.mail_from_address', null);
+    config()->set('messenger.ses_sns.sending.identities.default.mail_from_address');
 
     $this->mock(SesEventSimulatorService::class);
 
@@ -83,7 +83,7 @@ it('fails when no from address is configured', function () {
 
 it('fails when invalid scenarios are provided', function () {
     config()->set('mail.from.address', 'sender@example.com');
-    config()->set('messenger.ses_sns.sending.identities.default.mail_from_address', null);
+    config()->set('messenger.ses_sns.sending.identities.default.mail_from_address');
 
     $this->mock(SesEventSimulatorService::class);
 

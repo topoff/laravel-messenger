@@ -12,6 +12,7 @@
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Notifications\Events\NotificationSent;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Str;
 use Topoff\Messenger\Listeners\RecordNotificationSentListener;
 use Topoff\Messenger\Models\Message;
 use Topoff\Messenger\NotificationHandler\MainNotificationHandler;
@@ -84,7 +85,7 @@ it('sets messengerMessageId enabling vonage tracking', function (): void {
 
     // Simulate the NotificationSent event with a vonage response containing a message ID
     $vonageMessageId = 'vonage-msg-'.uniqid();
-    $sentSms = new readonly class($vonageMessageId) implements \IteratorAggregate
+    $sentSms = new readonly class($vonageMessageId) implements IteratorAggregate
     {
         public function __construct(private string $messageId) {}
 
@@ -103,9 +104,9 @@ it('sets messengerMessageId enabling vonage tracking', function (): void {
             return '0';
         }
 
-        public function getIterator(): \ArrayIterator
+        public function getIterator(): ArrayIterator
         {
-            return new \ArrayIterator([$this]);
+            return new ArrayIterator([$this]);
         }
     };
 
@@ -198,7 +199,7 @@ it('records error on send failure', function (): void {
 
     // Simulate error handling pattern from the action's catch block
     $message->error_at = Date::now();
-    $message->error_message = \Illuminate\Support\Str::limit('Vonage API error: connection refused', 245);
+    $message->error_message = Str::limit('Vonage API error: connection refused', 245);
     $message->save();
 
     $message->refresh();

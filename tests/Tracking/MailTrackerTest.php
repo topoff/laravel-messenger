@@ -3,6 +3,7 @@
 use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Mail\Events\MessageSent;
 use Illuminate\Mail\SentMessage as IlluminateSentMessage;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Symfony\Component\Mailer\Envelope;
 use Symfony\Component\Mailer\SentMessage as SymfonySentMessage;
@@ -344,7 +345,7 @@ it('skips tracking when X-No-Track header is present', function () {
 });
 
 it('stores content to filesystem when log_content_strategy is filesystem', function () {
-    Illuminate\Support\Facades\Storage::fake('local');
+    Storage::fake('local');
 
     config()->set('messenger.tracking.inject_pixel', false);
     config()->set('messenger.tracking.track_links', false);
@@ -370,5 +371,5 @@ it('stores content to filesystem when log_content_strategy is filesystem', funct
         ->and($messageModel->tracking_content_path)->toStartWith('tracker/')
         ->and($messageModel->tracking_content_path)->toEndWith('.html');
 
-    Illuminate\Support\Facades\Storage::disk('local')->assertExists($messageModel->tracking_content_path);
+    Storage::disk('local')->assertExists($messageModel->tracking_content_path);
 });

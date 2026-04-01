@@ -2,8 +2,10 @@
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\Mail;
 use Topoff\Messenger\Models\Message;
 use Topoff\Messenger\Services\MessageService;
+use Workbench\App\Mail\TestMail;
 use Workbench\App\Models\TestMessagable;
 use Workbench\App\Models\TestReceiver;
 use Workbench\App\Models\TestSender;
@@ -21,7 +23,7 @@ it('creates a message with all required fields', function () {
     $service->setReceiver(TestReceiver::class, $this->receiver->id)
         ->setSender(TestSender::class, $this->sender->id)
         ->setMessagable(TestMessagable::class, $this->messagable->id)
-        ->setMessageTypeClass(\Workbench\App\Mail\TestMail::class)
+        ->setMessageTypeClass(TestMail::class)
         ->setCompanyId(1)
         ->create();
 
@@ -45,7 +47,7 @@ it('creates a message with scheduled_at', function () {
     $service = new MessageService;
     $service->setReceiver(TestReceiver::class, $this->receiver->id)
         ->setMessagable(TestMessagable::class, $this->messagable->id)
-        ->setMessageTypeClass(\Workbench\App\Mail\TestMail::class)
+        ->setMessageTypeClass(TestMail::class)
         ->setScheduled($scheduled)
         ->create();
 
@@ -56,7 +58,7 @@ it('creates a message with params', function () {
     $service = new MessageService;
     $service->setReceiver(TestReceiver::class, $this->receiver->id)
         ->setMessagable(TestMessagable::class, $this->messagable->id)
-        ->setMessageTypeClass(\Workbench\App\Mail\TestMail::class)
+        ->setMessageTypeClass(TestMail::class)
         ->setParams(['foo' => 'bar', 'baz' => 123])
         ->create();
 
@@ -68,7 +70,7 @@ it('creates a message with mail text', function () {
     $service = new MessageService;
     $service->setReceiver(TestReceiver::class, $this->receiver->id)
         ->setMessagable(TestMessagable::class, $this->messagable->id)
-        ->setMessageTypeClass(\Workbench\App\Mail\TestMail::class)
+        ->setMessageTypeClass(TestMail::class)
         ->setMailText('Hello World')
         ->create();
 
@@ -80,13 +82,13 @@ it('resets vars after create for reuse', function () {
 
     $service->setReceiver(TestReceiver::class, $this->receiver->id)
         ->setMessagable(TestMessagable::class, $this->messagable->id)
-        ->setMessageTypeClass(\Workbench\App\Mail\TestMail::class)
+        ->setMessageTypeClass(TestMail::class)
         ->create();
 
     $receiver2 = createReceiver(['email' => 'second@example.com']);
     $service->setReceiver(TestReceiver::class, $receiver2->id)
         ->setMessagable(TestMessagable::class, $this->messagable->id)
-        ->setMessageTypeClass(\Workbench\App\Mail\TestMail::class)
+        ->setMessageTypeClass(TestMail::class)
         ->create();
 
     expect(Message::count())->toBe(2);
@@ -123,7 +125,7 @@ it('prevents message creation when prevent_create_message returns true', functio
     $service = new MessageService;
     $service->setReceiver(TestReceiver::class, $this->receiver->id)
         ->setMessagable(TestMessagable::class, $this->messagable->id)
-        ->setMessageTypeClass(\Workbench\App\Mail\TestMail::class)
+        ->setMessageTypeClass(TestMail::class)
         ->create();
 
     expect(Message::count())->toBe(0);
@@ -135,7 +137,7 @@ it('creates message when prevent_create_message returns false', function () {
     $service = new MessageService;
     $service->setReceiver(TestReceiver::class, $this->receiver->id)
         ->setMessagable(TestMessagable::class, $this->messagable->id)
-        ->setMessageTypeClass(\Workbench\App\Mail\TestMail::class)
+        ->setMessageTypeClass(TestMail::class)
         ->create();
 
     expect(Message::count())->toBe(1);
@@ -147,7 +149,7 @@ it('creates message when prevent_create_message is null', function () {
     $service = new MessageService;
     $service->setReceiver(TestReceiver::class, $this->receiver->id)
         ->setMessagable(TestMessagable::class, $this->messagable->id)
-        ->setMessageTypeClass(\Workbench\App\Mail\TestMail::class)
+        ->setMessageTypeClass(TestMail::class)
         ->create();
 
     expect(Message::count())->toBe(1);
@@ -164,7 +166,7 @@ it('prevent_create_message receives receiver class and id', function () {
     $service = new MessageService;
     $service->setReceiver(TestReceiver::class, $this->receiver->id)
         ->setMessagable(TestMessagable::class, $this->messagable->id)
-        ->setMessageTypeClass(\Workbench\App\Mail\TestMail::class)
+        ->setMessageTypeClass(TestMail::class)
         ->create();
 
     expect($receivedArgs['class'])->toBe(TestReceiver::class)
@@ -175,14 +177,14 @@ it('changes the schedule of an existing message', function () {
     $service = new MessageService;
     $service->setReceiver(TestReceiver::class, $this->receiver->id)
         ->setMessagable(TestMessagable::class, $this->messagable->id)
-        ->setMessageTypeClass(\Workbench\App\Mail\TestMail::class)
+        ->setMessageTypeClass(TestMail::class)
         ->setCompanyId(1)
         ->create();
 
     $newSchedule = Carbon::parse('2025-12-25 08:00:00');
     $changed = $service->setReceiver(TestReceiver::class, $this->receiver->id)
         ->setMessagable(TestMessagable::class, $this->messagable->id)
-        ->setMessageTypeClass(\Workbench\App\Mail\TestMail::class)
+        ->setMessageTypeClass(TestMail::class)
         ->setCompanyId(1)
         ->setScheduled($newSchedule)
         ->change();
@@ -195,7 +197,7 @@ it('returns null when changing a non-existent message', function () {
     $service = new MessageService;
     $result = $service->setReceiver(TestReceiver::class, $this->receiver->id)
         ->setMessagable(TestMessagable::class, $this->messagable->id)
-        ->setMessageTypeClass(\Workbench\App\Mail\TestMail::class)
+        ->setMessageTypeClass(TestMail::class)
         ->setCompanyId(1)
         ->change();
 
@@ -206,7 +208,7 @@ it('deletes a message', function () {
     $service = new MessageService;
     $service->setReceiver(TestReceiver::class, $this->receiver->id)
         ->setMessagable(TestMessagable::class, $this->messagable->id)
-        ->setMessageTypeClass(\Workbench\App\Mail\TestMail::class)
+        ->setMessageTypeClass(TestMail::class)
         ->delete();
 
     // delete() creates and then soft-deletes
@@ -304,12 +306,12 @@ it('blocks creation when required_params is missing', function () {
 });
 
 it('createAndSendNow creates message and dispatches handler', function () {
-    Illuminate\Support\Facades\Mail::fake();
+    Mail::fake();
 
     $service = new MessageService;
     $service->setReceiver(TestReceiver::class, $this->receiver->id)
         ->setMessagable(TestMessagable::class, $this->messagable->id)
-        ->setMessageTypeClass(\Workbench\App\Mail\TestMail::class)
+        ->setMessageTypeClass(TestMail::class)
         ->createAndSendNow();
 
     expect(Message::count())->toBe(1);

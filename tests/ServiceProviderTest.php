@@ -1,11 +1,14 @@
 <?php
 
+use Illuminate\Support\Facades\Schema;
+use Topoff\Messenger\Models\Message;
+use Topoff\Messenger\Models\MessageType;
 use Topoff\Messenger\Repositories\MessageTypeRepository;
 
 it('registers the package config', function () {
     expect(config('messenger'))->toBeArray()
-        ->and(config('messenger.models.message'))->toBe(\Topoff\Messenger\Models\Message::class)
-        ->and(config('messenger.models.message_type'))->toBe(\Topoff\Messenger\Models\MessageType::class);
+        ->and(config('messenger.models.message'))->toBe(Message::class)
+        ->and(config('messenger.models.message_type'))->toBe(MessageType::class);
 });
 
 it('registers MessageTypeRepository as singleton', function () {
@@ -22,14 +25,14 @@ it('registers package views', function () {
 });
 
 it('runs package migrations and creates tables with expected columns', function () {
-    expect(\Illuminate\Support\Facades\Schema::hasTable('message_types'))->toBeTrue()
-        ->and(\Illuminate\Support\Facades\Schema::hasTable('messages'))->toBeTrue()
-        ->and(\Illuminate\Support\Facades\Schema::hasTable('message_log'))->toBeTrue()
-        ->and(\Illuminate\Support\Facades\Schema::hasColumns('message_types', [
+    expect(Schema::hasTable('message_types'))->toBeTrue()
+        ->and(Schema::hasTable('messages'))->toBeTrue()
+        ->and(Schema::hasTable('message_log'))->toBeTrue()
+        ->and(Schema::hasColumns('message_types', [
             'channel', 'notification_class', 'single_handler', 'bulk_handler',
             'ses_configuration_set', 'max_retry_attempts', 'required_messagable',
         ]))->toBeTrue()
-        ->and(\Illuminate\Support\Facades\Schema::hasColumns('messages', [
+        ->and(Schema::hasColumns('messages', [
             'channel', 'failed_at', 'error_code', 'error_message',
             'tracking_sender_contact', 'tracking_recipient_contact',
         ]))->toBeTrue();

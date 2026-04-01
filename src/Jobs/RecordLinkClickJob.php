@@ -6,6 +6,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use RuntimeException;
@@ -24,7 +25,7 @@ class RecordLinkClickJob implements ShouldQueue
         public ?string $ipAddress
     ) {}
 
-    public function retryUntil(): \Illuminate\Support\Carbon
+    public function retryUntil(): Carbon
     {
         return now()->addDays(5);
     }

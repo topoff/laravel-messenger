@@ -2,13 +2,15 @@
 
 namespace Topoff\Messenger\Services\SesSns;
 
+use Aws\SesV2\SesV2Client;
+
 class SesEventSimulatorService
 {
     protected object $sesV2;
 
     public function __construct()
     {
-        $sesClientClass = '\\Aws\\SesV2\\SesV2Client';
+        $sesClientClass = SesV2Client::class;
         if (! class_exists($sesClientClass)) {
             throw new \RuntimeException('AWS SDK classes not found. Please install aws/aws-sdk-php.');
         }

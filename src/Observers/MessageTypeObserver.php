@@ -2,6 +2,7 @@
 
 namespace Topoff\Messenger\Observers;
 
+use Illuminate\Cache\TaggableStore;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 use Topoff\Messenger\Repositories\MessageTypeRepository;
@@ -55,7 +56,7 @@ class MessageTypeObserver
     {
         $store = Cache::getStore();
 
-        if ($store instanceof \Illuminate\Cache\TaggableStore) {
+        if ($store instanceof TaggableStore) {
             Cache::tags([config('messenger.cache.tag')])->flush();
         } else {
             Cache::forever(MessageTypeRepository::CACHE_VERSION_KEY, ((int) Cache::get(MessageTypeRepository::CACHE_VERSION_KEY, 1)) + 1);

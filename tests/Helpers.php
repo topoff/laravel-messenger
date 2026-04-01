@@ -1,7 +1,9 @@
 <?php
 
+use Topoff\Messenger\MailHandler\MainBulkMailHandler;
 use Topoff\Messenger\Models\Message;
 use Topoff\Messenger\Models\MessageType;
+use Workbench\App\Mail\TestMail;
 use Workbench\App\MailHandler\TestMailHandler;
 use Workbench\App\Models\TestMessagable;
 use Workbench\App\Models\TestReceiver;
@@ -10,9 +12,9 @@ use Workbench\App\Models\TestSender;
 function createMessageType(array $attributes = []): MessageType
 {
     return MessageType::create(array_merge([
-        'notification_class' => \Workbench\App\Mail\TestMail::class,
+        'notification_class' => TestMail::class,
         'single_handler' => TestMailHandler::class,
-        'bulk_handler' => \Topoff\Messenger\MailHandler\MainBulkMailHandler::class,
+        'bulk_handler' => MainBulkMailHandler::class,
         'direct' => true,
         'dev_bcc' => true,
         'error_stop_send_minutes' => 60 * 24 * 3,

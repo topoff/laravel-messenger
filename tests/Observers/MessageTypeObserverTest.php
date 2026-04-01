@@ -18,7 +18,7 @@ it('clears cache when a message type is created', function () {
 
     // Cache was flushed, so this should fail (record no longer in DB)
     expect(fn () => $repository->getFromTypeAndCustomer('App\\Mail\\Existing'))
-        ->toThrow(\TypeError::class);
+        ->toThrow(TypeError::class);
 });
 
 it('clears cache when a message type is updated', function () {
@@ -32,7 +32,7 @@ it('clears cache when a message type is updated', function () {
 
     // Old cache key should be gone
     expect(fn () => $repository->getFromTypeAndCustomer('App\\Mail\\Update'))
-        ->toThrow(\TypeError::class);
+        ->toThrow(TypeError::class);
 });
 
 it('clears cache when a message type is deleted', function () {
@@ -45,5 +45,5 @@ it('clears cache when a message type is deleted', function () {
 
     // Cache was flushed, soft-deleted record won't be found
     expect(fn () => $repository->getFromTypeAndCustomer('App\\Mail\\Delete'))
-        ->toThrow(\TypeError::class);
+        ->toThrow(TypeError::class);
 });

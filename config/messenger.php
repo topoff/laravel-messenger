@@ -1,10 +1,15 @@
 <?php
 
+use Topoff\Messenger\Mail\BulkMail;
+use Topoff\Messenger\Models\Message;
+use Topoff\Messenger\Models\MessageLog;
+use Topoff\Messenger\Models\MessageType;
+
 return [
     'models' => [
-        'message' => \Topoff\Messenger\Models\Message::class,
-        'message_type' => \Topoff\Messenger\Models\MessageType::class,
-        'message_log' => \Topoff\Messenger\Models\MessageLog::class,
+        'message' => Message::class,
+        'message_type' => MessageType::class,
+        'message_log' => MessageLog::class,
     ],
 
     'database' => [
@@ -46,7 +51,7 @@ return [
     ],
 
     'mail' => [
-        'default_bulk_mail_class' => \Topoff\Messenger\Mail\BulkMail::class,
+        'default_bulk_mail_class' => BulkMail::class,
 
         // View used by BulkMail. Override to use your own Blade template.
         'bulk_mail_view' => 'messenger::bulkMail',
@@ -105,7 +110,7 @@ return [
             'register_resource' => false,
 
             // Override with your own resource class if needed.
-            'resource' => \Topoff\Messenger\Nova\Resources\Message::class,
+            'resource' => Topoff\Messenger\Nova\Resources\Message::class,
 
             // Signed preview route used by the Nova action.
             'preview_route' => [

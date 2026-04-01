@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Mail;
 use Topoff\Messenger\Exceptions\ReceiverMissingException;
 use Topoff\Messenger\MailHandler\MainMailHandler;
+use Workbench\App\Mail\TestMail;
 use Workbench\App\Models\TestMessagable;
 use Workbench\App\Models\TestReceiver;
 
@@ -49,7 +50,7 @@ it('sends a message successfully', function () {
     expect($message->sent_at)->not->toBeNull()
         ->and($message->attempts)->toBe(1);
 
-    Mail::assertSent(\Workbench\App\Mail\TestMail::class);
+    Mail::assertSent(TestMail::class);
 });
 
 it('sets sent_at even when not sending in this environment', function () {
@@ -241,7 +242,7 @@ it('uses mail class from message type', function () {
     $handler = new MainMailHandler($message->load('messageType'));
     $handler->send();
 
-    Mail::assertSent(\Workbench\App\Mail\TestMail::class);
+    Mail::assertSent(TestMail::class);
 });
 
 it('sends mail to the receiver email address', function () {
@@ -262,5 +263,5 @@ it('sends mail to the receiver email address', function () {
     $handler = new MainMailHandler($message->load('messageType'));
     $handler->send();
 
-    Mail::assertSent(\Workbench\App\Mail\TestMail::class, fn ($mail) => $mail->hasTo('specific@example.com'));
+    Mail::assertSent(TestMail::class, fn ($mail) => $mail->hasTo('specific@example.com'));
 });

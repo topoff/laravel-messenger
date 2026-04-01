@@ -11,7 +11,9 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
+use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
+use Symfony\Component\Mime\Header\HeaderInterface;
 use Symfony\Component\Mime\Part\Multipart\AlternativePart;
 use Symfony\Component\Mime\Part\Multipart\MixedPart;
 use Symfony\Component\Mime\Part\Multipart\RelatedPart;
@@ -299,7 +301,7 @@ class MailTracker
         $currentFrom = collect($message->getFrom())->first();
         $currentName = $currentFrom?->getName() ?? '';
 
-        $message->from(new \Symfony\Component\Mime\Address($mailFromAddress, $currentName));
+        $message->from(new Address($mailFromAddress, $currentName));
     }
 
     /**
@@ -370,7 +372,7 @@ class MailTracker
 
         $headers = $originalMessage->getHeaders();
 
-        if (($header = $headers->get('X-SES-Message-ID')) instanceof \Symfony\Component\Mime\Header\HeaderInterface) {
+        if (($header = $headers->get('X-SES-Message-ID')) instanceof HeaderInterface) {
             return $header->getBodyAsString();
         }
 

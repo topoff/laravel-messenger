@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Date;
 use Topoff\Messenger\Contracts\MessageReceiverInterface;
 use Topoff\Messenger\Models\Traits\DateScopesTrait;
@@ -41,16 +42,16 @@ use Topoff\Messenger\Models\Traits\DateScopesTrait;
  * @property array|null $tracking_meta
  * @property string|null $tracking_content
  * @property string|null $tracking_content_path
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- * @property \Illuminate\Support\Carbon|null $deleted_at
- * @property \Illuminate\Support\Carbon|null $scheduled_at
- * @property \Illuminate\Support\Carbon|null $reserved_at
- * @property \Illuminate\Support\Carbon|null $error_at
- * @property \Illuminate\Support\Carbon|null $sent_at
- * @property \Illuminate\Support\Carbon|null $failed_at
- * @property \Illuminate\Support\Carbon|null $tracking_opened_at
- * @property \Illuminate\Support\Carbon|null $tracking_clicked_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
+ * @property Carbon|null $scheduled_at
+ * @property Carbon|null $reserved_at
+ * @property Carbon|null $error_at
+ * @property Carbon|null $sent_at
+ * @property Carbon|null $failed_at
+ * @property Carbon|null $tracking_opened_at
+ * @property Carbon|null $tracking_clicked_at
  * @property-read MessageType $messageType
  * @property-read MessageReceiverInterface|Model|null $receiver
  */

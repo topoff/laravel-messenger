@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
 beforeEach(function () {
@@ -137,7 +138,7 @@ function domainExpression(string $column): string
 /**
  * Helper to build the same aggregation query the lens uses, executed directly via DB::table().
  */
-function domainTrackingQuery(): \Illuminate\Database\Query\Builder
+function domainTrackingQuery(): Builder
 {
     $table = (new (config('messenger.models.message')))->getTable();
     $domainExpr = domainExpression("{$table}.tracking_recipient_contact");

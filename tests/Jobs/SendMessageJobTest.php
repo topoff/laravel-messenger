@@ -3,7 +3,9 @@
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Mail;
 use Topoff\Messenger\Jobs\SendMessageJob;
+use Topoff\Messenger\Mail\BulkMail;
 use Topoff\Messenger\Models\Message;
+use Workbench\App\Mail\TestMail;
 use Workbench\App\Models\TestMessagable;
 use Workbench\App\Models\TestReceiver;
 
@@ -32,7 +34,7 @@ it('sends direct messages that are ready', function () {
     $message = Message::first();
     expect($message->sent_at)->not->toBeNull();
 
-    Mail::assertSent(\Workbench\App\Mail\TestMail::class);
+    Mail::assertSent(TestMail::class);
 });
 
 it('does not send direct messages that are already sent', function () {
@@ -124,7 +126,7 @@ it('sends scheduled messages that are due', function () {
     $job = new SendMessageJob;
     $job->handle();
 
-    Mail::assertSent(\Workbench\App\Mail\TestMail::class);
+    Mail::assertSent(TestMail::class);
 });
 
 it('retries error messages when isRetryCall is true', function () {
@@ -152,7 +154,7 @@ it('retries error messages when isRetryCall is true', function () {
     $job = new SendMessageJob(true);
     $job->handle();
 
-    Mail::assertSent(\Workbench\App\Mail\TestMail::class);
+    Mail::assertSent(TestMail::class);
 });
 
 it('does not retry permanently failed messages', function () {
@@ -238,7 +240,7 @@ it('applies exponential backoff on retries', function () {
     $job = new SendMessageJob(true);
     $job->handle();
 
-    Mail::assertSent(\Workbench\App\Mail\TestMail::class);
+    Mail::assertSent(TestMail::class);
 });
 
 it('does not send permanently failed messages in normal mode', function () {
@@ -274,7 +276,7 @@ it('sends indirect messages as single when only one message per group', function
     $job->handle();
 
     // Single message goes through individual handler, not bulk
-    Mail::assertSent(\Workbench\App\Mail\TestMail::class);
+    Mail::assertSent(TestMail::class);
 });
 
 it('sends indirect messages as bulk when multiple messages per group', function () {
@@ -300,7 +302,7 @@ it('sends indirect messages as bulk when multiple messages per group', function 
     $job->handle();
 
     // Multiple messages for same receiver — should use BulkMail
-    Mail::assertSent(\Topoff\Messenger\Mail\BulkMail::class);
+    Mail::assertSent(BulkMail::class);
 });
 
 it('has tries set to 1', function () {

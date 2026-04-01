@@ -7,6 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Topoff\Messenger\Events\MessageDeliveredEvent;
@@ -21,7 +22,7 @@ class RecordVonageDlrJob implements ShouldQueue
     /** @param  array<string, mixed>  $data */
     public function __construct(public array $data) {}
 
-    public function retryUntil(): \Illuminate\Support\Carbon
+    public function retryUntil(): Carbon
     {
         return now()->addDays(5);
     }

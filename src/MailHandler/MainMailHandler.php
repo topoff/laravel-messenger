@@ -28,7 +28,7 @@ use Topoff\Messenger\Models\Message;
  *
  * They are even called for every line in a bulk mail with multiple messages
  *
- * @see \Topoff\Messenger\MailHandler\MainBulkMailHandler::send()
+ * @see MainBulkMailHandler::send()
  */
 class MainMailHandler implements GroupableMailTypeInterface
 {

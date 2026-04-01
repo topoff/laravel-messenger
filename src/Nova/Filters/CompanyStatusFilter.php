@@ -2,7 +2,9 @@
 
 namespace Topoff\Messenger\Nova\Filters;
 
+use App\Enums\CompanyStatus;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
@@ -17,7 +19,7 @@ class CompanyStatusFilter extends Filter
     public $name = 'Company Status';
 
     /**
-     * @param  Builder<\Illuminate\Database\Eloquent\Model>  $query
+     * @param  Builder<Model>  $query
      * @param  mixed  $value
      */
     public function apply(NovaRequest $request, $query, $value): Builder
@@ -41,8 +43,8 @@ class CompanyStatusFilter extends Filter
             ->orderBy('status')
             ->pluck('status', 'status')
             ->mapWithKeys(function (int $status): array {
-                $label = class_exists(\App\Enums\CompanyStatus::class)
-                    ? \App\Enums\CompanyStatus::fromValue($status)->description
+                $label = class_exists(CompanyStatus::class)
+                    ? CompanyStatus::fromValue($status)->description
                     : (string) $status;
 
                 return [$label => $status];

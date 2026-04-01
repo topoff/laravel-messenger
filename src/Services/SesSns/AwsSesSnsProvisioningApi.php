@@ -2,6 +2,10 @@
 
 namespace Topoff\Messenger\Services\SesSns;
 
+use Aws\Route53\Route53Client;
+use Aws\SesV2\SesV2Client;
+use Aws\Sns\SnsClient;
+use Aws\Sts\StsClient;
 use Topoff\Messenger\Contracts\SesSnsProvisioningApi;
 
 class AwsSesSnsProvisioningApi implements SesSnsProvisioningApi
@@ -17,10 +21,10 @@ class AwsSesSnsProvisioningApi implements SesSnsProvisioningApi
     public function __construct()
     {
         $sharedConfig = $this->sharedAwsConfig();
-        $sesClientClass = '\\Aws\\SesV2\\SesV2Client';
-        $snsClientClass = '\\Aws\\Sns\\SnsClient';
-        $stsClientClass = '\\Aws\\Sts\\StsClient';
-        $route53ClientClass = '\\Aws\\Route53\\Route53Client';
+        $sesClientClass = SesV2Client::class;
+        $snsClientClass = SnsClient::class;
+        $stsClientClass = StsClient::class;
+        $route53ClientClass = Route53Client::class;
 
         if (! class_exists($sesClientClass) || ! class_exists($snsClientClass) || ! class_exists($stsClientClass) || ! class_exists($route53ClientClass)) {
             throw new \RuntimeException('AWS SDK classes not found. Please install aws/aws-sdk-php.');

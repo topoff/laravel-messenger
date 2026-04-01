@@ -6,6 +6,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
 use Topoff\Messenger\Events\MessageOpenedEvent;
 use Topoff\Messenger\Models\Message;
@@ -21,7 +22,7 @@ class RecordOpenJob implements ShouldQueue
         public ?string $ipAddress
     ) {}
 
-    public function retryUntil(): \Illuminate\Support\Carbon
+    public function retryUntil(): Carbon
     {
         return now()->addDays(5);
     }

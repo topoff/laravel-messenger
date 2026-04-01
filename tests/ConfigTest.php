@@ -1,9 +1,14 @@
 <?php
 
+use Topoff\Messenger\Mail\BulkMail;
+use Topoff\Messenger\Models\Message;
+use Topoff\Messenger\Models\MessageLog;
+use Topoff\Messenger\Models\MessageType;
+
 it('has default model classes configured', function () {
-    expect(config('messenger.models.message'))->toBe(\Topoff\Messenger\Models\Message::class)
-        ->and(config('messenger.models.message_type'))->toBe(\Topoff\Messenger\Models\MessageType::class)
-        ->and(config('messenger.models.message_log'))->toBe(\Topoff\Messenger\Models\MessageLog::class);
+    expect(config('messenger.models.message'))->toBe(Message::class)
+        ->and(config('messenger.models.message_type'))->toBe(MessageType::class)
+        ->and(config('messenger.models.message_log'))->toBe(MessageLog::class);
 });
 
 it('allows overriding model classes', function () {
@@ -18,7 +23,7 @@ it('has default cache settings', function () {
 });
 
 it('has default bulk mail class configured', function () {
-    expect(config('messenger.mail.default_bulk_mail_class'))->toBe(\Topoff\Messenger\Mail\BulkMail::class);
+    expect(config('messenger.mail.default_bulk_mail_class'))->toBe(BulkMail::class);
 });
 
 it('has default bulk mail view configured', function () {
@@ -36,7 +41,7 @@ it('has null defaults for callable configs', function () {
 it('has nova tracking defaults configured', function () {
     expect(config('messenger.tracking.nova.enabled'))->toBeTrue()
         ->and(config('messenger.tracking.nova.register_resource'))->toBeFalse()
-        ->and(config('messenger.tracking.nova.resource'))->toBe(\Topoff\Messenger\Nova\Resources\Message::class)
+        ->and(config('messenger.tracking.nova.resource'))->toBe(Topoff\Messenger\Nova\Resources\Message::class)
         ->and(config('messenger.tracking.nova.preview_route.prefix'))->toBe('emessenger/nova');
 });
 

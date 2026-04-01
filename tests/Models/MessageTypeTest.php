@@ -1,13 +1,14 @@
 <?php
 
 use Topoff\Messenger\Models\MessageType;
+use Workbench\App\Mail\TestMail;
 
 it('can create a message type', function () {
     $messageType = createMessageType();
 
     expect($messageType)->toBeInstanceOf(MessageType::class)
         ->and($messageType->id)->toBeInt()
-        ->and($messageType->notification_class)->toBe(\Workbench\App\Mail\TestMail::class)
+        ->and($messageType->notification_class)->toBe(TestMail::class)
         ->and($messageType->direct)->toBe(true)
         ->and($messageType->dev_bcc)->toBe(true);
 });
