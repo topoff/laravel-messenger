@@ -7,20 +7,23 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Topoff\Messenger\Events\MessageRejectedEvent;
 use Topoff\Messenger\Jobs\Concerns\ExtractsSesMessageTags;
+use Topoff\Messenger\Jobs\Concerns\RetriesOnMissingTrackedMessage;
 
 class RecordRejectJob implements ShouldQueue
 {
-    use Dispatchable, ExtractsSesMessageTags, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, ExtractsSesMessageTags, InteractsWithQueue, Queueable, RetriesOnMissingTrackedMessage, SerializesModels;
 
     public int $maxExceptions = 3;
 
     public function __construct(public array $message) {}
 
-    public function retryUntil(): \Illuminate\Support\Carbon
+    public function retryUntil(): Carbon
     {
         return now()->addDays(5);
     }
@@ -36,11 +39,8 @@ class RecordRejectJob implements ShouldQueue
 
         $reason = (string) data_get($this->message, 'reject.reason', 'unknown');
 
-        $messageClass = config('messenger.models.message');
-        $trackedMessages = $messageClass::query()->where('tracking_message_id', $messageId)->get();
-        if ($trackedMessages->isEmpty()) {
-            Log::error('RecordRejectJob: No message found for tracking_message_id.', ['messageId' => $messageId]);
-
+        $trackedMessages = $this->findTrackedMessagesOrRetry($messageId, 'RecordRejectJob');
+        if (! $trackedMessages instanceof Collection) {
             return;
         }
 

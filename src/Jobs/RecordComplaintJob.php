@@ -7,20 +7,23 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Topoff\Messenger\Events\MessageComplaintEvent;
 use Topoff\Messenger\Jobs\Concerns\ExtractsSesMessageTags;
+use Topoff\Messenger\Jobs\Concerns\RetriesOnMissingTrackedMessage;
 
 class RecordComplaintJob implements ShouldQueue
 {
-    use Dispatchable, ExtractsSesMessageTags, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, ExtractsSesMessageTags, InteractsWithQueue, Queueable, RetriesOnMissingTrackedMessage, SerializesModels;
 
     public int $maxExceptions = 3;
 
     public function __construct(public array $message) {}
 
-    public function retryUntil(): \Illuminate\Support\Carbon
+    public function retryUntil(): Carbon
     {
         return now()->addDays(5);
     }
@@ -40,11 +43,8 @@ class RecordComplaintJob implements ShouldQueue
             return;
         }
 
-        $messageClass = config('messenger.models.message');
-        $trackedMessages = $messageClass::query()->where('tracking_message_id', $messageId)->get();
-        if ($trackedMessages->isEmpty()) {
-            Log::error('RecordComplaintJob: No message found for tracking_message_id.', ['messageId' => $messageId]);
-
+        $trackedMessages = $this->findTrackedMessagesOrRetry($messageId, 'RecordComplaintJob');
+        if (! $trackedMessages instanceof Collection) {
             return;
         }
 
