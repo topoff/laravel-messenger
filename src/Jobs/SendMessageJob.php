@@ -3,6 +3,7 @@
 namespace Topoff\Messenger\Jobs;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -18,7 +19,7 @@ use Topoff\Messenger\MailHandler\MainBulkMailHandler;
 use Topoff\Messenger\MailHandler\MainMailHandler;
 use Topoff\Messenger\Models\Message;
 
-class SendMessageJob implements ShouldQueue
+class SendMessageJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -30,6 +31,12 @@ class SendMessageJob implements ShouldQueue
     public int $tries = 1;
 
     /**
+     * Release the unique lock after this many seconds, even if the job is still running.
+     * Prevents permanent lock when the worker is killed by timeout.
+     */
+    public int $uniqueFor = 55;
+
+    /**
      * Create a new job instance.
      */
     public function __construct(
@@ -38,6 +45,14 @@ class SendMessageJob implements ShouldQueue
          */
         protected bool $isRetryCallForMessagesWithError = false
     ) {}
+
+    /**
+     * Differentiate normal send vs retry so both can be on the queue simultaneously.
+     */
+    public function uniqueId(): string
+    {
+        return $this->isRetryCallForMessagesWithError ? 'retry' : 'send';
+    }
 
     /**
      * Execute the job.

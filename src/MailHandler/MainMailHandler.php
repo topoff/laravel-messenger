@@ -37,10 +37,15 @@ class MainMailHandler implements GroupableMailTypeInterface
     /**
      * Message should be eager loaded with('messageType')
      */
+    protected bool $reserved = false;
+
     public function __construct(protected Message $message)
     {
-        $this->setMessageReserved();
-        $this->onBuilding();
+        $this->reserved = $this->setMessageReserved();
+
+        if ($this->reserved) {
+            $this->onBuilding();
+        }
     }
 
     /**
@@ -119,6 +124,10 @@ class MainMailHandler implements GroupableMailTypeInterface
      */
     public function send(): void
     {
+        if (! $this->reserved) {
+            return;
+        }
+
         try {
             $this->message->attempts++;
             $this->receiver = $this->getReceiver();
@@ -226,12 +235,29 @@ class MainMailHandler implements GroupableMailTypeInterface
     }
 
     /**
-     * Sets the message to reserved
+     * Atomically claim the message by setting reserved_at only if no other process has changed it.
+     * For new messages: reserved_at must be NULL.
+     * For retries: reserved_at must match the current value (optimistic locking).
+     * Returns true if this process successfully reserved the message, false if another process got it first.
      */
-    protected function setMessageReserved(): void
+    protected function setMessageReserved(): bool
     {
-        $this->message->reserved_at = Date::now();
-        $this->message->save();
+        $now = Date::now();
+
+        $affected = $this->message->newQuery()
+            ->where('id', $this->message->id)
+            ->where(fn ($query) => $query
+                ->whereNull('reserved_at')
+                ->orWhere('reserved_at', $this->message->reserved_at))
+            ->update(['reserved_at' => $now]);
+
+        if ($affected === 0) {
+            return false;
+        }
+
+        $this->message->reserved_at = $now;
+
+        return true;
     }
 
     /**
