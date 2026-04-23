@@ -15,7 +15,6 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Topoff\Messenger\Filament\Resources\MessageResource;
 use Topoff\Messenger\Mail\CustomMessageMail;
-use Topoff\Messenger\Models\Message;
 use Topoff\Messenger\Notifications\NovaChannelNotification;
 use Topoff\Messenger\Repositories\MessageTypeRepository;
 
@@ -77,15 +76,15 @@ class ListMessages extends ListRecords
                         ->default(false),
                 ])
                 ->action(function (array $data) {
-                    $subject = trim($data['subject']);
-                    $markdown = trim($data['markdown']);
-                    $recipientEmail = trim($data['recipient_email']);
+                    $subject = trim((string) $data['subject']);
+                    $markdown = trim((string) $data['markdown']);
+                    $recipientEmail = trim((string) $data['recipient_email']);
                     $mailer = $data['mailer'] ?: null;
                     $configSetKey = $data['ses_configuration_set'] ?: null;
                     $scheduledAt = $data['scheduled_at'] instanceof Carbon ? $data['scheduled_at'] : ($data['scheduled_at'] ? Carbon::parse($data['scheduled_at']) : Date::now());
 
                     if ($data['preview_only'] ?? false) {
-                        $previewKey = 'messenger:nova-custom-preview:' . Str::uuid();
+                        $previewKey = 'messenger:nova-custom-preview:'.Str::uuid();
                         Cache::put($previewKey, [
                             'subject' => $subject,
                             'markdown' => $markdown,
@@ -131,7 +130,7 @@ class ListMessages extends ListRecords
                         $messageRecord->error_message = Str::limit($e->getMessage(), 245);
                         $messageRecord->save();
 
-                        Notification::make()->danger()->title('Failed: ' . Str::limit($e->getMessage(), 100))->send();
+                        Notification::make()->danger()->title('Failed: '.Str::limit($e->getMessage(), 100))->send();
                     }
                 }),
 
@@ -160,8 +159,8 @@ class ListMessages extends ListRecords
                 ->action(function (array $data) {
                     $channel = $data['channel'];
                     $subject = trim($data['subject'] ?? '');
-                    $message = trim($data['message']);
-                    $recipient = trim($data['recipient']);
+                    $message = trim((string) $data['message']);
+                    $recipient = trim((string) $data['recipient']);
 
                     if ($channel === 'mail' && $subject === '') {
                         Notification::make()->danger()->title('Subject is required for email.')->send();
@@ -202,7 +201,7 @@ class ListMessages extends ListRecords
                         $messageRecord->error_message = Str::limit($e->getMessage(), 245);
                         $messageRecord->save();
 
-                        Notification::make()->danger()->title('Failed: ' . Str::limit($e->getMessage(), 100))->send();
+                        Notification::make()->danger()->title('Failed: '.Str::limit($e->getMessage(), 100))->send();
                     }
                 }),
 

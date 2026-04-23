@@ -6,4 +6,5 @@ parameters:
         - src
     excludePaths:
         - src/Nova/*
+        - src/Filament/*
     level: 4

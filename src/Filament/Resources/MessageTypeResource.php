@@ -9,10 +9,10 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Str;
 use Topoff\Messenger\Filament\Resources\MessageTypeResource\Pages;
 use Topoff\Messenger\Models\MessageType;
 
@@ -20,9 +20,9 @@ class MessageTypeResource extends Resource
 {
     protected static ?string $model = MessageType::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-cog-6-tooth';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cog-6-tooth';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Messenger';
+    protected static string|\UnitEnum|null $navigationGroup = 'Messenger';
 
     protected static ?int $navigationSort = 3;
 
@@ -128,14 +128,14 @@ class MessageTypeResource extends Resource
                                     ->get()
                                     ->mapWithKeys(function (Model $message): array {
                                         $createdAt = $message->created_at?->format('Y-m-d H:i');
-                                        $recipient = $message->tracking_recipient_contact ?: ($message->receiver_id ? 'receiverId#' . $message->receiver_id : 'n/a');
+                                        $recipient = $message->tracking_recipient_contact ?: ($message->receiver_id ? 'receiverId#'.$message->receiver_id : 'n/a');
                                         $locale = $message->locale ?: 'n/a';
 
                                         return [
-                                            (string) $message->id => '#' . $message->id
-                                                . ' | ' . $recipient
-                                                . ' | ' . $locale
-                                                . ' | ' . $createdAt,
+                                            (string) $message->id => '#'.$message->id
+                                                .' | '.$recipient
+                                                .' | '.$locale
+                                                .' | '.$createdAt,
                                         ];
                                     })
                                     ->toArray();
@@ -172,7 +172,7 @@ class MessageTypeResource extends Resource
             ->defaultSort('id', 'desc');
     }
 
-    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
             ->withoutGlobalScope(SoftDeletingScope::class);

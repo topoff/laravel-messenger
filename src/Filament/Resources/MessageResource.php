@@ -9,6 +9,8 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Date;
@@ -21,9 +23,9 @@ class MessageResource extends Resource
 {
     protected static ?string $model = Message::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-envelope';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-envelope';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Messenger';
+    protected static string|\UnitEnum|null $navigationGroup = 'Messenger';
 
     protected static ?int $navigationSort = 1;
 
@@ -256,7 +258,7 @@ class MessageResource extends Resource
                     ->color('warning')
                     ->requiresConfirmation()
                     ->deselectRecordsAfterCompletion()
-                    ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                    ->action(function (Collection $records) {
                         $queued = 0;
                         $skipped = 0;
                         $resender = app(MessageResender::class);
@@ -281,7 +283,7 @@ class MessageResource extends Resource
                             return;
                         }
 
-                        Notification::make()->success()->title("{$queued} resend(s) queued" . ($skipped > 0 ? ", {$skipped} skipped." : '.'))->send();
+                        Notification::make()->success()->title("{$queued} resend(s) queued".($skipped > 0 ? ", {$skipped} skipped." : '.'))->send();
                     }),
                 Actions\BulkActionGroup::make([
                     Actions\DeleteBulkAction::make(),
@@ -290,7 +292,7 @@ class MessageResource extends Resource
             ->defaultSort('id', 'desc');
     }
 
-    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
             ->withoutGlobalScope(SoftDeletingScope::class);
