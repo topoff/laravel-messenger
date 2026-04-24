@@ -167,7 +167,12 @@ return [
 
         // SES v2 configuration sets managed by this package.
         // Each key is a logical name; values specify the AWS resource names.
-        // This can be important for the domain reputation management.
+        // The 'identity' value must reference a key from 'sending.identities' below.
+        // Use separate configuration sets to isolate domain reputation per mail purpose
+        // (e.g. transactional vs. outreach/marketing).
+        //
+        // The MessageType model's `ses_configuration_set` field maps to a key here.
+        // This determines which identity (and therefore from-address) is used for sending.
         'configuration_sets' => [
             'default' => [
                 'configuration_set' => strtolower(env('APP_NAME')).'-'.strtolower(env('APP_ENV')).'-messenger-tracking',
@@ -197,13 +202,64 @@ return [
         'set_topic_policy' => true,
         'enable_event_destination' => true,
 
+        // SES sending identities. Each identity represents a verified domain in SES
+        // that the application is allowed to send from.
+        //
+        // You can define multiple identities to separate sending purposes (e.g.
+        // transactional, outreach, app notifications). Each identity requires:
+        //
+        //   identity_domain   — The domain verified in SES (e.g. mailer.example.com).
+        //                       Every From address must belong to a verified identity domain.
+        //                       If you want to send as user@example.com, then example.com
+        //                       must be a verified identity — a subdomain like mailer.example.com
+        //                       does NOT cover the parent domain.
+        //
+        //                       Common scenario: you use mailer.example.com for transactional
+        //                       mail but also want to send as info@example.com (e.g. for
+        //                       Laravel's default mailer or password resets). In that case you
+        //                       need a second identity with identity_domain = example.com.
+        //
+        //   mail_from_domain  — (Optional) Custom MAIL FROM / Return-Path domain for bounces
+        //                       and SPF alignment (e.g. bounce.mailer.example.com). Requires
+        //                       MX + TXT DNS records. Must be a subdomain of identity_domain.
+        //                       If omitted, SES uses its default bounce domain.
+        //
+        //   mail_from_address — (Optional) The From address used when sending via this identity
+        //                       (e.g. noreply@mailer.example.com). The domain part must match
+        //                       identity_domain. If omitted, falls back to config('mail.from.address').
+        //
+        //   reply_to_address  — (Optional) Override Reply-To header. Can be on any domain,
+        //                       does not need SES verification.
+        //
+        // Run `php artisan messenger:ses-sns:setup-sending` to provision all identities
+        // in SES and get the required DNS records (DKIM, SPF, MX).
+        //
+        // Example with multiple identities:
+        //
+        //   'default' => [
+        //       'identity_domain'   => 'mailer.example.com',
+        //       'mail_from_domain'  => 'bounce.mailer.example.com',
+        //       'mail_from_address' => 'noreply@mailer.example.com',
+        //   ],
+        //   'outreach' => [
+        //       'identity_domain'   => 'business.example.com',
+        //       'mail_from_domain'  => 'bounce.business.example.com',
+        //       'mail_from_address' => 'welcome@business.example.com',
+        //       'reply_to_address'  => 'info@example.com',
+        //   ],
+        //   'app' => [
+        //       'identity_domain'   => 'example.com',        // parent domain as separate identity
+        //       // mail_from_domain and mail_from_address are optional — omit if this
+        //       // identity only needs to exist so Laravel's default mailer can send
+        //       // from info@example.com (using config('mail.from.address')).
+        //   ],
         'sending' => [
             'identities' => [
                 'default' => [
                     'identity_domain' => env('AWS_SES_IDENTITY_DOMAIN'),
                     'mail_from_domain' => env('AWS_SES_MAIL_FROM_DOMAIN'),
                     'mail_from_address' => env('MAIL_FROM_ADDRESS'),
-                    // 'reply_to_address' => env('...'),  // Optional: override Reply-To for this identity.
+                    // 'reply_to_address' => env('...'),
                 ],
             ],
 
