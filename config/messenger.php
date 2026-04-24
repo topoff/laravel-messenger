@@ -170,14 +170,14 @@ return [
         // This can be important for the domain reputation management.
         'configuration_sets' => [
             'default' => [
-                'configuration_set' => env('APP_TENANT').'-'.env('APP_ENV').'-messenger-tracking',
-                'event_destination' => env('APP_TENANT').'-'.env('APP_ENV').'-messenger-sns',
+                'configuration_set' => env('APP_NAME').'-'.env('APP_ENV').'-messenger-tracking',
+                'event_destination' => env('APP_NAME').'-'.env('APP_ENV').'-messenger-sns',
                 'identity' => 'default',
             ],
         ],
 
         // SNS resources managed by this package.
-        'topic_name' => env('APP_TENANT').'-'.env('APP_ENV').'-messenger-ses-events',
+        'topic_name' => env('APP_NAME').'-'.env('APP_ENV').'-messenger-ses-events',
         'topic_arn' => null,
 
         // If null, route('messenger.tracking.sns') is used.
@@ -188,7 +188,7 @@ return [
 
         // Optional SES v2 tenant association for identity/configuration set resources.
         'tenant' => [
-            'name' => env('APP_TENANT').'-'.env('APP_ENV').'-tenant',
+            'name' => env('APP_NAME').'-'.env('APP_ENV').'-tenant',
         ],
 
         // Automation toggles.
