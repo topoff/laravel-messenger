@@ -401,7 +401,6 @@ class SesSendingSetupService
     {
         $records = [];
         $domain = $this->identityDomainFromIdentity($identity);
-        $region = (string) config('messenger.ses_sns.aws.region', 'eu-central-1');
 
         $dkimTokens = (array) Arr::get($identityData, 'DkimAttributes.Tokens', []);
         foreach ($dkimTokens as $tokenRaw) {
@@ -413,7 +412,7 @@ class SesSendingSetupService
             $records[] = [
                 'name' => $token.'._domainkey.'.$domain,
                 'type' => 'CNAME',
-                'values' => [$token.'.dkim.'.$region.'.amazonses.com'],
+                'values' => [$token.'.dkim.amazonses.com'],
             ];
         }
 

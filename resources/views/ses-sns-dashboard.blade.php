@@ -242,6 +242,8 @@
     {{-- DNS Records --}}
     <div class="card" id="dns">
         <h2>Required DNS Records (Sending)</h2>
+        @php $sesRegion = (string) config('messenger.ses_sns.aws.region', 'eu-central-1'); @endphp
+        <p><a class="link-button" href="https://{{ $sesRegion }}.console.aws.amazon.com/sesv2/home?region={{ $sesRegion }}#/identities" target="_blank" rel="noopener">Open AWS SES Identities</a></p>
         <table>
             <tr>
                 <th>Status</th>
@@ -322,7 +324,6 @@
                         <th>Value</th>
                     </tr>
                     @php $dkimDomain = (string) data_get($detail, 'domain', ''); @endphp
-                    @php $dkimRegion = (string) config('messenger.ses_sns.aws.region', 'eu-central-1'); @endphp
                     @foreach($dkimTokens as $token)
                         <tr>
                             <td><code>CNAME</code></td>
@@ -331,7 +332,7 @@
                                 <button class="copy-btn" onclick="copyValue(this)">Copy</button>
                             </td>
                             <td class="copyable">
-                                <code>{{ $token }}.dkim.{{ $dkimRegion }}.amazonses.com</code>
+                                <code>{{ $token }}.dkim.amazonses.com</code>
                                 <button class="copy-btn" onclick="copyValue(this)">Copy</button>
                             </td>
                         </tr>
