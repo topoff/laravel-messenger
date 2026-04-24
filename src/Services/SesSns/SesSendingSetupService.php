@@ -141,10 +141,10 @@ class SesSendingSetupService
                 $identity
             );
 
-            $mailFromAddress = trim((string) ($identityConfig['mail_from_address'] ?? ''));
-            if ($mailFromAddress === '') {
-                $mailFromAddress = trim((string) config('mail.from.address', ''));
-            }
+            $explicitMailFromAddress = trim((string) ($identityConfig['mail_from_address'] ?? ''));
+            $mailFromAddress = $explicitMailFromAddress !== ''
+                ? $explicitMailFromAddress
+                : trim((string) config('mail.from.address', ''));
 
             if ($mailFromAddress === '') {
                 $this->addCheck(
@@ -155,15 +155,19 @@ class SesSendingSetupService
                     'mail_from_address is empty.'
                 );
             } else {
-                $matches = $this->mailFromAddressMatchesIdentity($identity, $mailFromAddress);
+                // Check against all identities — SES allows sending as long as the
+                // address domain is verified by any identity, not just the current one.
+                $source = $explicitMailFromAddress !== '' ? null : 'mail.from.address';
+                $matchedIdentity = $this->findMatchingIdentityForAddress($mailFromAddress, $identities);
+                $sourceHint = $source !== null ? " (from {$source})" : '';
                 $this->addCheck(
                     $checks,
                     'mail_from_address_matches_identity'.$keySuffix,
                     'mail_from_address matches SES identity'.$suffix,
-                    $matches,
-                    $matches
-                        ? sprintf('mail_from_address "%s" matches identity "%s".', $mailFromAddress, $identity)
-                        : sprintf('mail_from_address "%s" does not match identity "%s".', $mailFromAddress, $identity)
+                    $matchedIdentity !== null,
+                    $matchedIdentity !== null
+                        ? sprintf('mail_from_address "%s"%s covered by identity "%s".', $mailFromAddress, $sourceHint, $matchedIdentity)
+                        : sprintf('mail_from_address "%s"%s does not match any configured identity.', $mailFromAddress, $sourceHint)
                 );
             }
 
@@ -462,6 +466,23 @@ class SesSendingSetupService
         $mailFromAddressDomain = substr(strrchr($mailFromAddress, '@') ?: '', 1);
 
         return strtolower($mailFromAddressDomain) === strtolower($identity);
+    }
+
+    /**
+     * Find the first identity whose domain matches the given email address.
+     *
+     * @param  array<string, array{identity_domain?: string, mail_from_domain?: string, mail_from_address?: string}>  $identities
+     */
+    protected function findMatchingIdentityForAddress(string $mailFromAddress, array $identities): ?string
+    {
+        foreach ($identities as $identityConfig) {
+            $identity = $this->resolveIdentity($identityConfig);
+            if ($this->mailFromAddressMatchesIdentity($identity, $mailFromAddress)) {
+                return $identity;
+            }
+        }
+
+        return null;
     }
 
     protected function mailFromBehaviorOnMxFailure(): string

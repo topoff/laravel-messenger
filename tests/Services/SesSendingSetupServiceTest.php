@@ -297,3 +297,101 @@ it('checks if mail_from_address matches ses identity', function () {
     expect($result['ok'])->toBeTrue()
         ->and(collect($result['checks'])->firstWhere('key', 'mail_from_address_matches_identity')['ok'])->toBeTrue();
 });
+
+it('check passes when mail.from.address is covered by another identity', function () {
+    config()->set('messenger.ses_sns.sending.identities', [
+        'default' => [
+            'identity_domain' => 'mailer.example.com',
+            'mail_from_domain' => 'bounce.mailer.example.com',
+            // No explicit mail_from_address — falls back to config('mail.from.address').
+        ],
+        'app' => [
+            'identity_domain' => 'example.com',
+            // Verifies example.com so sending from info@example.com is allowed.
+        ],
+    ]);
+    config()->set('mail.from.address', 'info@example.com');
+    config()->set('messenger.ses_sns.configuration_sets', [
+        'default' => [
+            'configuration_set' => 'messenger-tracking',
+            'event_destination' => 'messenger-sns',
+            'identity' => 'default',
+        ],
+    ]);
+    config()->set('messenger.ses_sns.tenant.name');
+
+    $fake = new class implements SesSnsProvisioningApi
+    {
+        public function getCallerAccountId(): string { return '123'; }
+
+        public function findTopicArnByName(string $topicName): ?string { return null; }
+
+        public function createTopic(string $topicName): string { return ''; }
+
+        public function getTopicAttributes(string $topicArn): array { return []; }
+
+        public function setTopicPolicy(string $topicArn, string $policyJson): void {}
+
+        public function hasHttpsSubscription(string $topicArn, string $endpoint): bool { return false; }
+
+        public function findHttpsSubscriptionArn(string $topicArn, string $endpoint): ?string { return null; }
+
+        public function subscribeHttps(string $topicArn, string $endpoint): void {}
+
+        public function unsubscribe(string $subscriptionArn): void {}
+
+        public function deleteTopic(string $topicArn): void {}
+
+        public function configurationSetExists(string $configurationSetName): bool { return false; }
+
+        public function createConfigurationSet(string $configurationSetName): void {}
+
+        public function getEventDestination(string $configurationSetName, string $eventDestinationName): ?array { return null; }
+
+        public function upsertEventDestination(string $configurationSetName, string $eventDestinationName, string $topicArn, array $eventTypes, bool $enabled = true): void {}
+
+        public function deleteEventDestination(string $configurationSetName, string $eventDestinationName): void {}
+
+        public function deleteConfigurationSet(string $configurationSetName): void {}
+
+        public function tenantExists(string $tenantName): bool { return false; }
+
+        public function createTenant(string $tenantName): void {}
+
+        public function tenantHasResourceAssociation(string $tenantName, string $resourceArn): bool { return false; }
+
+        public function associateTenantResource(string $tenantName, string $resourceArn): void {}
+
+        public function disassociateTenantResource(string $tenantName, string $resourceArn): void {}
+
+        public function getEmailIdentity(string $identity): array
+        {
+            return ['VerifiedForSendingStatus' => true];
+        }
+
+        public function createEmailIdentity(string $identity): array { return []; }
+
+        public function putEmailIdentityMailFromAttributes(string $identity, string $mailFromDomain, string $behaviorOnMxFailure = 'USE_DEFAULT_VALUE'): void {}
+
+        public function putEmailIdentityConfigurationSetAttributes(string $identity, string $configurationSetName): void {}
+
+        public function findHostedZoneIdByDomain(string $domain): ?string { return null; }
+
+        public function upsertRoute53Record(string $hostedZoneId, string $recordName, string $recordType, array $values, int $ttl = 300): void {}
+    };
+
+    $service = new SesSendingSetupService($fake);
+    $result = $service->check();
+    $checks = collect($result['checks']);
+
+    // The default identity has no explicit mail_from_address, so it falls back
+    // to mail.from.address (info@example.com). This should pass because the
+    // 'app' identity covers example.com.
+    $defaultCheck = $checks->firstWhere('key', 'mail_from_address_matches_identity_default');
+    expect($defaultCheck['ok'])->toBeTrue()
+        ->and($defaultCheck['details'])->toContain('covered by identity "example.com"');
+
+    // The app identity also falls back to mail.from.address — matches directly.
+    $appCheck = $checks->firstWhere('key', 'mail_from_address_matches_identity_app');
+    expect($appCheck['ok'])->toBeTrue();
+});
