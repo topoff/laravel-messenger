@@ -142,3 +142,7 @@ protected function isAccessible(User $user, ?string $path = null): bool
 - Add useful array shape type definitions when appropriate.
 
 </laravel-boost-guidelines>
+
+## Deliberate team memory
+
+@.agent-memory/team-memory.md

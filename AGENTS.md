@@ -142,3 +142,11 @@ protected function isAccessible(User $user, ?string $path = null): bool
 - Add useful array shape type definitions when appropriate.
 
 </laravel-boost-guidelines>
+
+## Deliberate team memory
+
+- This repository uses deliberate, versioned team memory in `.agent-memory/team-memory.md`.
+- Before making non-trivial changes in this repository, read `.agent-memory/team-memory.md`.
+- If this repository is used inside the Platreform workspace, also respect the workspace-level `AGENTS.md`.
+- If you learn a long-lived team fact about this project, propose an update to `.agent-memory/team-memory.md`.
+- Do not store personal preferences, temporary debug notes, secrets, credentials, API keys, tokens, or private customer data.
