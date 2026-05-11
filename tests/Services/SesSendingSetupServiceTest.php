@@ -322,19 +322,37 @@ it('check passes when mail.from.address is covered by another identity', functio
 
     $fake = new class implements SesSnsProvisioningApi
     {
-        public function getCallerAccountId(): string { return '123'; }
+        public function getCallerAccountId(): string
+        {
+            return '123';
+        }
 
-        public function findTopicArnByName(string $topicName): ?string { return null; }
+        public function findTopicArnByName(string $topicName): ?string
+        {
+            return null;
+        }
 
-        public function createTopic(string $topicName): string { return ''; }
+        public function createTopic(string $topicName): string
+        {
+            return '';
+        }
 
-        public function getTopicAttributes(string $topicArn): array { return []; }
+        public function getTopicAttributes(string $topicArn): array
+        {
+            return [];
+        }
 
         public function setTopicPolicy(string $topicArn, string $policyJson): void {}
 
-        public function hasHttpsSubscription(string $topicArn, string $endpoint): bool { return false; }
+        public function hasHttpsSubscription(string $topicArn, string $endpoint): bool
+        {
+            return false;
+        }
 
-        public function findHttpsSubscriptionArn(string $topicArn, string $endpoint): ?string { return null; }
+        public function findHttpsSubscriptionArn(string $topicArn, string $endpoint): ?string
+        {
+            return null;
+        }
 
         public function subscribeHttps(string $topicArn, string $endpoint): void {}
 
@@ -342,11 +360,17 @@ it('check passes when mail.from.address is covered by another identity', functio
 
         public function deleteTopic(string $topicArn): void {}
 
-        public function configurationSetExists(string $configurationSetName): bool { return false; }
+        public function configurationSetExists(string $configurationSetName): bool
+        {
+            return false;
+        }
 
         public function createConfigurationSet(string $configurationSetName): void {}
 
-        public function getEventDestination(string $configurationSetName, string $eventDestinationName): ?array { return null; }
+        public function getEventDestination(string $configurationSetName, string $eventDestinationName): ?array
+        {
+            return null;
+        }
 
         public function upsertEventDestination(string $configurationSetName, string $eventDestinationName, string $topicArn, array $eventTypes, bool $enabled = true): void {}
 
@@ -354,11 +378,17 @@ it('check passes when mail.from.address is covered by another identity', functio
 
         public function deleteConfigurationSet(string $configurationSetName): void {}
 
-        public function tenantExists(string $tenantName): bool { return false; }
+        public function tenantExists(string $tenantName): bool
+        {
+            return false;
+        }
 
         public function createTenant(string $tenantName): void {}
 
-        public function tenantHasResourceAssociation(string $tenantName, string $resourceArn): bool { return false; }
+        public function tenantHasResourceAssociation(string $tenantName, string $resourceArn): bool
+        {
+            return false;
+        }
 
         public function associateTenantResource(string $tenantName, string $resourceArn): void {}
 
@@ -369,13 +399,19 @@ it('check passes when mail.from.address is covered by another identity', functio
             return ['VerifiedForSendingStatus' => true];
         }
 
-        public function createEmailIdentity(string $identity): array { return []; }
+        public function createEmailIdentity(string $identity): array
+        {
+            return [];
+        }
 
         public function putEmailIdentityMailFromAttributes(string $identity, string $mailFromDomain, string $behaviorOnMxFailure = 'USE_DEFAULT_VALUE'): void {}
 
         public function putEmailIdentityConfigurationSetAttributes(string $identity, string $configurationSetName): void {}
 
-        public function findHostedZoneIdByDomain(string $domain): ?string { return null; }
+        public function findHostedZoneIdByDomain(string $domain): ?string
+        {
+            return null;
+        }
 
         public function upsertRoute53Record(string $hostedZoneId, string $recordName, string $recordType, array $values, int $ttl = 300): void {}
     };

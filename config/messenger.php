@@ -175,14 +175,14 @@ return [
         // This determines which identity (and therefore from-address) is used for sending.
         'configuration_sets' => [
             'default' => [
-                'configuration_set' => strtolower(env('APP_NAME')).'-'.strtolower(env('APP_ENV')).'-messenger-tracking',
-                'event_destination' => strtolower(env('APP_NAME')).'-'.strtolower(env('APP_ENV')).'-messenger-sns',
+                'configuration_set' => strtolower((string) env('APP_NAME')).'-'.strtolower((string) env('APP_ENV')).'-messenger-tracking',
+                'event_destination' => strtolower((string) env('APP_NAME')).'-'.strtolower((string) env('APP_ENV')).'-messenger-sns',
                 'identity' => 'default',
             ],
         ],
 
         // SNS resources managed by this package.
-        'topic_name' => strtolower(env('APP_NAME')).'-'.strtolower(env('APP_ENV')).'-messenger-ses-events',
+        'topic_name' => strtolower((string) env('APP_NAME')).'-'.strtolower((string) env('APP_ENV')).'-messenger-ses-events',
         'topic_arn' => null,
 
         // If null, route('messenger.tracking.sns') is used.
@@ -193,7 +193,7 @@ return [
 
         // Optional SES v2 tenant association for identity/configuration set resources.
         'tenant' => [
-            'name' => strtolower(env('APP_NAME')).'-'.strtolower(env('APP_ENV')).'-tenant',
+            'name' => strtolower((string) env('APP_NAME')).'-'.strtolower((string) env('APP_ENV')).'-tenant',
         ],
 
         // Automation toggles.
