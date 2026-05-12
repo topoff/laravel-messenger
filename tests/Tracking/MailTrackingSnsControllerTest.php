@@ -30,7 +30,8 @@ it('records delivery notifications via sns callback', function () {
     $message->refresh();
 
     expect(data_get($message->tracking_meta, 'success'))->toBeTrue()
-        ->and(data_get($message->tracking_meta, 'smtpResponse'))->toBe('250 Ok');
+        ->and(data_get($message->tracking_meta, 'smtpResponse'))->toBe('250 Ok')
+        ->and($message->delivered_at)->not->toBeNull();
 
     Event::assertDispatched(SesSnsWebhookReceivedEvent::class, fn (SesSnsWebhookReceivedEvent $event): bool => $event->notificationType === 'Delivery'
         && $event->processedSynchronously === false
@@ -51,6 +52,7 @@ it('records bounce notifications via sns callback', function () {
             'bounce' => [
                 'bounceType' => 'Permanent',
                 'bounceSubType' => 'General',
+                'timestamp' => '2026-01-01T00:05:00Z',
                 'bouncedRecipients' => [
                     ['emailAddress' => 'receiver@example.com', 'diagnosticCode' => '550 No such user'],
                 ],
@@ -63,7 +65,52 @@ it('records bounce notifications via sns callback', function () {
     $message->refresh();
 
     expect(data_get($message->tracking_meta, 'success'))->toBeFalse()
-        ->and(data_get($message->tracking_meta, 'failures.0.emailAddress'))->toBe('receiver@example.com');
+        ->and(data_get($message->tracking_meta, 'failures.0.emailAddress'))->toBe('receiver@example.com')
+        ->and($message->bounced_at)->not->toBeNull()
+        ->and($message->delivered_at)->toBeNull();
+});
+
+it('does not flip success to false when a bounce arrives after a successful delivery', function () {
+    $message = createMessage([
+        'tracking_message_id' => 'accept-then-bounce-mid',
+        'tracking_meta' => [],
+    ]);
+
+    $this->postJson(route('messenger.tracking.sns'), [
+        'Type' => 'Notification',
+        'Message' => json_encode([
+            'notificationType' => 'Delivery',
+            'mail' => ['messageId' => 'accept-then-bounce-mid'],
+            'delivery' => [
+                'smtpResponse' => '250 Ok',
+                'timestamp' => '2026-01-01T00:00:00Z',
+                'recipients' => ['receiver@example.com'],
+            ],
+        ]),
+    ])->assertOk();
+
+    $this->postJson(route('messenger.tracking.sns'), [
+        'Type' => 'Notification',
+        'Message' => json_encode([
+            'notificationType' => 'Bounce',
+            'mail' => ['messageId' => 'accept-then-bounce-mid'],
+            'bounce' => [
+                'bounceType' => 'Transient',
+                'bounceSubType' => 'General',
+                'timestamp' => '2026-01-01T00:00:05Z',
+                'bouncedRecipients' => [
+                    ['emailAddress' => 'receiver@example.com'],
+                ],
+            ],
+        ]),
+    ])->assertOk();
+
+    $message->refresh();
+
+    expect(data_get($message->tracking_meta, 'success'))->toBeTrue()
+        ->and(data_get($message->tracking_meta, 'failures.0.emailAddress'))->toBe('receiver@example.com')
+        ->and($message->delivered_at)->not->toBeNull()
+        ->and($message->bounced_at)->not->toBeNull();
 });
 
 it('records complaint notifications via sns callback', function () {

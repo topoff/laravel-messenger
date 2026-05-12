@@ -50,6 +50,8 @@ use Topoff\Messenger\Models\Traits\DateScopesTrait;
  * @property Carbon|null $error_at
  * @property Carbon|null $sent_at
  * @property Carbon|null $failed_at
+ * @property Carbon|null $delivered_at
+ * @property Carbon|null $bounced_at
  * @property Carbon|null $tracking_opened_at
  * @property Carbon|null $tracking_clicked_at
  * @property-read MessageType $messageType
@@ -169,6 +171,8 @@ class Message extends Model
             'error_at' => 'datetime',
             'sent_at' => 'datetime',
             'failed_at' => 'datetime',
+            'delivered_at' => 'datetime',
+            'bounced_at' => 'datetime',
             'tracking_opened_at' => 'datetime',
             'tracking_clicked_at' => 'datetime',
         ];

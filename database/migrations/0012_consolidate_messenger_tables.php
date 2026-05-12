@@ -60,6 +60,8 @@ return new class extends Migration
                 $table->dateTime('error_at')->nullable()->index();
                 $table->dateTime('sent_at')->nullable();
                 $table->dateTime('failed_at')->nullable();
+                $table->dateTime('delivered_at')->nullable();
+                $table->dateTime('bounced_at')->nullable();
                 $table->unsignedTinyInteger('attempts')->nullable()->default(0);
                 $table->unsignedSmallInteger('error_code')->nullable();
                 $table->string('error_message')->nullable();
