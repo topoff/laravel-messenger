@@ -34,6 +34,8 @@ class MessagesStatusFilter extends Filter
             'Scheduled' => 'scheduled_at',
             'Reserved' => 'reserved_at',
             'Sent' => 'sent_at',
+            'Delivered' => 'delivered_at',
+            'Bounced' => 'bounced_at',
             'Error' => 'error_at',
             'Failed' => 'failed_at',
         ];

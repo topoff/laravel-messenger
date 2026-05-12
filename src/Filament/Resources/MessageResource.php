@@ -71,6 +71,8 @@ class MessageResource extends Resource
                         Forms\Components\DateTimePicker::make('sent_at'),
                         Forms\Components\DateTimePicker::make('error_at'),
                         Forms\Components\DateTimePicker::make('failed_at'),
+                        Forms\Components\DateTimePicker::make('delivered_at'),
+                        Forms\Components\DateTimePicker::make('bounced_at'),
                     ])->columns(2),
 
                 Forms\Components\Section::make('Tracking')
@@ -136,6 +138,18 @@ class MessageResource extends Resource
                 Tables\Columns\TextColumn::make('sent_at')
                     ->dateTime('d.m.Y H:i')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('delivered_at')
+                    ->label('Delivered')
+                    ->dateTime('d.m.Y H:i')
+                    ->color('success')
+                    ->sortable()
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('bounced_at')
+                    ->label('Bounced')
+                    ->dateTime('d.m.Y H:i')
+                    ->color('danger')
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('error_at')
                     ->dateTime('d.m.Y H:i')
                     ->sortable()
@@ -187,6 +201,8 @@ class MessageResource extends Resource
                         'scheduled_at' => 'Scheduled',
                         'reserved_at' => 'Reserved',
                         'sent_at' => 'Sent',
+                        'delivered_at' => 'Delivered',
+                        'bounced_at' => 'Bounced',
                         'error_at' => 'Error',
                         'failed_at' => 'Failed',
                     ])
@@ -195,6 +211,10 @@ class MessageResource extends Resource
 
                         return $value ? $query->whereNotNull($value) : $query;
                     }),
+                Tables\Filters\Filter::make('accept_then_bounce')
+                    ->label('Accept-then-bounce (delivered + bounced)')
+                    ->toggle()
+                    ->query(fn ($query) => $query->whereNotNull('delivered_at')->whereNotNull('bounced_at')),
                 Tables\Filters\SelectFilter::make('channel')
                     ->options(fn () => Cache::remember('messenger.channels', now()->addDays(7), fn () => Message::query()->distinct()->pluck('channel', 'channel')->toArray())),
                 Tables\Filters\SelectFilter::make('message_type_id')
