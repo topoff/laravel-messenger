@@ -8,7 +8,7 @@ Mail management package: template-driven sending via SES, SNS event tracking (op
 
 ### Message (`src/Models/Message.php`)
 - Polymorphic relations: `receiver`, `sender`, `messagable` (MorphTo), `messageType` (BelongsTo)
-- Status timestamps: `scheduled_at`, `reserved_at`, `error_at`, `sent_at`, `failed_at`
+- Status timestamps: `scheduled_at`, `reserved_at`, `error_at`, `sent_at`, `failed_at`, `delivered_at`, `bounced_at`
 - Tracking fields: `tracking_hash`, `tracking_message_id`, `tracking_recipient_contact`, `tracking_sender_contact`, `tracking_subject`, `tracking_opens`, `tracking_clicks`, `tracking_meta`, `tracking_content`, `tracking_content_path`
 - Tracking timestamps: `tracking_opened_at`, `tracking_clicked_at`
 - Error fields: `error_code`, `error_message`, `attempts`
@@ -167,10 +167,10 @@ Controlled by `config('messenger.tracking.vonage_dlr.enabled')` (default: `false
 
 ### SNS Event Processing
 Jobs in `src/Jobs/`:
-- `RecordDeliveryJob` — sets `success: true`, `delivered_at`, `smtpResponse`
-- `RecordBounceJob` — sets `success: false`, appends to `failures[]`, dispatches Permanent/Transient events
-- `RecordComplaintJob` — sets `complaint: true`, `success: false`, `complaint_type`
-- `RecordRejectJob` — sets `success: false`, sets `failed_at = now()`
+- `RecordDeliveryJob` — sets column `delivered_at`, `tracking_meta.success = true`, `tracking_meta.smtpResponse`
+- `RecordBounceJob` — sets column `bounced_at`, appends to `tracking_meta.failures[]`, dispatches Permanent/Transient events. Only sets `tracking_meta.success = false` if no prior delivery — never overwrites a previous `success: true` (handles SES "accept-then-bounce" where the recipient MTA returns `250 OK` and later sends an async DSN)
+- `RecordComplaintJob` — sets `tracking_meta.complaint: true`, `tracking_meta.success: false`, `tracking_meta.complaint_type`
+- `RecordRejectJob` — sets `tracking_meta.success: false`, sets `failed_at = now()`
 - `RecordOpenJob` / `RecordLinkClickJob` — increments opens/clicks counters, sets `tracking_opened_at`/`tracking_clicked_at` on first event
 
 All use `ExtractsSesMessageTags` trait for SES tag extraction.

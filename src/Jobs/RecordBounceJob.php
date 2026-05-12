@@ -26,7 +26,7 @@ class RecordBounceJob implements ShouldQueue
 
     public function retryUntil(): Carbon
     {
-        return now()->addDays(5);
+        return Carbon::now()->addDays(5);
     }
 
     public function handle(): void
@@ -68,7 +68,11 @@ class RecordBounceJob implements ShouldQueue
             }
 
             $meta->put('failures', $failures->toArray());
-            $meta->put('success', false);
+
+            if (! $meta->has('success')) {
+                $meta->put('success', false);
+            }
+
             $meta->put('sns_message_bounce', $this->message);
 
             $sesTags = $this->extractSesMessageTags($this->message);
@@ -77,6 +81,7 @@ class RecordBounceJob implements ShouldQueue
             }
 
             $trackedMessage->tracking_meta = $meta->toArray();
+            $trackedMessage->bounced_at = $this->parseEventTimestamp(data_get($this->message, 'bounce.timestamp'));
             $trackedMessage->save();
 
             $bounceType = (string) data_get($this->message, 'bounce.bounceType');
@@ -90,5 +95,18 @@ class RecordBounceJob implements ShouldQueue
                 ));
             }
         });
+    }
+
+    protected function parseEventTimestamp(mixed $timestamp): Carbon
+    {
+        if (! is_string($timestamp) || $timestamp === '') {
+            return now();
+        }
+
+        try {
+            return Carbon::parse($timestamp);
+        } catch (\Throwable) {
+            return now();
+        }
     }
 }

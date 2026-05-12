@@ -25,7 +25,7 @@ class RecordRejectJob implements ShouldQueue
 
     public function retryUntil(): Carbon
     {
-        return now()->addDays(5);
+        return Carbon::now()->addDays(5);
     }
 
     public function handle(): void

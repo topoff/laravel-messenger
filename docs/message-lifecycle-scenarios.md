@@ -263,21 +263,24 @@ When grouping indirect messages, if the receiver no longer exists, all messages 
 
 ## Phase 2: SES/SNS Callbacks (after sending)
 
-These events arrive via SNS webhook **after** the message was already accepted by SES (i.e. `sent_at` is already set). Most callbacks only update `tracking_meta`. The exception is **Reject**, which also sets `failed_at`.
+These events arrive via SNS webhook **after** the message was already accepted by SES (i.e. `sent_at` is already set). Most callbacks only update `tracking_meta` plus a dedicated status timestamp (`delivered_at` / `bounced_at`). The exception is **Reject**, which also sets `failed_at`.
+
+> **Note on accept-then-bounce:** SES can emit a `Delivery` event (recipient MTA answered `250 OK`) followed seconds later by an asynchronous `Bounce` event (recipient MTA sent back a DSN after acceptance). In that case both `delivered_at` and `bounced_at` are set and `tracking_meta.success` stays `true` (a previous `success: true` is never overwritten by a later bounce). Read the two timestamp columns to detect this pattern.
 
 ### 15. SES Delivery Confirmation
 
-SES confirms the email was successfully delivered to the recipient's mail server.
+SES confirms the recipient mail server accepted the email at the SMTP layer.
 
 | Field | Value |
 |---|---|
+| `delivered_at` | delivery timestamp (column) |
 | `tracking_meta.success` | `true` |
 | `tracking_meta.delivered_at` | delivery timestamp |
 | `tracking_meta.smtpResponse` | SMTP response from recipient server |
 | `tracking_meta.sns_message_delivery` | full SNS payload |
 | `tracking_meta.ses_tags` | extracted SES message tags (if present) |
 
-**Status fields unchanged.** `sent_at` remains set from Phase 1.
+**Status fields:** `sent_at` remains set from Phase 1. `delivered_at` is set.
 
 **Event dispatched:** `MessageDeliveredEvent`
 
@@ -291,12 +294,13 @@ The recipient's mail server permanently rejected the email (e.g. mailbox doesn't
 
 | Field | Value |
 |---|---|
-| `tracking_meta.success` | `false` |
+| `bounced_at` | bounce timestamp (column) |
+| `tracking_meta.success` | `false` (only if no prior delivery; never overwrites `true`) |
 | `tracking_meta.failures` | array of bounced recipients with diagnostic codes |
 | `tracking_meta.sns_message_bounce` | full SNS payload |
 | `tracking_meta.ses_tags` | extracted SES message tags (if present) |
 
-**Status fields unchanged.** `sent_at` remains set. `failed_at` is **not** set.
+**Status fields:** `sent_at` remains set. `failed_at` is **not** set. `bounced_at` is set.
 
 **Event dispatched:** `MessagePermanentBouncedEvent` (per recipient)
 
@@ -308,16 +312,17 @@ The recipient's mail server permanently rejected the email (e.g. mailbox doesn't
 
 ### 17. SES Transient Bounce
 
-A temporary delivery failure (e.g. mailbox full, server temporarily unavailable).
+A temporary delivery failure (e.g. mailbox full, server temporarily unavailable) — or an **asynchronous DSN** from the recipient mail server after a successful SMTP-level acceptance (accept-then-bounce). With recipient-side content filters, this is the common case where `delivered_at` and `bounced_at` are both set.
 
 | Field | Value |
 |---|---|
-| `tracking_meta.success` | `false` |
+| `bounced_at` | bounce timestamp (column) |
+| `tracking_meta.success` | `false` only when no prior delivery exists — leaves a prior `true` untouched |
 | `tracking_meta.failures` | array of bounced recipients |
 | `tracking_meta.sns_message_bounce` | full SNS payload |
 | `tracking_meta.ses_tags` | extracted SES message tags (if present) |
 
-**Status fields unchanged.**
+**Status fields:** `bounced_at` is set. `delivered_at` may also be set (accept-then-bounce).
 
 **Event dispatched:** `MessageTransientBouncedEvent` (per recipient)
 

@@ -25,7 +25,7 @@ class RecordDeliveryJob implements ShouldQueue
 
     public function retryUntil(): Carbon
     {
-        return now()->addDays(5);
+        return Carbon::now()->addDays(5);
     }
 
     public function handle(): void
@@ -71,9 +71,23 @@ class RecordDeliveryJob implements ShouldQueue
             }
 
             $trackedMessage->tracking_meta = $meta->toArray();
+            $trackedMessage->delivered_at = $this->parseEventTimestamp(data_get($this->message, 'delivery.timestamp'));
             $trackedMessage->save();
 
             Event::dispatch(new MessageDeliveredEvent($trackedMessage));
         });
+    }
+
+    protected function parseEventTimestamp(mixed $timestamp): Carbon
+    {
+        if (! is_string($timestamp) || $timestamp === '') {
+            return now();
+        }
+
+        try {
+            return Carbon::parse($timestamp);
+        } catch (\Throwable) {
+            return now();
+        }
     }
 }
