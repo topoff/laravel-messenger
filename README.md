@@ -170,12 +170,14 @@ SNS notifications are dispatched to dedicated jobs:
 
 | Event | Job | Effect |
 |---|---|---|
-| Delivery | `RecordDeliveryJob` | Sets `success: true`, `delivered_at` |
-| Bounce | `RecordBounceJob` | Sets `success: false`, dispatches Permanent/Transient event |
-| Complaint | `RecordComplaintJob` | Sets `complaint: true`, `success: false` |
-| Reject | `RecordRejectJob` | Sets `success: false`, `failed_at` (permanent) |
+| Delivery | `RecordDeliveryJob` | Sets column `delivered_at`, `tracking_meta.success = true`, `tracking_meta.smtpResponse` |
+| Bounce | `RecordBounceJob` | Sets column `bounced_at`, appends `tracking_meta.failures[]`, dispatches Permanent/Transient event. Never overwrites a previous `tracking_meta.success = true` (handles SES "accept-then-bounce"). |
+| Complaint | `RecordComplaintJob` | Sets `tracking_meta.complaint = true`, `tracking_meta.success = false` |
+| Reject | `RecordRejectJob` | Sets `tracking_meta.success = false`, `failed_at` (permanent) |
 | Open | `RecordOpenJob` | Increments opens, sets `tracking_opened_at` |
 | Click | `RecordLinkClickJob` | Increments clicks, sets `tracking_clicked_at` |
+
+For SES "accept-then-bounce" (the recipient MTA returns `250 OK` and later sends an asynchronous DSN — common with content filters, vacation auto-responders, or forwarding loops), **both `delivered_at` and `bounced_at` are set on the same row**. Query `WHERE delivered_at IS NOT NULL AND bounced_at IS NOT NULL` to surface the pattern; the Filament resource has a dedicated toggle filter for it.
 
 ### BCC Recipient Filtering
 
