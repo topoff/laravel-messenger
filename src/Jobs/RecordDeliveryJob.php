@@ -13,11 +13,12 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Topoff\Messenger\Events\MessageDeliveredEvent;
 use Topoff\Messenger\Jobs\Concerns\ExtractsSesMessageTags;
+use Topoff\Messenger\Jobs\Concerns\ParsesEventTimestamp;
 use Topoff\Messenger\Jobs\Concerns\RetriesOnMissingTrackedMessage;
 
 class RecordDeliveryJob implements ShouldQueue
 {
-    use Dispatchable, ExtractsSesMessageTags, InteractsWithQueue, Queueable, RetriesOnMissingTrackedMessage, SerializesModels;
+    use Dispatchable, ExtractsSesMessageTags, InteractsWithQueue, ParsesEventTimestamp, Queueable, RetriesOnMissingTrackedMessage, SerializesModels;
 
     public int $maxExceptions = 3;
 
@@ -62,7 +63,6 @@ class RecordDeliveryJob implements ShouldQueue
             $meta = collect($trackedMessage->tracking_meta ?: []);
             $meta->put('smtpResponse', data_get($this->message, 'delivery.smtpResponse'));
             $meta->put('success', true);
-            $meta->put('delivered_at', data_get($this->message, 'delivery.timestamp'));
             $meta->put('sns_message_delivery', $this->message);
 
             $sesTags = $this->extractSesMessageTags($this->message);
@@ -76,18 +76,5 @@ class RecordDeliveryJob implements ShouldQueue
 
             Event::dispatch(new MessageDeliveredEvent($trackedMessage));
         });
-    }
-
-    protected function parseEventTimestamp(mixed $timestamp): Carbon
-    {
-        if (! is_string($timestamp) || $timestamp === '') {
-            return now();
-        }
-
-        try {
-            return Carbon::parse($timestamp);
-        } catch (\Throwable) {
-            return now();
-        }
     }
 }

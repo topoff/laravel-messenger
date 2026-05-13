@@ -30,7 +30,7 @@ it('processes delivered DLR and dispatches event', function () {
 
     expect(data_get($message->tracking_meta, 'dlr_status'))->toBe('delivered')
         ->and(data_get($message->tracking_meta, 'success'))->toBeTrue()
-        ->and(data_get($message->tracking_meta, 'delivered_at'))->toBe('2026-03-01 12:00:00');
+        ->and($message->delivered_at?->toDateTimeString())->toBe('2026-03-01 12:00:00');
 
     Event::assertDispatched(MessageDeliveredEvent::class, fn (MessageDeliveredEvent $e): bool => $e->message->id === $message->id);
 });

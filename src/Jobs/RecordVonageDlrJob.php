@@ -12,10 +12,11 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Topoff\Messenger\Events\MessageDeliveredEvent;
 use Topoff\Messenger\Events\MessageRejectedEvent;
+use Topoff\Messenger\Jobs\Concerns\ParsesEventTimestamp;
 
 class RecordVonageDlrJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, ParsesEventTimestamp, Queueable, SerializesModels;
 
     public int $maxExceptions = 3;
 
@@ -58,10 +59,13 @@ class RecordVonageDlrJob implements ShouldQueue
 
         if ($status === 'delivered') {
             $meta->put('success', true);
-            $meta->put('delivered_at', $this->data['message-timestamp'] ?? now()->toIso8601String());
         }
 
         $message->tracking_meta = $meta->toArray();
+
+        if ($status === 'delivered') {
+            $message->delivered_at = $this->parseEventTimestamp($this->data['message-timestamp'] ?? null);
+        }
 
         $permanentFailureStatuses = ['failed', 'rejected', 'expired'];
 

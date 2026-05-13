@@ -275,7 +275,6 @@ SES confirms the recipient mail server accepted the email at the SMTP layer.
 |---|---|
 | `delivered_at` | delivery timestamp (column) |
 | `tracking_meta.success` | `true` |
-| `tracking_meta.delivered_at` | delivery timestamp |
 | `tracking_meta.smtpResponse` | SMTP response from recipient server |
 | `tracking_meta.sns_message_delivery` | full SNS payload |
 | `tracking_meta.ses_tags` | extracted SES message tags (if present) |

@@ -26,10 +26,10 @@ it('updates tracking_meta on delivered', function () {
 
     expect(data_get($message->tracking_meta, 'dlr_status'))->toBe('delivered')
         ->and(data_get($message->tracking_meta, 'success'))->toBeTrue()
-        ->and(data_get($message->tracking_meta, 'delivered_at'))->toBe('2026-03-01 12:00:00')
         ->and(data_get($message->tracking_meta, 'dlr_err_code'))->toBe(0)
         ->and(data_get($message->tracking_meta, 'dlr_price'))->toBe('0.0354')
-        ->and(data_get($message->tracking_meta, 'dlr_network_code'))->toBe('22801');
+        ->and(data_get($message->tracking_meta, 'dlr_network_code'))->toBe('22801')
+        ->and($message->delivered_at?->toDateTimeString())->toBe('2026-03-01 12:00:00');
 });
 
 it('dispatches MessageDeliveredEvent on delivered', function () {

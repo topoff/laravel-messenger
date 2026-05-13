@@ -14,11 +14,12 @@ use Illuminate\Support\Facades\Log;
 use Topoff\Messenger\Events\MessagePermanentBouncedEvent;
 use Topoff\Messenger\Events\MessageTransientBouncedEvent;
 use Topoff\Messenger\Jobs\Concerns\ExtractsSesMessageTags;
+use Topoff\Messenger\Jobs\Concerns\ParsesEventTimestamp;
 use Topoff\Messenger\Jobs\Concerns\RetriesOnMissingTrackedMessage;
 
 class RecordBounceJob implements ShouldQueue
 {
-    use Dispatchable, ExtractsSesMessageTags, InteractsWithQueue, Queueable, RetriesOnMissingTrackedMessage, SerializesModels;
+    use Dispatchable, ExtractsSesMessageTags, InteractsWithQueue, ParsesEventTimestamp, Queueable, RetriesOnMissingTrackedMessage, SerializesModels;
 
     public int $maxExceptions = 3;
 
@@ -95,18 +96,5 @@ class RecordBounceJob implements ShouldQueue
                 ));
             }
         });
-    }
-
-    protected function parseEventTimestamp(mixed $timestamp): Carbon
-    {
-        if (! is_string($timestamp) || $timestamp === '') {
-            return now();
-        }
-
-        try {
-            return Carbon::parse($timestamp);
-        } catch (\Throwable) {
-            return now();
-        }
     }
 }

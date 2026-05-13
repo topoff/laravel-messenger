@@ -138,7 +138,7 @@ Controlled by `config('messenger.tracking.vonage_dlr.enabled')` (default: `false
 `RecordVonageDlrJob` processes the raw webhook payload:
 - Finds Message by `tracking_message_id` = Vonage `messageId`
 - Updates `tracking_meta`: `dlr_status`, `dlr_err_code`, `dlr_timestamp`, `dlr_price`, `dlr_network_code`
-- On `delivered` status: sets `tracking_meta.success = true` and `delivered_at`
+- On `delivered` status: sets column `delivered_at` (from `message-timestamp`), plus `tracking_meta.success = true`
 - On `failed`/`rejected`/`expired`: sets `failed_at = now()` (permanent, no retry)
 
 ### Mail vs SMS Tracking Comparison
@@ -167,7 +167,7 @@ Controlled by `config('messenger.tracking.vonage_dlr.enabled')` (default: `false
 
 ### SNS Event Processing
 Jobs in `src/Jobs/`:
-- `RecordDeliveryJob` — sets column `delivered_at`, `tracking_meta.success = true`, `tracking_meta.smtpResponse`
+- `RecordDeliveryJob` — sets column `delivered_at`, plus `tracking_meta.success = true`, `tracking_meta.smtpResponse`, `tracking_meta.sns_message_delivery`
 - `RecordBounceJob` — sets column `bounced_at`, appends to `tracking_meta.failures[]`, dispatches Permanent/Transient events. Only sets `tracking_meta.success = false` if no prior delivery — never overwrites a previous `success: true` (handles SES "accept-then-bounce" where the recipient MTA returns `250 OK` and later sends an async DSN)
 - `RecordComplaintJob` — sets `tracking_meta.complaint: true`, `tracking_meta.success: false`, `tracking_meta.complaint_type`
 - `RecordRejectJob` — sets `tracking_meta.success: false`, sets `failed_at = now()`
