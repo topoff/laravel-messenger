@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -28,17 +29,23 @@ return new class extends Migration
             return;
         }
 
-        $jsonPath = '$.sns_message_delivery.delivery.timestamp';
+        $driver = DB::connection()->getDriverName();
 
-        DB::statement(<<<SQL
-            UPDATE messages
-            SET delivered_at = STR_TO_DATE(
-                SUBSTRING(JSON_UNQUOTE(JSON_EXTRACT(tracking_meta, '{$jsonPath}')), 1, 19),
-                '%Y-%m-%dT%H:%i:%s'
-            )
-            WHERE delivered_at IS NULL
-              AND JSON_UNQUOTE(JSON_EXTRACT(tracking_meta, '{$jsonPath}')) IS NOT NULL
-        SQL);
+        if ($driver === 'mysql' || $driver === 'mariadb') {
+            $jsonPath = '$.sns_message_delivery.delivery.timestamp';
+
+            DB::statement(<<<SQL
+                UPDATE messages
+                SET delivered_at = STR_TO_DATE(
+                    SUBSTRING(JSON_UNQUOTE(JSON_EXTRACT(tracking_meta, '{$jsonPath}')), 1, 19),
+                    '%Y-%m-%dT%H:%i:%s'
+                )
+                WHERE delivered_at IS NULL
+                  AND JSON_UNQUOTE(JSON_EXTRACT(tracking_meta, '{$jsonPath}')) IS NOT NULL
+            SQL);
+
+            return;
+        }
     }
 
     public function down(): void
