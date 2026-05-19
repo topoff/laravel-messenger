@@ -6,6 +6,7 @@ use Filament\Actions;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -33,7 +34,7 @@ class MessageResource extends Resource
     {
         return $schema
             ->schema([
-                Forms\Components\Section::make('Message')
+                Section::make('Message')
                     ->schema([
                         Forms\Components\TextInput::make('message_type_id')
                             ->numeric()
@@ -53,13 +54,13 @@ class MessageResource extends Resource
                             ->numeric(),
                     ])->columns(2),
 
-                Forms\Components\Section::make('Params')
+                Section::make('Params')
                     ->schema([
                         Forms\Components\KeyValue::make('params')
                             ->columnSpanFull(),
                     ])->collapsed(),
 
-                Forms\Components\Section::make('Status')
+                Section::make('Status')
                     ->schema([
                         Forms\Components\TextInput::make('attempts')
                             ->numeric(),
@@ -75,7 +76,7 @@ class MessageResource extends Resource
                         Forms\Components\DateTimePicker::make('bounced_at'),
                     ])->columns(2),
 
-                Forms\Components\Section::make('Tracking')
+                Section::make('Tracking')
                     ->schema([
                         Forms\Components\TextInput::make('tracking_subject'),
                         Forms\Components\TextInput::make('tracking_sender_contact'),

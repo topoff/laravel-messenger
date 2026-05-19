@@ -4,6 +4,7 @@ namespace Topoff\Messenger\Filament\Resources;
 
 use Filament\Forms;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -24,7 +25,7 @@ class MessageLogResource extends Resource
     {
         return $schema
             ->schema([
-                Forms\Components\Section::make('Message Log')
+                Section::make('Message Log')
                     ->schema([
                         Forms\Components\TextInput::make('channel'),
                         Forms\Components\TextInput::make('to'),

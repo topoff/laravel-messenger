@@ -6,6 +6,7 @@ use Filament\Actions;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -30,7 +31,7 @@ class MessageTypeResource extends Resource
     {
         return $schema
             ->schema([
-                Forms\Components\Section::make('Message Type')
+                Section::make('Message Type')
                     ->schema([
                         Forms\Components\TextInput::make('channel')
                             ->required(),
@@ -40,7 +41,7 @@ class MessageTypeResource extends Resource
                         Forms\Components\TextInput::make('bulk_handler'),
                     ])->columns(2),
 
-                Forms\Components\Section::make('Settings')
+                Section::make('Settings')
                     ->schema([
                         Forms\Components\Toggle::make('direct'),
                         Forms\Components\Toggle::make('dev_bcc'),
@@ -54,7 +55,7 @@ class MessageTypeResource extends Resource
                             ->hint('Config key (e.g. "default", "transactional", "marketing")'),
                     ])->columns(2),
 
-                Forms\Components\Section::make('Requirements')
+                Section::make('Requirements')
                     ->schema([
                         Forms\Components\Toggle::make('required_sender'),
                         Forms\Components\Toggle::make('required_messagable'),
@@ -64,7 +65,7 @@ class MessageTypeResource extends Resource
                         Forms\Components\Toggle::make('required_params'),
                     ])->columns(3),
 
-                Forms\Components\Section::make('Bulk')
+                Section::make('Bulk')
                     ->schema([
                         Forms\Components\Textarea::make('bulk_message_line')
                             ->columnSpanFull(),
