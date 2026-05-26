@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Topoff\Messenger\Mail\BulkMail;
 use Topoff\Messenger\Models\Message;
 use Topoff\Messenger\Models\MessageLog;

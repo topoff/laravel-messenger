@@ -8,7 +8,7 @@
     "license": "MIT",
     "require": {
         "aws/aws-sdk-php": "^3.344",
-        "php": "^8.3",
+        "php": "^8.4",
         "spatie/laravel-package-tools": "^1.16"
     },
     "require-dev": {

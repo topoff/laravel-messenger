@@ -22,7 +22,7 @@ class NovaCustomMessagePreviewController
             'receiver_type' => (string) ($payload['model_type'] ?? ''),
         ]);
 
-        $html = (new CustomMessageMail($message))->render();
+        $html = new CustomMessageMail($message)->render();
 
         return response($html);
     }

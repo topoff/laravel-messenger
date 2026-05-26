@@ -301,7 +301,7 @@ class SendMessageJob implements ShouldBeUnique, ShouldQueue
                 } else {
                     /** @var MainBulkMailHandler $bulkMailHandler */
                     $bulkMailHandler = $group->bulk_handler;
-                    (new $bulkMailHandler($messageGroup->first()->receiver, $messageGroup))->send();
+                    new $bulkMailHandler($messageGroup->first()->receiver, $messageGroup)->send();
                 }
             } else {
                 $messageGroup->each(fn (Message $message) => $this->callMailHandlerWithSingleMessage($message));

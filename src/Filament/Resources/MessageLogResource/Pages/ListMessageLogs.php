@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Topoff\Messenger\Filament\Resources\MessageLogResource\Pages;
 
 use Filament\Resources\Pages\ListRecords;

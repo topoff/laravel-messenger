@@ -58,7 +58,7 @@ class SesSnsDashboardCustomMailController extends Controller
         ]);
 
         $message = $this->messageFromPayload($payload);
-        $html = (new CustomMessageMail($message))->render();
+        $html = new CustomMessageMail($message)->render();
 
         return response($html);
     }

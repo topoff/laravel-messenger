@@ -62,7 +62,7 @@ class MailTrackingSnsController extends Controller
     protected function dispatchTrackingJob(string $jobClass, array $message, bool $processSynchronously): void
     {
         if ($processSynchronously) {
-            (new $jobClass($message))->handle();
+            new $jobClass($message)->handle();
 
             return;
         }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Topoff\Messenger\Observers;
 
 use Illuminate\Cache\TaggableStore;
