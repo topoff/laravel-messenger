@@ -37,6 +37,12 @@ class ListMessages extends ListRecords
                 ->color('gray')
                 ->url(fn () => MessageResource::getUrl('tracking-by-domain')),
 
+            Actions\Action::make('tracking_by_bounce_source')
+                ->label('Bounces by Source')
+                ->icon('heroicon-o-arrow-uturn-left')
+                ->color('gray')
+                ->url(fn () => MessageResource::getUrl('tracking-by-bounce-source')),
+
             Actions\Action::make('send_custom_email')
                 ->label('Send Custom Email')
                 ->icon('heroicon-o-paper-airplane')

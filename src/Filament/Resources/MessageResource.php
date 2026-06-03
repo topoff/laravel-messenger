@@ -332,6 +332,7 @@ class MessageResource extends Resource
             'edit' => Pages\EditMessage::route('/{record}/edit'),
             'tracking-by-type' => Pages\TrackingByType::route('/tracking-by-type'),
             'tracking-by-domain' => Pages\TrackingByDomain::route('/tracking-by-domain'),
+            'tracking-by-bounce-source' => Pages\TrackingByBounceSource::route('/tracking-by-bounce-source'),
         ];
     }
 }
