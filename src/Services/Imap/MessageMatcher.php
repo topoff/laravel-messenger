@@ -19,14 +19,14 @@ use Topoff\Messenger\Models\Message;
  * Returns an Eloquent Collection (possibly empty). Caller decides what to do
  * with empty results — usually log as orphan.
  */
-final class MessageMatcher
+final readonly class MessageMatcher
 {
     public function __construct(
         /**
          * Lookback window for the fallback match-by-recipient path. Bounces older than
          * this are not matched by recipient alone, to avoid wrong attribution.
          */
-        private readonly int $fallbackLookbackHours = 240,
+        private int $fallbackLookbackHours = 240,
     ) {}
 
     /**

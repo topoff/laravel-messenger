@@ -11,17 +11,17 @@ namespace Topoff\Messenger\Services\Imap;
  *
  * @phpstan-type HeaderMap array<string, list<string>>
  */
-final class InboundMimePart
+final readonly class InboundMimePart
 {
     /**
      * @param  HeaderMap  $headers  lowercased header name → list of raw values
      * @param  array<string, string>  $contentTypeParams  e.g. ['boundary' => 'xyz', 'charset' => 'utf-8']
      */
     public function __construct(
-        public readonly array $headers,
-        public readonly string $contentType,
-        public readonly array $contentTypeParams,
-        public readonly string $body,
+        public array $headers,
+        public string $contentType,
+        public array $contentTypeParams,
+        public string $body,
     ) {}
 
     public function header(string $name): ?string

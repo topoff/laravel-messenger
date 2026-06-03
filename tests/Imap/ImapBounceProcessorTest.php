@@ -77,10 +77,8 @@ it('records a soft bounce and fires TransientBouncedEvent with sub-type', functi
 
     expect($result->softBounces)->toBe(1);
 
-    Event::assertDispatched(MessageTransientBouncedEvent::class, function ($e) use ($tracked) {
-        return $e->message->id === $tracked->id
-            && $e->bounceSubType === 'MailboxFull';
-    });
+    Event::assertDispatched(MessageTransientBouncedEvent::class, fn ($e) => $e->message->id === $tracked->id
+        && $e->bounceSubType === 'MailboxFull');
 });
 
 it('records a complaint and fires ComplaintEvent', function () {
@@ -123,13 +121,11 @@ it('fires MessageReplyReceivedEvent for genuine replies', function () {
 
     expect($result->replies)->toBe(1);
 
-    Event::assertDispatched(MessageReplyReceivedEvent::class, function ($e) use ($tracked) {
-        return $e->message?->id === $tracked->id
-            && $e->inboxKey === 'topoffer_info'
-            && $e->fromAddress === 'bob@customer.example'
-            && $e->subject === 'Re: Welcome to our service'
-            && str_contains($e->textBody, 'billing address');
-    });
+    Event::assertDispatched(MessageReplyReceivedEvent::class, fn ($e) => $e->message?->id === $tracked->id
+        && $e->inboxKey === 'topoffer_info'
+        && $e->fromAddress === 'bob@customer.example'
+        && $e->subject === 'Re: Welcome to our service'
+        && str_contains((string) $e->textBody, 'billing address'));
 });
 
 it('fires MessageReplyReceivedEvent with null message when no match', function () {

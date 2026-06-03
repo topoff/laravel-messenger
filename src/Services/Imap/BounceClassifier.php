@@ -114,7 +114,7 @@ final class BounceClassifier
     private function buildBounceReport(InboundMessage $message): BounceReport
     {
         $dsnPart = $message->firstPartByType('message/delivery-status');
-        $dsnFields = $dsnPart ? $this->parseDsnFields($dsnPart->body) : [];
+        $dsnFields = $dsnPart instanceof InboundMimePart ? $this->parseDsnFields($dsnPart->body) : [];
 
         $statusCode = $dsnFields['status'] ?? null;
         $diagnosticCode = $dsnFields['diagnostic-code'] ?? null;
@@ -153,7 +153,7 @@ final class BounceClassifier
     private function buildComplaintReport(InboundMessage $message): BounceReport
     {
         $arfPart = $message->firstPartByType('message/feedback-report');
-        $arfFields = $arfPart ? $this->parseDsnFields($arfPart->body) : [];
+        $arfFields = $arfPart instanceof InboundMimePart ? $this->parseDsnFields($arfPart->body) : [];
 
         $originalRcpt = $arfFields['original-rcpt-to'] ?? $arfFields['original-mail-from'] ?? null;
         $recipients = is_string($originalRcpt) && $originalRcpt !== ''
@@ -222,7 +222,7 @@ final class BounceClassifier
     {
         foreach (['message/rfc822', 'text/rfc822-headers'] as $type) {
             $part = $message->firstPartByType($type);
-            if (! $part) {
+            if (! $part instanceof InboundMimePart) {
                 continue;
             }
             $body = $part->body;

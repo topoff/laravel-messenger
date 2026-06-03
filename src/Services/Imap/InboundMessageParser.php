@@ -194,7 +194,6 @@ final class InboundMessageParser
     private function splitOnBoundary(string $body, string $boundary): array
     {
         $marker = '--'.$boundary;
-        $endMarker = $marker.'--';
 
         $parts = [];
         $cursor = 0;
@@ -251,7 +250,7 @@ final class InboundMessageParser
         $encoding = mb_strtolower(trim((string) $part->header('content-transfer-encoding')));
         $body = match ($encoding) {
             'quoted-printable' => quoted_printable_decode($part->body),
-            'base64' => (string) base64_decode($part->body, strict: false),
+            'base64' => base64_decode($part->body, strict: false),
             default => $part->body,
         };
 

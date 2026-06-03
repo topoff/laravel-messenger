@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Topoff\Messenger\Services\Imap;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
@@ -106,7 +107,7 @@ class ImapBounceProcessor
             BounceClassification::HardBounce,
             BounceClassification::SoftBounce => $this->handleBounce($result, $inbound, $report, $matches),
             BounceClassification::Complaint => $this->handleComplaint($result, $inbound, $report, $matches),
-            BounceClassification::Reply => $this->handleReply($result, $inbound, $report, $matches, $inboxKey),
+            BounceClassification::Reply => $this->handleReply($result, $inbound, $matches, $inboxKey),
             BounceClassification::AutoReply => $result->autoReplies++,
             BounceClassification::Unknown => $result->unknown++,
         };
@@ -192,7 +193,7 @@ class ImapBounceProcessor
         ]);
 
         $message->tracking_meta = $meta->toArray();
-        if ($report->bouncedAt !== null && $message->bounced_at === null) {
+        if ($report->bouncedAt instanceof CarbonImmutable && $message->bounced_at === null) {
             $message->bounced_at = Carbon::instance($report->bouncedAt->toDateTimeImmutable());
         }
         $message->save();
@@ -233,7 +234,6 @@ class ImapBounceProcessor
     private function handleReply(
         ProcessingResult $result,
         InboundMessage $inbound,
-        BounceReport $report,
         $matches,
         string $inboxKey,
     ): void {
@@ -266,7 +266,7 @@ class ImapBounceProcessor
     {
         $part = $inbound->firstPartByType('text/plain');
 
-        return $part === null ? '' : $part->body;
+        return $part instanceof InboundMimePart ? $part->body : '';
     }
 
     /**

@@ -15,7 +15,7 @@ use Throwable;
  */
 class ProcessedMessageTracker
 {
-    private const TABLE = 'messenger_imap_processed';
+    private const string TABLE = 'messenger_imap_processed';
 
     public function fingerprint(string $rawMessage): string
     {

@@ -11,16 +11,16 @@ namespace Topoff\Messenger\Services\Imap;
  *
  * @phpstan-import-type HeaderMap from InboundMimePart
  */
-final class InboundMessage
+final readonly class InboundMessage
 {
     /**
      * @param  HeaderMap  $headers
      * @param  list<InboundMimePart>  $parts
      */
     public function __construct(
-        public readonly array $headers,
-        public readonly array $parts,
-        public readonly string $raw = '',
+        public array $headers,
+        public array $parts,
+        public string $raw = '',
     ) {}
 
     public function header(string $name): ?string
@@ -68,6 +68,6 @@ final class InboundMessage
 
     public function hasPartType(string $contentType): bool
     {
-        return $this->firstPartByType($contentType) !== null;
+        return $this->firstPartByType($contentType) instanceof InboundMimePart;
     }
 }
