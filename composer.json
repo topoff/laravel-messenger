@@ -11,6 +11,9 @@
         "php": "^8.4",
         "spatie/laravel-package-tools": "^1.16"
     },
+    "suggest": {
+        "webklex/laravel-imap": "Required for IMAP-based bounce / complaint / reply processing (^6.0)"
+    },
     "require-dev": {
         "larastan/larastan": "^3.0",
         "laravel/boost": "^2.1",

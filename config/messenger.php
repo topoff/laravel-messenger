@@ -180,6 +180,12 @@ return [
                 'configuration_set' => strtolower((string) env('APP_NAME')).'-'.strtolower((string) env('APP_ENV')).'-messenger-tracking',
                 'event_destination' => strtolower((string) env('APP_NAME')).'-'.strtolower((string) env('APP_ENV')).'-messenger-sns',
                 'identity' => 'default',
+
+                // Optional IMAP inbox key (must reference messenger.imap.inboxes).
+                // When set, the imap fetcher will scan that inbox for bounces, complaints,
+                // and replies that target messages sent via this configuration set.
+                // Set to null to leave this configuration set unmonitored.
+                'imap_inbox' => null,
             ],
         ],
 
@@ -277,6 +283,67 @@ return [
                 'auto_create_records' => false,
                 'ttl' => 300,
             ],
+        ],
+    ],
+
+    // IMAP-based bounce / complaint / reply processing.
+    //
+    // Requires webklex/laravel-imap. Without it the IMAP scheduler is dormant
+    // and `messenger:imap:fetch` raises a clear error. Bounce events parsed via
+    // IMAP fire the same MessagePermanentBouncedEvent / MessageTransientBouncedEvent
+    // as the SNS path. Genuine replies fire MessageReplyReceivedEvent.
+    //
+    // Note: the IMAP path intentionally does NOT push hard-bounce recipients
+    // to the SES suppression list (heuristic parsing must not globally block
+    // real recipients). Host applications can subscribe to the bounce events
+    // to apply their own domain-specific suppression.
+    'imap' => [
+        'enabled' => env('MESSENGER_IMAP_ENABLED', false),
+
+        // What to do with an inbound message once we've processed it. Possible values:
+        //  - 'move' (move to the matching folder under imap.folders)
+        //  - 'seen' (just flag as \Seen)
+        //  - 'delete'
+        //  - 'noop' (leave untouched)
+        'after_process' => [
+            'bounce' => 'move',
+            'complaint' => 'move',
+            'reply' => 'seen',
+            'auto_reply' => 'seen',
+            'unknown' => 'seen',
+        ],
+
+        'folders' => [
+            'bounce' => 'INBOX.Bounces',
+            'complaint' => 'INBOX.Complaints',
+            'reply' => 'INBOX.Processed',
+        ],
+
+        // One entry per IMAP account. Reference one of these keys from a
+        // ses_sns.configuration_sets[].imap_inbox value.
+        'inboxes' => [
+            // 'topoffer_info' => [
+            //     'host'          => env('MESSENGER_IMAP_INFO_HOST'),
+            //     'port'          => (int) env('MESSENGER_IMAP_INFO_PORT', 993),
+            //     'encryption'    => env('MESSENGER_IMAP_INFO_ENCRYPTION', 'ssl'),
+            //     'validate_cert' => true,
+            //     'username'      => env('MESSENGER_IMAP_INFO_USERNAME'),
+            //     'password'      => env('MESSENGER_IMAP_INFO_PASSWORD'),
+            //     'folder'        => env('MESSENGER_IMAP_INFO_FOLDER', 'INBOX'),
+            //
+            //     // Per-run safety caps.
+            //     'max_messages_per_run' => 200,
+            //     'fetch_since_days'     => 14,
+            // ],
+        ],
+
+        // Scheduler entry, registered by MessengerServiceProvider when imap.enabled.
+        'schedule' => [
+            'enabled' => true,
+            'cron' => '*/10 * * * *',
+            'queue' => null,
+            'without_overlapping' => true,
+            'on_one_server' => true,
         ],
     ],
 ];

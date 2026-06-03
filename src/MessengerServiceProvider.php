@@ -13,6 +13,7 @@ use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Topoff\Messenger\Console\CheckSesSendingCommand;
 use Topoff\Messenger\Console\CheckSesSnsTrackingCommand;
+use Topoff\Messenger\Console\FetchImapBouncesCommand;
 use Topoff\Messenger\Console\SetupSesSendingCommand;
 use Topoff\Messenger\Console\SetupSesSnsAllCommand;
 use Topoff\Messenger\Console\SetupSesSnsTrackingCommand;
@@ -20,6 +21,7 @@ use Topoff\Messenger\Console\TeardownSesSnsTrackingCommand;
 use Topoff\Messenger\Console\TestSesSnsEventsCommand;
 use Topoff\Messenger\Contracts\SesSnsProvisioningApi;
 use Topoff\Messenger\Jobs\CleanupMessengerTablesJob;
+use Topoff\Messenger\Jobs\ProcessImapInboxJob;
 use Topoff\Messenger\Listeners\AddBccToEmailsListener;
 use Topoff\Messenger\Listeners\LogEmailToMessageLogListener;
 use Topoff\Messenger\Listeners\LogNotificationToMessageLogListener;
@@ -29,6 +31,7 @@ use Topoff\Messenger\Nova\Resources\MessageLog as MessageLogResource;
 use Topoff\Messenger\Nova\Resources\MessageType as MessageTypeResource;
 use Topoff\Messenger\Observers\MessageTypeObserver;
 use Topoff\Messenger\Repositories\MessageTypeRepository;
+use Topoff\Messenger\Services\Imap\ImapClientFactory;
 use Topoff\Messenger\Services\SesSns\AwsSesSnsProvisioningApi;
 use Topoff\Messenger\Tracking\MailTracker;
 
@@ -47,12 +50,14 @@ class MessengerServiceProvider extends PackageServiceProvider
             ->hasCommand(CheckSesSendingCommand::class)
             ->hasCommand(TestSesSnsEventsCommand::class)
             ->hasCommand(TeardownSesSnsTrackingCommand::class)
+            ->hasCommand(FetchImapBouncesCommand::class)
             ->discoversMigrations();
     }
 
     public function packageRegistered(): void
     {
         $this->app->singleton(MessageTypeRepository::class);
+        $this->app->singleton(ImapClientFactory::class);
         $this->app->bind(SesSnsProvisioningApi::class, AwsSesSnsProvisioningApi::class);
     }
 
@@ -61,6 +66,7 @@ class MessengerServiceProvider extends PackageServiceProvider
         $this->registerObservers();
         $this->registerEventListeners();
         $this->registerCleanupSchedule();
+        $this->registerImapSchedule();
         $this->registerRoutes();
         $this->registerNovaResources();
     }
@@ -99,6 +105,42 @@ class MessengerServiceProvider extends PackageServiceProvider
 
             if ((bool) config('messenger.cleanup.schedule.on_one_server', false)) {
                 $event->onOneServer();
+            }
+        });
+    }
+
+    protected function registerImapSchedule(): void
+    {
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            if (! (bool) config('messenger.imap.enabled', false)) {
+                return;
+            }
+            if (! (bool) config('messenger.imap.schedule.enabled', true)) {
+                return;
+            }
+
+            $inboxes = (array) config('messenger.imap.inboxes', []);
+            if ($inboxes === []) {
+                return;
+            }
+
+            $cron = (string) config('messenger.imap.schedule.cron', '*/10 * * * *');
+            $queue = config('messenger.imap.schedule.queue');
+            $withoutOverlapping = (bool) config('messenger.imap.schedule.without_overlapping', true);
+            $onOneServer = (bool) config('messenger.imap.schedule.on_one_server', true);
+
+            foreach (array_keys($inboxes) as $inboxKey) {
+                $event = $schedule
+                    ->job(new ProcessImapInboxJob((string) $inboxKey), $queue)
+                    ->cron($cron)
+                    ->name('messenger.imap.fetch.'.$inboxKey);
+
+                if ($withoutOverlapping) {
+                    $event->withoutOverlapping();
+                }
+                if ($onOneServer) {
+                    $event->onOneServer();
+                }
             }
         });
     }

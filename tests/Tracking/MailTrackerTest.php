@@ -344,6 +344,105 @@ it('skips tracking when X-No-Track header is present', function () {
     expect($body)->not->toContain('/email/t/');
 });
 
+it('stamps tracking_correlation_id and Message-ID and X-Topoff-Message-Id on the outgoing email', function () {
+    $messageModel = createMessage();
+
+    $email = (new Email)
+        ->from(new Address('sender@example.com', 'Sender Name'))
+        ->to(new Address('receiver@example.com', 'Receiver Name'))
+        ->subject('Correlation ID Test')
+        ->text('Plain text');
+
+    $event = new MessageSending($email, ['messageModel' => $messageModel]);
+    app(MailTracker::class)->messageSending($event);
+
+    $messageModel->refresh();
+
+    expect($messageModel->tracking_correlation_id)->not->toBeNull();
+
+    $topoffHeader = $email->getHeaders()->get('X-Topoff-Message-Id')?->getBodyAsString();
+    expect($topoffHeader)->toBe($messageModel->tracking_correlation_id);
+
+    $messageIdHeader = $email->getHeaders()->get('Message-ID')?->getBodyAsString();
+    expect($messageIdHeader)
+        ->toContain($messageModel->tracking_correlation_id)
+        ->toContain('@');
+});
+
+it('uses identity mail_from_domain in Message-ID when configured', function () {
+    config()->set('messenger.ses_sns.configuration_sets', [
+        'outreach' => [
+            'configuration_set' => 'my-tenant-prod-outreach',
+            'event_destination' => 'my-tenant-prod-outreach-sns',
+            'identity' => 'outreach',
+        ],
+    ]);
+    config()->set('messenger.ses_sns.sending.identities', [
+        'outreach' => [
+            'identity_domain' => 'business.example.com',
+            'mail_from_domain' => 'bounce.business.example.com',
+            'mail_from_address' => 'welcome@business.example.com',
+        ],
+    ]);
+
+    $messageType = createMessageType(['ses_configuration_set' => 'outreach']);
+    $messageModel = createMessage(['message_type_id' => $messageType->id]);
+
+    $email = (new Email)
+        ->from(new Address('original@example.com', 'Original'))
+        ->to(new Address('receiver@example.com', 'Receiver'))
+        ->subject('Message-ID Domain Test')
+        ->text('Plain text');
+
+    $event = new MessageSending($email, ['messageModel' => $messageModel]);
+    app(MailTracker::class)->messageSending($event);
+
+    $messageIdHeader = $email->getHeaders()->get('Message-ID')?->getBodyAsString();
+    expect($messageIdHeader)->toContain('@bounce.business.example.com');
+});
+
+it('preserves an existing tracking_correlation_id across re-sends', function () {
+    $existingId = '01234567-89ab-7cde-8123-456789abcdef';
+    $messageModel = createMessage(['tracking_correlation_id' => $existingId]);
+
+    $email = (new Email)
+        ->from(new Address('sender@example.com', 'Sender'))
+        ->to(new Address('receiver@example.com', 'Receiver'))
+        ->subject('Resend Test')
+        ->text('Plain text');
+
+    $event = new MessageSending($email, ['messageModel' => $messageModel]);
+    app(MailTracker::class)->messageSending($event);
+
+    $messageModel->refresh();
+
+    expect($messageModel->tracking_correlation_id)->toBe($existingId);
+    expect($email->getHeaders()->get('X-Topoff-Message-Id')?->getBodyAsString())->toBe($existingId);
+});
+
+it('shares one correlation_id across grouped bulk messages', function () {
+    $m1 = createMessage();
+    $m2 = createMessage([
+        'receiver_type' => $m1->receiver_type,
+        'receiver_id' => $m1->receiver_id,
+    ]);
+
+    $email = (new Email)
+        ->from(new Address('sender@example.com', 'Sender'))
+        ->to(new Address('receiver@example.com', 'Receiver'))
+        ->subject('Bulk Correlation Test')
+        ->text('Plain text');
+
+    $event = new MessageSending($email, ['messages' => collect([$m1, $m2])]);
+    app(MailTracker::class)->messageSending($event);
+
+    $m1->refresh();
+    $m2->refresh();
+
+    expect($m1->tracking_correlation_id)->not->toBeNull()
+        ->and($m2->tracking_correlation_id)->toBe($m1->tracking_correlation_id);
+});
+
 it('stores content to filesystem when log_content_strategy is filesystem', function () {
     Storage::fake('local');
 

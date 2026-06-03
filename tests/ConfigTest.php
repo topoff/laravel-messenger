@@ -49,9 +49,20 @@ it('has nova tracking defaults configured', function () {
 
 it('has ses sns setup defaults configured', function () {
     expect(config('messenger.ses_sns.configuration_sets.default.identity'))->toBe('default')
+        ->and(config('messenger.ses_sns.configuration_sets.default.imap_inbox'))->toBeNull()
         ->and(config('messenger.ses_sns.sending.identities.default.identity_domain'))->toBeNull()
         ->and(config('messenger.ses_sns.sending.identities.default.mail_from_domain'))->toBeNull()
         ->and(config('messenger.ses_sns.sending.identities'))->toHaveKey('default')
         ->and(config('messenger.ses_sns.topic_name'))->toEndWith('messenger-ses-events')
         ->and(config('messenger.ses_sns.event_types'))->toBe(['SEND', 'REJECT', 'BOUNCE', 'COMPLAINT', 'DELIVERY']);
+});
+
+it('has IMAP defaults disabled with empty inbox list', function () {
+    expect(config('messenger.imap.enabled'))->toBeFalse()
+        ->and(config('messenger.imap.inboxes'))->toBe([])
+        ->and(config('messenger.imap.after_process.bounce'))->toBe('move')
+        ->and(config('messenger.imap.after_process.reply'))->toBe('seen')
+        ->and(config('messenger.imap.folders.bounce'))->toBe('INBOX.Bounces')
+        ->and(config('messenger.imap.schedule.cron'))->toBe('*/10 * * * *')
+        ->and(config('messenger.imap.schedule.enabled'))->toBeTrue();
 });

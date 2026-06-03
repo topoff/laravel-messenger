@@ -5,6 +5,7 @@
 - [docs/message-lifecycle-scenarios.md](docs/message-lifecycle-scenarios.md) — all 22 message lifecycle scenarios with field changes at each stage
 - [docs/ses-environment-config.md](docs/ses-environment-config.md) — SES environment configuration (production, staging, local dev, DNS records)
 - [docs/AWS_SES_SETUP.md](docs/AWS_SES_SETUP.md) — AWS SES concepts (identities, config sets, tenants via tags)
+- [docs/imap-bounce-handling.md](docs/imap-bounce-handling.md) — optional IMAP path for bounces / complaints / replies (webklex/laravel-imap), config, matching, idempotency
 
 ## Key Facts
 

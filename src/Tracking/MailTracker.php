@@ -48,7 +48,8 @@ class MailTracker
             $this->injectConfigurationSetHeader($messageModels, $message);
             $this->injectFromAddressOverride($messageModels, $message);
             $this->injectReplyToOverride($messageModels, $message);
-            $this->persistTrackingMetadata($messageModels, $message, $hash, $html, $mutated);
+            $correlationId = $this->injectCorrelationId($messageModels, $message);
+            $this->persistTrackingMetadata($messageModels, $message, $hash, $correlationId, $html, $mutated);
             $this->injectMessageTags($messageModels, $message);
         } catch (\Throwable $e) {
             Log::error('MailTracker: Failed to inject tracking into email, sending without tracking.', [
@@ -200,13 +201,14 @@ class MailTracker
     /**
      * @param  Collection<int, Message>  $messageModels
      */
-    protected function persistTrackingMetadata(Collection $messageModels, Email $message, string $hash, string $originalHtml, bool $mutated): void
+    protected function persistTrackingMetadata(Collection $messageModels, Email $message, string $hash, string $correlationId, string $originalHtml, bool $mutated): void
     {
         $to = collect($message->getTo())->first();
         $from = collect($message->getFrom())->first();
 
-        $messageModels->each(function (Message $messageModel) use ($from, $to, $message, $hash, $mutated, $originalHtml): void {
+        $messageModels->each(function (Message $messageModel) use ($from, $to, $message, $hash, $correlationId, $mutated, $originalHtml): void {
             $messageModel->tracking_hash = $hash;
+            $messageModel->tracking_correlation_id = $correlationId;
             $messageModel->tracking_sender_name = $from?->getName();
             $messageModel->tracking_sender_contact = $from?->getAddress();
             $messageModel->tracking_recipient_name = $to?->getName();
@@ -331,6 +333,73 @@ class MailTracker
         }
 
         $message->replyTo($replyToAddress);
+    }
+
+    /**
+     * Stamp a stable correlation ID into the outgoing email so IMAP-based bounce
+     * processing can match DSNs back to the originating Message even when no
+     * SES tracking_message_id is available.
+     *
+     * Sets both X-Topoff-Message-Id (private header, survives MTA rewrites)
+     * and RFC 5322 Message-ID (so DSN In-Reply-To / References point at it).
+     *
+     * @param  Collection<int, Message>  $messageModels
+     */
+    protected function injectCorrelationId(Collection $messageModels, Email $message): string
+    {
+        $correlationId = $messageModels->first()?->tracking_correlation_id;
+        if (! $correlationId) {
+            $correlationId = (string) Str::uuid7();
+        }
+
+        if (! $message->getHeaders()->has('X-Topoff-Message-Id')) {
+            $message->getHeaders()->addTextHeader('X-Topoff-Message-Id', $correlationId);
+        }
+
+        if (! $message->getHeaders()->has('Message-ID')) {
+            $domain = $this->resolveMessageIdDomain($messageModels, $message);
+            $message->getHeaders()->addIdHeader('Message-ID', $correlationId.'@'.$domain);
+        }
+
+        return $correlationId;
+    }
+
+    /**
+     * Resolve the domain part used in the generated Message-ID header. Prefers the
+     * identity's mail_from_domain, then the From address domain, then app URL host.
+     *
+     * @param  Collection<int, Message>  $messageModels
+     */
+    protected function resolveMessageIdDomain(Collection $messageModels, Email $message): string
+    {
+        $configSetKey = $messageModels->first()?->messageType?->ses_configuration_set;
+        if ($configSetKey) {
+            $sets = (array) config('messenger.ses_sns.configuration_sets', []);
+            $identityKey = $sets[$configSetKey]['identity'] ?? null;
+            if ($identityKey) {
+                $identities = (array) config('messenger.ses_sns.sending.identities', []);
+                $mailFromDomain = trim((string) ($identities[$identityKey]['mail_from_domain'] ?? ''));
+                if ($mailFromDomain !== '') {
+                    return $mailFromDomain;
+                }
+                $identityDomain = trim((string) ($identities[$identityKey]['identity_domain'] ?? ''));
+                if ($identityDomain !== '') {
+                    return $identityDomain;
+                }
+            }
+        }
+
+        $fromAddress = collect($message->getFrom())->first()?->getAddress();
+        if (is_string($fromAddress) && str_contains($fromAddress, '@')) {
+            return mb_strtolower(explode('@', $fromAddress, 2)[1]);
+        }
+
+        $appHost = parse_url((string) config('app.url'), PHP_URL_HOST);
+        if (is_string($appHost) && $appHost !== '') {
+            return $appHost;
+        }
+
+        return 'localhost';
     }
 
     /**

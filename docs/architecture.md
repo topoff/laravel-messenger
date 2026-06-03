@@ -184,6 +184,20 @@ All use `ExtractsSesMessageTags` trait for SES tag extraction.
 | `RecordComplaintJob` | `complaint.complainedRecipients` | `object[]` with `emailAddress` |
 | `RecordRejectJob` | N/A | No per-recipient data |
 
+### IMAP Bounce Processing (additive to SNS)
+
+Full setup, classification table, troubleshooting → [imap-bounce-handling.md](imap-bounce-handling.md).
+
+Summary:
+- Optional path that reads the reply-to inbox(es) over IMAP (`webklex/laravel-imap`, suggested) and parses RFC 3464 DSNs / RFC 5965 ARF / replies.
+- Fires the **same** `MessagePermanentBouncedEvent` / `MessageTransientBouncedEvent` / `MessageComplaintEvent` as the SNS pipe — consumers do not branch on source. The IMAP source is recorded as `tracking_meta.failures[].source = 'imap'`.
+- Genuine replies fire a new `MessageReplyReceivedEvent` (nullable `Message` for unmatched inbound).
+- Matching uses `tracking_correlation_id` (UUID stamped by `MailTracker` as `X-Topoff-Message-Id` and RFC 5322 `Message-ID`), then `tracking_message_id`, then a recipient-time-window fallback.
+- Inbox ↔ configuration-set link is explicit: set `ses_sns.configuration_sets[<key>].imap_inbox` to one of `imap.inboxes` keys. Multiple config sets may share an inbox.
+- **Never** writes to the SES suppression list — that remains exclusive to the SNS pipe.
+- Idempotency via `messenger_imap_processed` table keyed by `(inbox_key, sha256(raw_message[0..2048]))`.
+- Scheduler: one `ProcessImapInboxJob($inboxKey)` per inbox, cron-driven (`messenger.imap.schedule.cron`), `withoutOverlapping` + `onOneServer` by default.
+
 ### BCC Recipient Guard
 
 **Problem:** BCC recipients share the same SES message ID. SNS events for BCC would corrupt the TO recipient's tracking data.
@@ -193,10 +207,12 @@ All use `ExtractsSesMessageTags` trait for SES tag extraction.
 ## Events
 
 - `MessageOpenedEvent`, `MessageLinkClickedEvent` — user interaction
-- `MessageDeliveredEvent`, `MessagePermanentBouncedEvent`, `MessageTransientBouncedEvent` — delivery status
+- `MessageDeliveredEvent`, `MessagePermanentBouncedEvent`, `MessageTransientBouncedEvent` — delivery status (fired by both SNS and IMAP paths)
 - `MessageComplaintEvent`, `MessageRejectedEvent` — negative outcomes
+- `MessageReplyReceivedEvent` — genuine human reply observed in an IMAP reply-to inbox
 - `MessageTrackingValidActionEvent` — generic valid action
 - `SesSnsWebhookReceivedEvent` — raw SNS webhook
+- `ImapMessageProcessedEvent` — low-level per-inbound-message event for observability (one per IMAP fetch)
 
 ## Listeners
 
@@ -240,6 +256,7 @@ Returns identity & DNS status:
 | `messenger:ses-sns:check-sending` | Validate identity verification and DNS records |
 | `messenger:ses-sns:test-events` | Simulate SES events (bounce, complaint, delivery) for testing |
 | `messenger:ses-sns:teardown` | Remove all provisioned SES/SNS resources (requires `--force`) |
+| `messenger:imap:fetch [inbox] [--dry-run] [--limit=N]` | List or sweep IMAP inboxes for bounces/complaints/replies (see [imap-bounce-handling.md](imap-bounce-handling.md)) |
 
 ## Nova Integration
 
@@ -310,7 +327,8 @@ Web-based dashboard at `/emessenger/nova/ses-sns-dashboard` (signed URL via `Ope
 | `sending.*` | `check_should_send` callable (null = production only) |
 | `bcc.*` | `check_should_add_bcc` callable (null = always add when provided) |
 | `tracking.*` | inject_pixel, track_links, nova resource class, preview route config, content storage, vonage_dlr (enabled) |
-| `ses_sns.*` | AWS region/credentials, configuration_sets (keyed by name with identity + event_destination), topic name, event types, callback endpoint, tenant config, Route53 automation |
+| `ses_sns.*` | AWS region/credentials, configuration_sets (keyed by name with identity + event_destination + optional `imap_inbox`), topic name, event types, callback endpoint, tenant config, Route53 automation |
+| `imap.*` | Optional IMAP bounce/complaint/reply ingestion: `enabled`, `inboxes` (keyed), `after_process`, `folders`, `schedule` |
 
 ## Migrations (10 total)
 
@@ -324,6 +342,9 @@ Web-based dashboard at `/emessenger/nova/ses-sns-dashboard` (signed URL via `Ope
 8. Retry improvements (failed_at on messages, max_retry_attempts on message_types)
 9. Rename columns for channel support (mail_class→notification_class, email_error→error_message, etc.) + add `channel` field
 10. Unified message_log table (replaces email_log + notification_log)
+11. `delivered_at` + `bounced_at` on messages (0013) + backfill (0014)
+12. `tracking_correlation_id` UUID on messages (0015) — stamped into outgoing Message-ID + X-Topoff-Message-Id for IMAP bounce matching
+13. `messenger_imap_processed` idempotency table (0016) — keyed by `(inbox_key, fingerprint)`
 
 ## Test Structure
 

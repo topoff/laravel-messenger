@@ -32,6 +32,7 @@ use Topoff\Messenger\Models\Traits\DateScopesTrait;
  * @property string|null $error_message
  * @property string|null $tracking_hash
  * @property string|null $tracking_message_id
+ * @property string|null $tracking_correlation_id
  * @property string|null $tracking_sender_name
  * @property string|null $tracking_sender_contact
  * @property string|null $tracking_recipient_name
@@ -153,6 +154,7 @@ class Message extends Model
             'error_message' => 'string',
             'tracking_hash' => 'string',
             'tracking_message_id' => 'string',
+            'tracking_correlation_id' => 'string',
             'tracking_sender_name' => 'string',
             'tracking_sender_contact' => 'string',
             'tracking_recipient_name' => 'string',

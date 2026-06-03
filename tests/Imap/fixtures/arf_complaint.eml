@@ -1,0 +1,42 @@
+From: feedback@isp.example
+To: info@top-offerten.ch
+Subject: FW: Email Feedback Report for top-offerten.ch
+Date: Thu, 04 Jun 2026 08:00:00 +0000
+MIME-Version: 1.0
+Content-Type: multipart/report; report-type=feedback-report;
+	boundary="ARF_BOUNDARY_X"
+Message-ID: <complaint-9999@isp.example>
+
+--ARF_BOUNDARY_X
+Content-Type: text/plain; charset=utf-8
+
+This is an email abuse report for an email message received from
+top-offerten.ch on 2026-06-03.
+
+--ARF_BOUNDARY_X
+Content-Type: message/feedback-report
+
+Feedback-Type: abuse
+User-Agent: ISP-FBL/1.0
+Version: 1
+Original-Mail-From: noreply@mailer.top-offerten.ch
+Original-Rcpt-To: subscriber@isp.example
+Arrival-Date: Wed, 03 Jun 2026 14:30:00 +0000
+Reported-Domain: top-offerten.ch
+Source-IP: 192.0.2.55
+
+--ARF_BOUNDARY_X
+Content-Type: message/rfc822
+
+From: noreply@mailer.top-offerten.ch
+To: subscriber@isp.example
+Subject: Weekly newsletter
+Date: Wed, 03 Jun 2026 14:29:00 +0000
+Message-ID: <33334444-5555-7666-8777-888899990000@bounce.mailer.top-offerten.ch>
+X-Topoff-Message-Id: 33334444-5555-7666-8777-888899990000
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+
+<html><body>Newsletter content</body></html>
+
+--ARF_BOUNDARY_X--

@@ -1,0 +1,39 @@
+Return-Path: <>
+Delivered-To: info@top-offerten.ch
+Date: Wed, 03 Jun 2026 11:30:00 +0200
+From: MAILER-DAEMON@mailer.top-offerten.ch (Mail Delivery System)
+Subject: Delayed Mail (still being retried)
+To: info@top-offerten.ch
+Auto-Submitted: auto-replied
+MIME-Version: 1.0
+Content-Type: multipart/report; report-type=delivery-status;
+	boundary="POSTFIX-BOUNDARY-002"
+
+--POSTFIX-BOUNDARY-002
+Content-Type: text/plain; charset=us-ascii
+
+This is the mail system. Delivery to the following address is being
+retried because the recipient mailbox is full.
+
+--POSTFIX-BOUNDARY-002
+Content-Type: message/delivery-status
+
+Reporting-MTA: dns; mailer.top-offerten.ch
+Arrival-Date: Wed, 03 Jun 2026 11:30:00 +0200
+
+Final-Recipient: rfc822; busy@example.net
+Action: delayed
+Status: 4.2.2
+Diagnostic-Code: smtp; 452 4.2.2 Mailbox full
+
+--POSTFIX-BOUNDARY-002
+Content-Type: text/rfc822-headers
+
+From: noreply@mailer.top-offerten.ch
+To: busy@example.net
+Subject: Order #4242 confirmation
+X-Topoff-Message-Id: aaaaaaaa-bbbb-7ccc-8ddd-eeeeeeeeeeee
+Message-ID: <aaaaaaaa-bbbb-7ccc-8ddd-eeeeeeeeeeee@bounce.mailer.top-offerten.ch>
+Date: Wed, 03 Jun 2026 11:29:55 +0200
+
+--POSTFIX-BOUNDARY-002--
