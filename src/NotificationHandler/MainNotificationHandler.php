@@ -5,6 +5,8 @@ namespace Topoff\Messenger\NotificationHandler;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use ReflectionClass;
+use ReflectionParameter;
 use Throwable;
 use Topoff\Messenger\Models\Message;
 
@@ -138,10 +140,51 @@ class MainNotificationHandler
     /**
      * Parameters passed to the notification class constructor.
      * Override in child handlers to pass domain-specific arguments.
+     *
+     * Defaults to the message's persisted `params` payload plus the message's
+     * `channel` column (added when the notification constructor accepts a
+     * `channel` parameter and `params` does not already provide one). This
+     * allows a queued retry of a persisted Message — e.g. via
+     * SendMessageJob::retryDirectMessages — to reconstruct the notification
+     * without a custom subclass when the originating sender persisted its
+     * arguments on the Message (as SendNotificationAction does for
+     * NovaChannelNotification).
+     *
+     * @return array<string, mixed>|array<int, mixed>
      */
     public function getNotificationParameters(): array
     {
-        return [];
+        $params = $this->message->params ?? [];
+        $constructorParameters = $this->notificationConstructorParameterNames();
+
+        if (in_array('channel', $constructorParameters, true) && ! array_key_exists('channel', $params)) {
+            $params['channel'] = $this->message->channel;
+        }
+
+        return $params;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function notificationConstructorParameterNames(): array
+    {
+        $class = $this->notificationClass();
+
+        if (! class_exists($class)) {
+            return [];
+        }
+
+        $constructor = new ReflectionClass($class)->getConstructor();
+
+        if ($constructor === null) {
+            return [];
+        }
+
+        return array_map(
+            static fn (ReflectionParameter $parameter): string => $parameter->getName(),
+            $constructor->getParameters(),
+        );
     }
 
     /**
