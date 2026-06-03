@@ -51,7 +51,12 @@ class MessengerServiceProvider extends PackageServiceProvider
             ->hasCommand(TestSesSnsEventsCommand::class)
             ->hasCommand(TeardownSesSnsTrackingCommand::class)
             ->hasCommand(FetchImapBouncesCommand::class)
-            ->discoversMigrations();
+            ->discoversMigrations()
+            // discoversMigrations() alone only enables vendor:publish; runsMigrations()
+            // is what actually wires the files into the migrator so `php artisan migrate`
+            // picks them up automatically. Without this, host apps had to invoke
+            // `migrate --path=vendor/topoff/laravel-messenger/database/migrations`.
+            ->runsMigrations();
     }
 
     public function packageRegistered(): void

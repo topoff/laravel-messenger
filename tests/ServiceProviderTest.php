@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Schema;
+use Spatie\LaravelPackageTools\Package;
+use Topoff\Messenger\MessengerServiceProvider;
 use Topoff\Messenger\Models\Message;
 use Topoff\Messenger\Models\MessageType;
 use Topoff\Messenger\Repositories\MessageTypeRepository;
@@ -36,4 +38,21 @@ it('runs package migrations and creates tables with expected columns', function 
             'channel', 'failed_at', 'error_code', 'error_message',
             'tracking_sender_contact', 'tracking_recipient_contact',
         ]))->toBeTrue();
+});
+
+it('opts into Spatie runsMigrations so host apps do not need --path on migrate', function () {
+    // discoversMigrations() on its own only enables vendor:publish for migrations.
+    // Without runsMigrations(), Spatie's discoverPackageMigrations() never calls
+    // loadMigrationsFrom() on the file paths, so a plain `php artisan migrate` in a
+    // host app does not see them and you have to invoke
+    // `migrate --path=vendor/topoff/laravel-messenger/database/migrations`.
+    $package = new Package;
+    $package->setBasePath(realpath(__DIR__.'/../src'));
+
+    /** @var MessengerServiceProvider $provider */
+    $provider = app()->getProvider(MessengerServiceProvider::class);
+    $provider->configurePackage($package);
+
+    expect($package->discoversMigrations)->toBeTrue();
+    expect($package->runsMigrations)->toBeTrue();
 });
