@@ -71,22 +71,27 @@ class ImapClientFactory
     public function make(string $inboxKey): object
     {
         $clientClass = '\\Webklex\\PHPIMAP\\Client';
-        if (! class_exists($clientClass)) {
+        $configClass = '\\Webklex\\PHPIMAP\\Config';
+        if (! class_exists($clientClass) || ! class_exists($configClass)) {
             throw ImapPackageMissingException::forClient();
         }
 
         $config = $this->configFor($inboxKey);
 
         $clientConfig = [
-            'host' => $config['host'],
-            'port' => (int) ($config['port'] ?? 993),
-            'encryption' => $config['encryption'] ?? 'ssl',
-            'validate_cert' => (bool) ($config['validate_cert'] ?? true),
-            'username' => $config['username'],
-            'password' => $config['password'],
-            'protocol' => $config['protocol'] ?? 'imap',
+            'accounts' => [
+                'default' => [
+                    'host' => $config['host'],
+                    'port' => (int) ($config['port'] ?? 993),
+                    'encryption' => $config['encryption'] ?? 'ssl',
+                    'validate_cert' => (bool) ($config['validate_cert'] ?? true),
+                    'username' => $config['username'],
+                    'password' => $config['password'],
+                    'protocol' => $config['protocol'] ?? 'imap',
+                ],
+            ],
         ];
 
-        return new $clientClass($clientConfig);
+        return new $clientClass($configClass::make($clientConfig));
     }
 }
