@@ -71,3 +71,19 @@ it('classifies a real human reply as Reply', function () {
     expect($report->classification)->toBe(BounceClassification::Reply);
     expect($report->originalCorrelationId)->toBe('77778888-9999-7aaa-8bbb-cccccccccccc');
 });
+
+it('extracts SES message id from In-Reply-To when SES rewrote our Message-ID header', function () {
+    // Apple/Outlook reply clients quote whatever Message-ID the sending MTA put on the wire.
+    // SES replaces our `<uuid@bounce.mailer...>` stamp with `<ses-msg-id@region.amazonses.com>`,
+    // so In-Reply-To carries the SES ID — not our correlation UUID. The classifier must
+    // pull that SES ID out so MessageMatcher can look it up via tracking_message_id.
+    $report = classifyFixture('ses_rewritten_reply.eml');
+
+    expect($report->classification)->toBe(BounceClassification::Reply);
+    expect($report->originalMessageId)->toBe(
+        '0102030405060708-aabbccdd-1122-3344-5566-778899aabbcc-000000@eu-central-1.amazonses.com'
+    );
+    expect($report->originalSesMessageId)->toBe(
+        '0102030405060708-aabbccdd-1122-3344-5566-778899aabbcc-000000'
+    );
+});

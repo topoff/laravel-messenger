@@ -32,18 +32,24 @@ final class BounceClassifier
         }
 
         if ($this->isAutoReply($message)) {
+            $inReplyTo = $this->extractInReplyTo($message);
+
             return new BounceReport(
                 classification: BounceClassification::AutoReply,
                 originalCorrelationId: $this->extractCorrelationFromHeaders($message->headers),
-                originalMessageId: $this->extractInReplyTo($message),
+                originalMessageId: $inReplyTo,
+                originalSesMessageId: $this->extractSesMessageIdFromMessageId($inReplyTo),
             );
         }
 
         if ($this->looksLikeReply($message)) {
+            $inReplyTo = $this->extractInReplyTo($message);
+
             return new BounceReport(
                 classification: BounceClassification::Reply,
                 originalCorrelationId: $this->extractCorrelationFromHeaders($message->headers),
-                originalMessageId: $this->extractInReplyTo($message),
+                originalMessageId: $inReplyTo,
+                originalSesMessageId: $this->extractSesMessageIdFromMessageId($inReplyTo),
             );
         }
 
@@ -329,6 +335,23 @@ final class BounceClassifier
         }
 
         return $this->normalizeMessageId($value);
+    }
+
+    /**
+     * SES rewrites the outgoing Message-ID header to `<ses-msg-id@region.amazonses.com>`,
+     * so a reply's `In-Reply-To` no longer contains our correlation UUID but the SES
+     * message ID. Extract that ID so MessageMatcher can look it up via tracking_message_id.
+     */
+    private function extractSesMessageIdFromMessageId(?string $messageId): ?string
+    {
+        if ($messageId === null || $messageId === '') {
+            return null;
+        }
+        if (preg_match('/^([^@\s<>]+)@[^@\s<>]*amazonses\.com$/i', $messageId, $m) === 1) {
+            return $m[1];
+        }
+
+        return null;
     }
 
     private function normalizeMessageId(string $value): ?string

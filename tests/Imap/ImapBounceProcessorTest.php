@@ -128,6 +128,28 @@ it('fires MessageReplyReceivedEvent for genuine replies', function () {
         && str_contains((string) $e->textBody, 'billing address'));
 });
 
+it('matches a SES-rewritten reply via tracking_message_id', function () {
+    Event::fake();
+
+    $tracked = createMessage([
+        'tracking_correlation_id' => 'aaaaaaaa-bbbb-7ccc-8ddd-eeeeeeeeeeee',
+        'tracking_message_id' => '0102030405060708-aabbccdd-1122-3344-5566-778899aabbcc-000000',
+        'tracking_recipient_contact' => 'jane.doe@example.com',
+    ]);
+
+    $source = new InMemoryInboundMessageSource('topoffer_info', [
+        'uid-reply' => readFixture('ses_rewritten_reply.eml'),
+    ]);
+
+    $result = makeProcessor()->process($source);
+
+    expect($result->replies)->toBe(1);
+
+    Event::assertDispatched(MessageReplyReceivedEvent::class, fn ($e) => $e->message?->id === $tracked->id
+        && $e->inboxKey === 'topoffer_info'
+        && $e->fromAddress === 'jane.doe@example.com');
+});
+
 it('fires MessageReplyReceivedEvent with null message when no match', function () {
     Event::fake();
 
