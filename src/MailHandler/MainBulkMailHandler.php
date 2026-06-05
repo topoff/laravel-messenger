@@ -48,6 +48,12 @@ class MainBulkMailHandler
             return;
         }
 
+        $this->dropMessagesWithMissingRequiredMessagable();
+
+        if ($this->messageGroup->isEmpty()) {
+            return;
+        }
+
         /** @var array<int|string, MainMailHandler> $handlers */
         $handlers = [];
 
@@ -151,6 +157,43 @@ class MainBulkMailHandler
             'receiver_email' => $this->receiver->getEmail(),
             'message_ids' => $this->messageGroup->pluck('id')->all(),
         ]);
+    }
+
+    /**
+     * Soft-delete every message in the group whose messageType requires a
+     * messagable but where the messagable has gone missing (typically because
+     * the underlying record was trashed between scheduling and dispatch).
+     * Mirrors the per-message gate in {@see MainMailHandler::abortAndDeleteWhen()}
+     * so bulk-routed mails fail closed instead of rendering with missing data.
+     */
+    protected function dropMessagesWithMissingRequiredMessagable(): void
+    {
+        $dropped = $this->messageGroup->filter(
+            fn ($message): bool => (bool) $message->messageType->required_messagable && ! $message->messagable
+        );
+
+        if ($dropped->isEmpty()) {
+            return;
+        }
+
+        $messageClass = config('messenger.models.message');
+        $now = Date::now();
+
+        $messageClass::whereIn('id', $dropped->pluck('id'))->update([
+            'reserved_at' => null,
+            'error_message' => 'Message has been deleted, because the Messagable itself is missing but required.',
+            'deleted_at' => $now,
+        ]);
+
+        Log::info('MainBulkMailHandler: messages dropped, required messagable missing', [
+            'receiver_class' => $this->receiver::class,
+            'receiver_email' => $this->receiver->getEmail(),
+            'message_ids' => $dropped->pluck('id')->all(),
+        ]);
+
+        $this->messageGroup = $this->messageGroup->reject(
+            fn ($message): bool => $dropped->contains('id', $message->id)
+        )->values();
     }
 
     /**

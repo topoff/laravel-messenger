@@ -183,6 +183,79 @@ it('aborts and soft-deletes all messages when the receiver email is flagged inva
     });
 });
 
+it('drops messages whose required messagable went missing and sends the rest', function () {
+    Mail::fake();
+
+    $strictType = createMessageType(['required_messagable' => true]);
+
+    $validMessagable = createMessagable(['title' => 'Still here']);
+    $orphanMessagable = createMessagable(['title' => 'Will be trashed']);
+
+    $valid = createMessage([
+        'receiver_type' => TestReceiver::class,
+        'receiver_id' => $this->receiver->id,
+        'message_type_id' => $strictType->id,
+        'messagable_type' => TestMessagable::class,
+        'messagable_id' => $validMessagable->id,
+    ]);
+
+    $orphan = createMessage([
+        'receiver_type' => TestReceiver::class,
+        'receiver_id' => $this->receiver->id,
+        'message_type_id' => $strictType->id,
+        'messagable_type' => TestMessagable::class,
+        'messagable_id' => $orphanMessagable->id,
+    ]);
+
+    $orphanMessagable->delete();
+
+    $messages = collect([$valid->fresh(), $orphan->fresh()])
+        ->each(fn (Message $m) => $m->load('messageType'));
+
+    $handler = new MainBulkMailHandler($this->receiver, $messages);
+    $handler->send();
+
+    Mail::assertSent(BulkMail::class);
+
+    $orphanFresh = Message::withTrashed()->find($orphan->id);
+    expect($orphanFresh->sent_at)->toBeNull()
+        ->and($orphanFresh->deleted_at)->not->toBeNull()
+        ->and($orphanFresh->error_message)->toContain('Messagable itself is missing');
+
+    $validFresh = Message::find($valid->id);
+    expect($validFresh->sent_at)->not->toBeNull()
+        ->and($validFresh->deleted_at)->toBeNull();
+});
+
+it('skips sending entirely when every message in the group has lost its required messagable', function () {
+    Mail::fake();
+
+    $strictType = createMessageType(['required_messagable' => true]);
+
+    $messagable = createMessagable(['title' => 'About to vanish']);
+
+    $orphan = createMessage([
+        'receiver_type' => TestReceiver::class,
+        'receiver_id' => $this->receiver->id,
+        'message_type_id' => $strictType->id,
+        'messagable_type' => TestMessagable::class,
+        'messagable_id' => $messagable->id,
+    ]);
+
+    $messagable->delete();
+
+    $messages = collect([$orphan->fresh()])->each(fn (Message $m) => $m->load('messageType'));
+
+    $handler = new MainBulkMailHandler($this->receiver, $messages);
+    $handler->send();
+
+    Mail::assertNothingSent();
+
+    $orphanFresh = Message::withTrashed()->find($orphan->id);
+    expect($orphanFresh->sent_at)->toBeNull()
+        ->and($orphanFresh->deleted_at)->not->toBeNull();
+});
+
 it('uses the configured bulk mail class', function () {
     $handler = new MainBulkMailHandler($this->receiver, collect());
 
