@@ -27,7 +27,15 @@ class MailTracker
         try {
             $messageModels = $this->resolveMessageModels($event);
             if ($messageModels->isEmpty()) {
-                Log::error('MailTracker: No message models resolved, email will be sent without tracking.', [
+                // Not every outgoing email flows through messenger's Message
+                // model — Spatie backup notifications, framework-internal
+                // alerts and any vendor mail dispatched via Mail::to() reach
+                // this handler too. Tracking is genuinely impossible for
+                // those, and emitting Log::error pushed every "you don't
+                // back up me" mail into the host app's Sentry issues feed
+                // (TOP-OFFERTEN-BACKEND-139). Downgrade to debug — host
+                // apps that want the signal can opt in via channel config.
+                Log::debug('MailTracker: No message models resolved, email will be sent without tracking.', [
                     'to' => collect($event->message->getTo())->map(fn ($a) => $a->getAddress())->implode(', '),
                     'subject' => $event->message->getSubject(),
                 ]);
