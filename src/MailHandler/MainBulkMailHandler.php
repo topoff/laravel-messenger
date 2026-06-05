@@ -42,6 +42,12 @@ class MainBulkMailHandler
 
     public function send(): void
     {
+        if (! $this->receiver->getEmailIsValid()) {
+            $this->abortGroupForInvalidReceiver();
+
+            return;
+        }
+
         /** @var array<int|string, MainMailHandler> $handlers */
         $handlers = [];
 
@@ -121,6 +127,30 @@ class MainBulkMailHandler
     {
         $messageClass = config('messenger.models.message');
         $messageClass::whereIn('id', $this->messageGroup->pluck('id'))->update(['sent_at' => Date::now(), 'error_at' => null, 'failed_at' => null]);
+    }
+
+    /**
+     * Abort the whole bulk group when the shared receiver has been flagged as
+     * email-invalid (e.g. by a prior hard bounce). Mirrors the per-message
+     * abort path in {@see MainMailHandler::abortAndDeleteWhen()} so that
+     * bulk-routed mails do not bypass the email_invalid_at gate.
+     */
+    protected function abortGroupForInvalidReceiver(): void
+    {
+        $messageClass = config('messenger.models.message');
+        $now = Date::now();
+
+        $messageClass::whereIn('id', $this->messageGroup->pluck('id'))->update([
+            'reserved_at' => null,
+            'error_message' => 'Bulk mail aborted, because the receiver email is invalid (email_invalid_at is not null).',
+            'deleted_at' => $now,
+        ]);
+
+        Log::info('MainBulkMailHandler: bulk mail aborted, receiver email invalid', [
+            'receiver_class' => $this->receiver::class,
+            'receiver_email' => $this->receiver->getEmail(),
+            'message_ids' => $this->messageGroup->pluck('id')->all(),
+        ]);
     }
 
     /**

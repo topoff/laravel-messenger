@@ -147,6 +147,42 @@ it('rethrows the exception when sending fails', function () {
     expect(fn () => $handler->send())->toThrow(RuntimeException::class, 'SMTP failure');
 });
 
+it('aborts and soft-deletes all messages when the receiver email is flagged invalid', function () {
+    Mail::fake();
+
+    $invalidReceiver = createReceiver(['email_invalid_at' => now()]);
+
+    $messages = collect([
+        createMessage([
+            'receiver_type' => TestReceiver::class,
+            'receiver_id' => $invalidReceiver->id,
+            'message_type_id' => $this->messageType->id,
+            'messagable_type' => TestMessagable::class,
+            'messagable_id' => $this->messagable->id,
+        ]),
+        createMessage([
+            'receiver_type' => TestReceiver::class,
+            'receiver_id' => $invalidReceiver->id,
+            'message_type_id' => $this->messageType->id,
+            'messagable_type' => TestMessagable::class,
+            'messagable_id' => createMessagable(['title' => 'Second'])->id,
+        ]),
+    ])->each(fn (Message $m) => $m->load('messageType'));
+
+    $handler = new MainBulkMailHandler($invalidReceiver, $messages);
+    $handler->send();
+
+    Mail::assertNothingSent();
+
+    $messages->each(function (Message $m) {
+        $fresh = Message::withTrashed()->find($m->id);
+        expect($fresh->sent_at)->toBeNull()
+            ->and($fresh->deleted_at)->not->toBeNull()
+            ->and($fresh->reserved_at)->toBeNull()
+            ->and($fresh->error_message)->toContain('email is invalid');
+    });
+});
+
 it('uses the configured bulk mail class', function () {
     $handler = new MainBulkMailHandler($this->receiver, collect());
 
