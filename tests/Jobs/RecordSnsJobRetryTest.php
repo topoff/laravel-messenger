@@ -88,7 +88,7 @@ it('releases reject job back to queue when message is not yet in database', func
     $job->assertReleased();
 });
 
-it('logs error and gives up after max retry attempts', function () {
+it('logs warning and gives up after max retry attempts', function () {
     Log::spy();
 
     $snsMessage = [
@@ -109,7 +109,7 @@ it('logs error and gives up after max retry attempts', function () {
 
     $job->assertNotReleased();
 
-    Log::shouldHaveReceived('error')
+    Log::shouldHaveReceived('warning')
         ->withArgs(fn (string $msg): bool => str_contains($msg, 'No message found for tracking_message_id after 8 attempts'));
 });
 

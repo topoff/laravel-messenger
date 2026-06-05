@@ -44,7 +44,15 @@ trait RetriesOnMissingTrackedMessage
             return null;
         }
 
-        Log::error(
+        // Surface as warning, not error. After 8 retries with backoff (up
+        // to ~6.5 min) the tracking_message_id is genuinely orphan, and
+        // — per the trait docblock — that is expected noise: SES replays,
+        // very old bounces flushed from a long-stalled SNS topic, and
+        // external senders sharing the SES identity all land here. The
+        // diagnostic context is still emitted so the host app can choose
+        // to escalate via its log channel config; we just don't promote
+        // every replay to a Sentry Issue (TOP-OFFERTEN-BACKEND-13A).
+        Log::warning(
             "{$jobName}: No message found for tracking_message_id after {$this->attempts()} attempts.",
             $this->orphanEventContext($messageId)
         );
