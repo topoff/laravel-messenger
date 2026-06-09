@@ -20,8 +20,10 @@ use RuntimeException;
  *   DELETE /2/zones/{zone}/records/{recordId}            — delete a record
  *
  * Source values posted to the API are RELATIVE to the zone (e.g. `_dmarc`, not
- * `_dmarc.example.com`). TXT values are sent UNQUOTED. MX priority is sent in
- * `description.priority.value`, not as a prefix on `target`.
+ * `_dmarc.example.com`). TXT values are sent UNQUOTED. MX records are posted with
+ * the priority inline in `target` (e.g. `target: "10 mail.example.com"`); on GET
+ * Infomaniak splits that back into `target` + `description.priority.value`, which
+ * recordMatches() reconciles when comparing existing vs desired records.
  */
 class InfomaniakDnsApi
 {
@@ -57,7 +59,7 @@ class InfomaniakDnsApi
 
         $existing = array_values(array_filter(
             $this->listRecords($zone),
-            fn (array $r): bool => strtoupper($r['type']) === $type
+            fn (array $r): bool => strtoupper((string) $r['type']) === $type
                 && $this->normalizeSource($r['source']) === $this->normalizeSource($source),
         ));
 
@@ -211,11 +213,11 @@ class InfomaniakDnsApi
     {
         $value = trim($value);
         if ($type === 'MX') {
+            // Infomaniak v2 API expects MX target as the full "<priority> <hostname>"
+            // string (priority NOT in description). On GET the API splits it back into
+            // target + description.priority — see recordMatches() for the reverse.
             if (preg_match('/^(\d+)\s+(.+)$/', $value, $m) === 1) {
-                return [
-                    'target' => rtrim($m[2], '.'),
-                    'description' => ['priority' => ['value' => (int) $m[1]]],
-                ];
+                return ['target' => $m[1].' '.rtrim($m[2], '.')];
             }
 
             return ['target' => rtrim($value, '.')];
@@ -242,18 +244,17 @@ class InfomaniakDnsApi
         $existingTarget = rtrim(trim($existing['target']), '.');
         $desiredTarget = rtrim(trim($desired['target']), '.');
 
-        if (strcasecmp($existingTarget, $desiredTarget) !== 0) {
-            return false;
-        }
-
         if ($type === 'MX') {
+            // GET returns target without priority + priority in description; POST/PUT
+            // takes target = "<priority> <hostname>". Normalize the existing record to
+            // the same shape as desired before comparing.
             $existingPriority = (int) ($existing['description']['priority']['value'] ?? 0);
-            $desiredPriority = (int) ($desired['description']['priority']['value'] ?? 0);
+            $existingFull = $existingPriority.' '.$existingTarget;
 
-            return $existingPriority === $desiredPriority;
+            return strcasecmp($existingFull, $desiredTarget) === 0;
         }
 
-        return true;
+        return strcasecmp($existingTarget, $desiredTarget) === 0;
     }
 
     protected function relativeSource(string $recordFqdn, string $zoneFqdn): string

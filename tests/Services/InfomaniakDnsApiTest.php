@@ -114,7 +114,7 @@ it('is a no-op when the desired record already exists with the same target', fun
     Http::assertNotSent(fn (Request $r): bool => in_array($r->method(), ['POST', 'PUT', 'DELETE'], true));
 });
 
-it('encodes MX priority in description, not in target', function () {
+it('encodes MX target as "<priority> <hostname>" (v2 API write format)', function () {
     Http::fake(fn (Request $request) => match (true) {
         $request->method() === 'GET' && (bool) preg_match('#/2/domains/[^/]+/zones#', $request->url()) => Http::response([
             'result' => 'success', 'data' => [['fqdn' => 'example.com']],
@@ -139,9 +139,31 @@ it('encodes MX priority in description, not in target', function () {
 
         return $b['type'] === 'MX'
             && $b['source'] === 'bounce'
-            && $b['target'] === 'feedback-smtp.eu-central-1.amazonses.com'
-            && ($b['description']['priority']['value'] ?? null) === 10;
+            && $b['target'] === '10 feedback-smtp.eu-central-1.amazonses.com'
+            && ! isset($b['description']);
     });
+});
+
+it('no-ops MX when existing record (split form from GET) matches desired full form', function () {
+    Http::fake(fn (Request $request) => match (true) {
+        $request->method() === 'GET' && (bool) preg_match('#/2/domains/[^/]+/zones#', $request->url()) => Http::response([
+            'result' => 'success', 'data' => [['fqdn' => 'example.com']],
+        ]),
+        $request->method() === 'GET' && str_contains($request->url(), '/2/zones/example.com/records') => Http::response([
+            'result' => 'success', 'data' => [[
+                'id' => 11, 'source' => 'bounce', 'type' => 'MX',
+                'target' => 'feedback-smtp.eu-central-1.amazonses.com',
+                'ttl' => 300,
+                'description' => ['priority' => ['value' => 10]],
+            ]],
+        ]),
+        default => Http::response(['unexpected' => $request->method().' '.$request->url()], 500),
+    });
+
+    $api = new InfomaniakDnsApi('tok');
+    $api->upsertRecord('bounce.example.com', 'MX', ['10 feedback-smtp.eu-central-1.amazonses.com'], 300);
+
+    Http::assertNotSent(fn (Request $r): bool => in_array($r->method(), ['POST', 'PUT', 'DELETE'], true));
 });
 
 it('strips surrounding quotes from TXT values when sending to the API', function () {
