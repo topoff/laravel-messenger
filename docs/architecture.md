@@ -224,10 +224,21 @@ Summary:
 ## SES/SNS Provisioning
 
 Services in `src/Services/SesSns/`:
-- `AwsSesSnsProvisioningApi` — AWS SDK wrapper (config sets, event destinations, SNS topics, subscriptions)
+- `AwsSesSnsProvisioningApi` — AWS SDK wrapper (config sets, event destinations, SNS topics, subscriptions, Route53 records)
+- `InfomaniakDnsApi` — Infomaniak DNS API wrapper (zone lookup, record list/create/update/delete, upsert with reconciliation)
 - `SesSnsSetupService` — orchestrates full setup/teardown, provides `check()` with health validation
-- `SesSendingSetupService` — SES identities, DKIM verification, MAIL FROM domains, DNS record retrieval
+- `SesSendingSetupService` — SES identities, DKIM verification, MAIL FROM domains, DMARC, DNS record retrieval, DNS automation (Infomaniak or Route53)
 - `SesEventSimulatorService` — simulates SES events for testing
+
+### DNS Automation
+
+`SesSendingSetupService` can upsert the generated DNS records (DKIM CNAMEs, MAIL FROM MX/TXT, DMARC TXT) at the user's DNS provider after each `setup()`. Order of precedence:
+
+1. **Infomaniak** — `messenger.ses_sns.sending.infomaniak.enabled` + `INFOMANIAK_API_TOKEN`. Uses `/2/domains/{domain}/zones` to discover the managed zone and `/2/zones/{zone}/records` to reconcile. Source values are sent relative to the zone; MX priority goes in `description.priority.value`; TXT values are sent unquoted.
+2. **Route53** — `messenger.ses_sns.sending.route53.enabled` + `auto_create_records=true`. Uses the AWS SDK's `changeResourceRecordSets`.
+3. None — records are printed for manual entry.
+
+The DMARC record is built from per-identity `dmarc` config (string = full TXT value; `false` = skip; omitted = default `v=DMARC1; p=none;`).
 
 ### SesSnsSetupService::check()
 

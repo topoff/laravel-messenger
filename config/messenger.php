@@ -239,8 +239,13 @@ return [
         //   reply_to_address  — (Optional) Override Reply-To header. Can be on any domain,
         //                       does not need SES verification.
         //
+        //   dmarc             — (Optional) Full DMARC TXT record value for the identity domain.
+        //                       Written to `_dmarc.<identity_domain>` by the DNS automation when
+        //                       a provider is configured. Defaults to 'v=DMARC1; p=none;' when
+        //                       omitted. Set to false to skip DMARC entirely for this identity.
+        //
         // Run `php artisan messenger:ses-sns:setup-sending` to provision all identities
-        // in SES and get the required DNS records (DKIM, SPF, MX).
+        // in SES and get the required DNS records (DKIM, SPF, MX, DMARC).
         //
         // Example with multiple identities:
         //
@@ -248,6 +253,7 @@ return [
         //       'identity_domain'   => 'mailer.example.com',
         //       'mail_from_domain'  => 'bounce.mailer.example.com',
         //       'mail_from_address' => 'noreply@mailer.example.com',
+        //       'dmarc'             => 'v=DMARC1; p=quarantine; rua=mailto:dmarc@example.com',
         //   ],
         //   'outreach' => [
         //       'identity_domain'   => 'business.example.com',
@@ -268,10 +274,31 @@ return [
                     'mail_from_domain' => env('AWS_SES_MAIL_FROM_DOMAIN'),
                     'mail_from_address' => env('MAIL_FROM_ADDRESS'),
                     // 'reply_to_address' => env('...'),
+                    // 'dmarc' => env('MESSENGER_DMARC_RECORD', 'v=DMARC1; p=none;'),
                 ],
             ],
 
             'mail_from_behavior_on_mx_failure' => 'USE_DEFAULT_VALUE',
+
+            // DNS automation for SES verification records (DKIM CNAMEs, MAIL FROM MX/TXT, DMARC TXT).
+            //
+            // Only one provider runs per `setup-sending` invocation. Order of precedence:
+            //   1. Infomaniak (when `infomaniak.enabled` is true)
+            //   2. Route53 (when `route53.enabled` is true)
+            //   3. None — records are printed for manual entry at the DNS provider.
+
+            // Infomaniak DNS automation.
+            // Token: create at https://manager.infomaniak.com → API tokens with scope `domain`.
+            // The zone identifier passed to the Infomaniak API is the apex domain
+            // (e.g. for `mailer.example.com` the zone is `example.com`) — resolved automatically
+            // by walking up the labels and probing the API.
+            'infomaniak' => [
+                'enabled' => env('MESSENGER_INFOMANIAK_DNS_ENABLED', false),
+                'token' => env('INFOMANIAK_API_TOKEN'),
+                'base_url' => env('INFOMANIAK_API_BASE_URL', 'https://api.infomaniak.com'),
+                'auto_create_records' => true,
+                'ttl' => 300,
+            ],
 
             // Route53 DNS automation for SES records.
             // Route53 is AWS DNS. Enable only if your domain DNS is hosted in AWS Route53.

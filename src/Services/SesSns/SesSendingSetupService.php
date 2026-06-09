@@ -8,7 +8,14 @@ use Topoff\Messenger\Contracts\SesSnsProvisioningApi;
 
 class SesSendingSetupService
 {
+    protected ?InfomaniakDnsApi $infomaniakDnsApi = null;
+
     public function __construct(protected SesSnsProvisioningApi $api) {}
+
+    public function setInfomaniakDnsApi(?InfomaniakDnsApi $api): void
+    {
+        $this->infomaniakDnsApi = $api;
+    }
 
     /**
      * @return array{ok: bool, steps: array<int, array{label: string, ok: bool, details: string}>, dns_records: array<int, array{name: string, type: string, values: array<int, string>}>}
@@ -55,6 +62,12 @@ class SesSendingSetupService
                 }
             } else {
                 $steps[] = ['label' => 'SES custom MAIL FROM'.$suffix, 'ok' => true, 'details' => 'Skipped (not configured).'];
+            }
+
+            $dmarcRecord = $this->buildDmarcDnsRecord($identity, $identityConfig);
+            if ($dmarcRecord !== null) {
+                $identityDnsRecords[] = $dmarcRecord;
+                $dnsRecords[] = $dmarcRecord;
             }
 
             $this->upsertDnsIfConfigured($identity, $identityDnsRecords, $steps);
@@ -190,6 +203,11 @@ class SesSendingSetupService
                 }
             }
 
+            $dmarcRecord = $this->buildDmarcDnsRecord($identity, $identityConfig);
+            if ($dmarcRecord !== null) {
+                $dnsRecords[] = array_merge($dmarcRecord, ['identity' => $identity, 'status' => 'RECOMMENDED']);
+            }
+
             $verifiedForSending = (bool) Arr::get($identityData, 'VerifiedForSendingStatus', false);
             $this->addCheck(
                 $checks,
@@ -227,10 +245,9 @@ class SesSendingSetupService
                     'status' => $mailFromStatus,
                     'behavior_on_mx_failure' => (string) Arr::get($identityData, 'MailFromAttributes.BehaviorOnMxFailure', ''),
                 ],
-                'dmarc' => [
-                    'record_name' => '_dmarc.'.$identityDomain,
-                    'record_value' => '"v=DMARC1; p=none;"',
-                ],
+                'dmarc' => $dmarcRecord !== null
+                    ? ['record_name' => $dmarcRecord['name'], 'record_value' => $dmarcRecord['values'][0]]
+                    : ['record_name' => null, 'record_value' => null, 'skipped' => true],
                 'dns_records' => [],
             ];
 
@@ -248,13 +265,10 @@ class SesSendingSetupService
                 }
             }
 
-            // Attach DMARC TXT record
-            $identityDetail['dns_records'][] = [
-                'name' => '_dmarc.'.$identityDomain,
-                'type' => 'TXT',
-                'values' => ['"v=DMARC1; p=none;"'],
-                'status' => 'RECOMMENDED',
-            ];
+            // Attach DMARC TXT record (skipped when identity opts out via `dmarc => false`).
+            if ($dmarcRecord !== null) {
+                $identityDetail['dns_records'][] = array_merge($dmarcRecord, ['status' => 'RECOMMENDED']);
+            }
 
             $identitiesDetails[$identityKey] = $identityDetail;
         }
@@ -366,11 +380,17 @@ class SesSendingSetupService
      */
     protected function upsertDnsIfConfigured(string $identity, array $dnsRecords, array &$steps): void
     {
+        if ((bool) config('messenger.ses_sns.sending.infomaniak.enabled', false)) {
+            $this->upsertViaInfomaniak($identity, $dnsRecords, $steps);
+
+            return;
+        }
+
         $route53Enabled = (bool) config('messenger.ses_sns.sending.route53.enabled', false);
         $autoCreate = (bool) config('messenger.ses_sns.sending.route53.auto_create_records', false);
 
         if (! $route53Enabled || ! $autoCreate) {
-            $steps[] = ['label' => 'Route53 DNS automation', 'ok' => true, 'details' => 'Skipped by configuration.'];
+            $steps[] = ['label' => 'DNS automation', 'ok' => true, 'details' => 'Skipped — no provider enabled. Apply records manually.'];
 
             return;
         }
@@ -395,6 +415,62 @@ class SesSendingSetupService
         }
 
         $steps[] = ['label' => 'Route53 DNS automation', 'ok' => true, 'details' => 'Upserted '.count($dnsRecords).' record(s) in zone '.$hostedZoneId];
+    }
+
+    /**
+     * @param  array<int, array{name: string, type: string, values: array<int, string>}>  $dnsRecords
+     * @param  array<int, array{label: string, ok: bool, details: string}>  $steps
+     */
+    protected function upsertViaInfomaniak(string $identity, array $dnsRecords, array &$steps): void
+    {
+        if (! (bool) config('messenger.ses_sns.sending.infomaniak.auto_create_records', true)) {
+            $steps[] = ['label' => 'Infomaniak DNS automation', 'ok' => true, 'details' => 'Skipped by configuration (auto_create_records=false).'];
+
+            return;
+        }
+
+        $api = $this->infomaniakDnsApi();
+        $ttl = (int) config('messenger.ses_sns.sending.infomaniak.ttl', 300);
+        $identityDomain = $this->identityDomainFromIdentity($identity);
+
+        $upserted = 0;
+        $failures = [];
+        foreach ($dnsRecords as $record) {
+            try {
+                $api->upsertRecord($record['name'], $record['type'], $record['values'], $ttl);
+                $upserted++;
+            } catch (\Throwable $e) {
+                $failures[] = sprintf('%s %s: %s', $record['type'], $record['name'], $e->getMessage());
+            }
+        }
+
+        if ($failures === []) {
+            $steps[] = ['label' => 'Infomaniak DNS automation', 'ok' => true, 'details' => 'Upserted '.$upserted.' record(s) for '.$identityDomain.'.'];
+
+            return;
+        }
+
+        $steps[] = [
+            'label' => 'Infomaniak DNS automation',
+            'ok' => false,
+            'details' => 'Upserted '.$upserted.' record(s) for '.$identityDomain.'; '.count($failures).' failure(s): '.implode(' | ', $failures),
+        ];
+    }
+
+    protected function infomaniakDnsApi(): InfomaniakDnsApi
+    {
+        if ($this->infomaniakDnsApi instanceof InfomaniakDnsApi) {
+            return $this->infomaniakDnsApi;
+        }
+
+        $token = (string) config('messenger.ses_sns.sending.infomaniak.token', '');
+        if ($token === '') {
+            throw new RuntimeException('Infomaniak DNS automation is enabled but messenger.ses_sns.sending.infomaniak.token (env INFOMANIAK_API_TOKEN) is empty.');
+        }
+
+        $baseUrl = (string) config('messenger.ses_sns.sending.infomaniak.base_url', 'https://api.infomaniak.com');
+
+        return $this->infomaniakDnsApi = new InfomaniakDnsApi($token, $baseUrl);
     }
 
     /**
@@ -441,6 +517,31 @@ class SesSendingSetupService
                 'type' => 'TXT',
                 'values' => ['"v=spf1 include:amazonses.com -all"'],
             ],
+        ];
+    }
+
+    /**
+     * Build the DMARC TXT record for an identity, or null when the identity opts out
+     * (`dmarc => false`). Defaults to `v=DMARC1; p=none;` when no value is configured.
+     *
+     * @param  array<string, mixed>  $identityConfig
+     * @return array{name: string, type: string, values: array<int, string>}|null
+     */
+    protected function buildDmarcDnsRecord(string $identity, array $identityConfig): ?array
+    {
+        $configured = $identityConfig['dmarc'] ?? null;
+        if ($configured === false) {
+            return null;
+        }
+
+        $value = is_string($configured) && trim($configured) !== ''
+            ? trim($configured)
+            : 'v=DMARC1; p=none;';
+
+        return [
+            'name' => '_dmarc.'.$this->identityDomainFromIdentity($identity),
+            'type' => 'TXT',
+            'values' => ['"'.$value.'"'],
         ];
     }
 

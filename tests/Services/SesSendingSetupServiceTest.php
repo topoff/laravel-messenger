@@ -166,7 +166,7 @@ it('creates ses domain identity and returns required dns records', function () {
     $result = $service->setup();
 
     expect($result['ok'])->toBeTrue()
-        ->and(count($result['dns_records']))->toBe(5)
+        ->and(count($result['dns_records']))->toBe(6) // 3 DKIM CNAME + 2 MAIL FROM (MX, TXT) + 1 DMARC TXT
         ->and($fake->configurationSetExists)->toBeTrue()
         ->and($fake->assignedConfigurationSets)->toContain([
             'identity' => 'example.com',
