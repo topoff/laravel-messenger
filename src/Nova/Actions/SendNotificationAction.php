@@ -100,9 +100,9 @@ class SendNotificationAction extends Action
                 sender: $sender,
                 params: ['subject' => $subject, 'message' => $message],
                 receiverType: $model::class,
-                receiverId: (int) $model->id,
+                receiverId: $model->id,
                 messagableType: $model::class,
-                messagableId: (int) $model->id,
+                messagableId: $model->id,
             );
 
             $notification = new NovaChannelNotification($subject, $message, $channel);
@@ -192,21 +192,21 @@ class SendNotificationAction extends Action
     }
 
     /**
-     * @return array{class: string|null, id: int|null}
+     * @return array{class: string|null, id: int|string|null}
      */
     protected function resolveSender(): array
     {
         $user = request()->user();
 
-        if ($user && isset($user->id) && is_numeric($user->id)) {
-            return ['class' => $user::class, 'id' => (int) $user->id];
+        if ($user && isset($user->id) && $user->id !== '') {
+            return ['class' => $user::class, 'id' => $user->id];
         }
 
         return ['class' => null, 'id' => null];
     }
 
     /**
-     * @param  array{class: string|null, id: int|null}  $sender
+     * @param  array{class: string|null, id: int|string|null}  $sender
      */
     protected function createMessageRecord(
         string $channel,
@@ -214,9 +214,9 @@ class SendNotificationAction extends Action
         array $sender,
         array $params,
         ?string $receiverType = null,
-        ?int $receiverId = null,
+        int|string|null $receiverId = null,
         ?string $messagableType = null,
-        ?int $messagableId = null,
+        int|string|null $messagableId = null,
     ): Message {
         /** @var class-string<Message> $messageClass */
         $messageClass = config('messenger.models.message');

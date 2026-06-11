@@ -8,6 +8,7 @@ use Workbench\App\MailHandler\TestMailHandler;
 use Workbench\App\Models\TestMessagable;
 use Workbench\App\Models\TestReceiver;
 use Workbench\App\Models\TestSender;
+use Workbench\App\Models\TestUuidReceiver;
 
 function createMessageType(array $attributes = []): MessageType
 {
@@ -47,6 +48,14 @@ function createMessagable(array $attributes = []): TestMessagable
 {
     return TestMessagable::create(array_merge([
         'title' => 'Test Messagable',
+    ], $attributes));
+}
+
+function createUuidReceiver(array $attributes = []): TestUuidReceiver
+{
+    return TestUuidReceiver::create(array_merge([
+        'email' => 'uuid-receiver@example.com',
+        'locale' => 'en',
     ], $attributes));
 }
 

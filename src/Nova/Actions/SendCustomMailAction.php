@@ -114,8 +114,8 @@ class SendCustomMailAction extends Action
 
             $messageService
                 ->setSender($sender['class'], $sender['id'])
-                ->setReceiver($model::class, (int) $model->id)
-                ->setMessagable($model::class, (int) $model->id)
+                ->setReceiver($model::class, $model->id)
+                ->setMessagable($model::class, $model->id)
                 ->setMessageTypeClass(CustomMessageMail::class)
                 ->setScheduled($scheduledAt)
                 ->setParams(array_filter(['subject' => $subject, 'text' => $markdown, 'mailer' => $mailer, 'ses_configuration_set' => $configSetKey]))
@@ -132,14 +132,14 @@ class SendCustomMailAction extends Action
     }
 
     /**
-     * @return array{class: string|null, id: int|null}
+     * @return array{class: string|null, id: int|string|null}
      */
     protected function resolveSender(): array
     {
         $user = request()->user();
 
-        if ($user && isset($user->id) && is_numeric($user->id)) {
-            return ['class' => $user::class, 'id' => (int) $user->id];
+        if ($user && isset($user->id) && $user->id !== '') {
+            return ['class' => $user::class, 'id' => $user->id];
         }
 
         return ['class' => null, 'id' => null];

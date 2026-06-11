@@ -42,16 +42,12 @@ class MessageResource extends Resource
                         Forms\Components\TextInput::make('channel'),
                         Forms\Components\TextInput::make('locale'),
                         Forms\Components\TextInput::make('receiver_type'),
-                        Forms\Components\TextInput::make('receiver_id')
-                            ->numeric(),
+                        Forms\Components\TextInput::make('receiver_id'),
                         Forms\Components\TextInput::make('sender_type'),
-                        Forms\Components\TextInput::make('sender_id')
-                            ->numeric(),
-                        Forms\Components\TextInput::make('company_id')
-                            ->numeric(),
+                        Forms\Components\TextInput::make('sender_id'),
+                        Forms\Components\TextInput::make('company_id'),
                         Forms\Components\TextInput::make('messagable_type'),
-                        Forms\Components\TextInput::make('messagable_id')
-                            ->numeric(),
+                        Forms\Components\TextInput::make('messagable_id'),
                     ])->columns(2),
 
                 Section::make('Params')

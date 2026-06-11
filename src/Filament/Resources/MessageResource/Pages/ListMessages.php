@@ -104,7 +104,7 @@ class ListMessages extends ListRecords
                     }
 
                     $user = request()->user();
-                    $sender = $user ? ['class' => $user::class, 'id' => (int) $user->id] : ['class' => null, 'id' => null];
+                    $sender = $user ? ['class' => $user::class, 'id' => $user->id] : ['class' => null, 'id' => null];
 
                     $messageType = resolve(MessageTypeRepository::class)
                         ->getFromTypeAndCustomer(CustomMessageMail::class);
@@ -175,7 +175,7 @@ class ListMessages extends ListRecords
                     }
 
                     $user = request()->user();
-                    $sender = $user ? ['class' => $user::class, 'id' => (int) $user->id] : ['class' => null, 'id' => null];
+                    $sender = $user ? ['class' => $user::class, 'id' => $user->id] : ['class' => null, 'id' => null];
 
                     $messageType = resolve(MessageTypeRepository::class)
                         ->getFromTypeAndCustomer(NovaChannelNotification::class);

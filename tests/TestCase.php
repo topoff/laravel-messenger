@@ -61,5 +61,12 @@ class TestCase extends Orchestra
             $table->id();
             $table->string('title');
         });
+
+        Schema::create('test_uuid_receivers', function (Blueprint $table): void {
+            $table->uuid('id')->primary();
+            $table->string('email');
+            $table->string('locale')->default('en');
+            $table->timestamp('email_invalid_at')->nullable();
+        });
     }
 }

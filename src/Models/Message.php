@@ -17,13 +17,13 @@ use Topoff\Messenger\Models\Traits\DateScopesTrait;
 /**
  * @property int $id
  * @property string|null $receiver_type
- * @property int|null $receiver_id
+ * @property int|string|null $receiver_id
  * @property string|null $sender_type
- * @property int|null $sender_id
- * @property int|null $company_id
+ * @property int|string|null $sender_id
+ * @property int|string|null $company_id
  * @property int $message_type_id
  * @property string|null $messagable_type
- * @property int|null $messagable_id
+ * @property int|string|null $messagable_id
  * @property array|null $params
  * @property string|null $locale
  * @property int|null $attempts
@@ -142,10 +142,8 @@ class Message extends Model
     protected function casts(): array
     {
         return [
-            'company_id' => 'integer',
             'message_type_id' => 'integer',
             'messagable_type' => 'string',
-            'messagable_id' => 'integer',
             'params' => 'array',
             'locale' => 'string',
             'attempts' => 'integer',

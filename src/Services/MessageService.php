@@ -19,21 +19,21 @@ class MessageService
 
     protected ?string $senderClass = null;
 
-    protected ?int $senderId = null;
+    protected int|string|null $senderId = null;
 
     protected ?string $receiverClass = null;
 
-    protected ?int $receiverId = null;
+    protected int|string|null $receiverId = null;
 
     protected ?string $messagableClass = null;
 
-    protected ?int $messagableId = null;
+    protected int|string|null $messagableId = null;
 
     protected ?string $messageTypeClass = null;
 
     protected ?MessageType $messageType = null;
 
-    protected ?int $companyId = null;
+    protected int|string|null $companyId = null;
 
     protected ?Carbon $scheduled = null;
 
@@ -62,7 +62,7 @@ class MessageService
         }
     }
 
-    public function setSender(?string $senderClass = null, ?int $senderId = null): self
+    public function setSender(?string $senderClass = null, int|string|null $senderId = null): self
     {
         $this->senderClass = $senderClass;
         $this->senderId = $senderId;
@@ -70,7 +70,7 @@ class MessageService
         return $this;
     }
 
-    public function setReceiver(?string $receiverClass = null, ?int $receiverId = null): self
+    public function setReceiver(?string $receiverClass = null, int|string|null $receiverId = null): self
     {
         $this->actionMissing = true;
 
@@ -80,7 +80,7 @@ class MessageService
         return $this;
     }
 
-    public function setMessagable(?string $messagableClass = null, ?int $messagableId = null): self
+    public function setMessagable(?string $messagableClass = null, int|string|null $messagableId = null): self
     {
         $this->messagableClass = $messagableClass;
         $this->messagableId = $messagableId;
@@ -97,7 +97,7 @@ class MessageService
         return $this;
     }
 
-    public function setCompanyId(?int $companyId = null): self
+    public function setCompanyId(int|string|null $companyId = null): self
     {
         $this->companyId = $companyId;
 
