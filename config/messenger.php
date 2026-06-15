@@ -149,6 +149,15 @@ return [
         // Optional: restrict SNS notifications to this topic ARN.
         'sns_topic' => null,
 
+        'sns' => [
+            // Verify the SNS message signature on the HTTP webhook path via
+            // Aws\Sns\MessageValidator. SNS signs every HTTP delivery; enabling
+            // this rejects forged tracking events from anyone who learns the
+            // public endpoint and topic ARN. Off by default for backwards
+            // compatibility. Not used by the SQS transport (IAM-authenticated).
+            'verify_signature' => env('MESSENGER_SNS_VERIFY_SIGNATURE', false),
+        ],
+
         // Vonage SMS delivery receipt (DLR) webhook.
         'vonage_dlr' => [
             'enabled' => false,

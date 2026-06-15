@@ -12,9 +12,11 @@
         "spatie/laravel-package-tools": "^1.16"
     },
     "suggest": {
-        "webklex/laravel-imap": "Required for IMAP-based bounce / complaint / reply processing (^6.0)"
+        "webklex/laravel-imap": "Required for IMAP-based bounce / complaint / reply processing (^6.0)",
+        "aws/aws-php-sns-message-validator": "Required only when messenger.tracking.sns.verify_signature is enabled on the HTTP webhook path (^1.0). Not needed for the SQS transport."
     },
     "require-dev": {
+        "aws/aws-php-sns-message-validator": "^1.0",
         "larastan/larastan": "^3.0",
         "laravel/boost": "^2.1",
         "laravel/pint": "^1.14",

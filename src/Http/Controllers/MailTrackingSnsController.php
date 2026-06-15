@@ -1,18 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Topoff\Messenger\Http\Controllers;
 
+use Aws\Sns\Message as SnsMessage;
+use Aws\Sns\MessageValidator;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Http;
-use Topoff\Messenger\Events\SesSnsWebhookReceivedEvent;
-use Topoff\Messenger\Jobs\RecordBounceJob;
-use Topoff\Messenger\Jobs\RecordComplaintJob;
-use Topoff\Messenger\Jobs\RecordDeliveryJob;
-use Topoff\Messenger\Jobs\RecordRejectJob;
+use Topoff\Messenger\Services\SesSns\SnsNotificationProcessor;
 
 class MailTrackingSnsController extends Controller
 {
+    public function __construct(protected SnsNotificationProcessor $processor) {}
+
     public function callback(Request $request): string
     {
         $payload = $request->json()->all();
@@ -20,108 +21,36 @@ class MailTrackingSnsController extends Controller
             $payload = json_decode((string) $request->getContent(), true) ?: [];
         }
 
-        $type = $payload['Type'] ?? null;
-
-        if ($type === 'SubscriptionConfirmation') {
-            $subscribeUrl = $payload['SubscribeURL'] ?? null;
-            if ($subscribeUrl) {
-                Http::get($subscribeUrl);
-            }
-
-            return 'subscription confirmed';
+        if (! $this->signatureIsValid($payload)) {
+            return 'invalid signature';
         }
 
-        if ($type !== 'Notification' || ! isset($payload['Message'])) {
-            return 'invalid payload';
-        }
-
-        $message = is_array($payload['Message']) ? $payload['Message'] : (json_decode((string) $payload['Message'], true) ?: []);
-        if (config('messenger.tracking.sns_topic') && ($payload['TopicArn'] ?? null) !== config('messenger.tracking.sns_topic')) {
-            return 'invalid topic ARN';
-        }
-
-        $notificationType = $message['notificationType'] ?? $message['eventType'] ?? null;
-        $processSynchronously = $this->isMessengerTestNotification($message);
-        event(new SesSnsWebhookReceivedEvent($payload, $message, $notificationType, $processSynchronously));
-
-        match ($notificationType) {
-            'Delivery' => $this->dispatchTrackingJob(RecordDeliveryJob::class, $message, $processSynchronously),
-            'Bounce' => $this->dispatchTrackingJob(RecordBounceJob::class, $message, $processSynchronously),
-            'Complaint' => $this->dispatchTrackingJob(RecordComplaintJob::class, $message, $processSynchronously),
-            'Reject' => $this->dispatchTrackingJob(RecordRejectJob::class, $message, $processSynchronously),
-            default => null,
-        };
-
-        return 'notification processed';
+        return $this->processor->processEnvelope($payload);
     }
 
     /**
-     * @param  class-string  $jobClass
-     * @param  array<string, mixed>  $message
+     * Verify the SNS message signature when enabled. SNS signs every HTTP
+     * delivery; verifying the signature prevents forged tracking events from
+     * anyone who learns the public endpoint and topic ARN.
+     *
+     * @param  array<string, mixed>  $payload
      */
-    protected function dispatchTrackingJob(string $jobClass, array $message, bool $processSynchronously): void
+    protected function signatureIsValid(array $payload): bool
     {
-        if ($processSynchronously) {
-            new $jobClass($message)->handle();
-
-            return;
+        if (! (bool) config('messenger.tracking.sns.verify_signature', false)) {
+            return true;
         }
 
-        $jobClass::dispatch($message)->onQueue(config('messenger.tracking.tracker_queue'));
-    }
-
-    /**
-     * @param  array<string, mixed>  $message
-     */
-    protected function isMessengerTestNotification(array $message): bool
-    {
-        $mailManagerTestTag = $this->extractMailTagValue($message, 'messenger_test');
-        if ($mailManagerTestTag !== null) {
-            return in_array(strtolower($mailManagerTestTag), ['1', 'true', 'yes'], true);
+        if (! class_exists(MessageValidator::class)) {
+            return true;
         }
 
-        $subject = (string) data_get($message, 'mail.commonHeaders.subject', '');
+        try {
+            new MessageValidator()->validate(new SnsMessage($payload));
 
-        return str_starts_with($subject, '[messenger][');
-    }
-
-    /**
-     * @param  array<string, mixed>  $message
-     */
-    protected function extractMailTagValue(array $message, string $tagName): ?string
-    {
-        $tags = (array) data_get($message, 'mail.tags', []);
-
-        // SES SNS payload often provides tags as a map: {"tagName": ["value"]}.
-        if (array_is_list($tags)) {
-            foreach ($tags as $tag) {
-                if (! is_array($tag)) {
-                    continue;
-                }
-
-                $name = (string) ($tag['name'] ?? $tag['Name'] ?? $tag['key'] ?? $tag['Key'] ?? '');
-                if (strtolower($name) !== strtolower($tagName)) {
-                    continue;
-                }
-
-                $value = (string) ($tag['value'] ?? $tag['Value'] ?? '');
-
-                return $value !== '' ? $value : null;
-            }
-
-            return null;
+            return true;
+        } catch (\Throwable) {
+            return false;
         }
-
-        foreach ($tags as $name => $values) {
-            if (strtolower((string) $name) !== strtolower($tagName)) {
-                continue;
-            }
-
-            $firstValue = is_array($values) ? (string) ($values[0] ?? '') : (string) $values;
-
-            return $firstValue !== '' ? $firstValue : null;
-        }
-
-        return null;
     }
 }

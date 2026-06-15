@@ -311,6 +311,31 @@ it('skips bounce event when recipient does not match tracking_recipient_contact'
     expect($message->tracking_meta)->toBeEmpty();
 });
 
+it('rejects a forged notification when sns signature verification is enabled', function () {
+    config()->set('messenger.tracking.sns.verify_signature', true);
+
+    $message = createMessage([
+        'tracking_message_id' => 'forged-mid',
+        'tracking_meta' => [],
+    ]);
+
+    $payload = [
+        'Type' => 'Notification',
+        'Message' => json_encode([
+            'notificationType' => 'Delivery',
+            'mail' => ['messageId' => 'forged-mid'],
+            'delivery' => ['recipients' => ['receiver@example.com']],
+        ]),
+    ];
+
+    $this->postJson(route('messenger.tracking.sns'), $payload)->assertOk()->assertSee('invalid signature');
+
+    $message->refresh();
+
+    expect($message->tracking_meta)->toBeEmpty()
+        ->and($message->delivered_at)->toBeNull();
+});
+
 it('skips complaint event when recipient does not match tracking_recipient_contact', function () {
     $message = createMessage([
         'tracking_message_id' => 'complaint-mid-bcc',
