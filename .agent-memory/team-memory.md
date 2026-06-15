@@ -6,8 +6,10 @@ It is versioned in this repository and is intended for Claude Code, Codex, and O
 ## Stable facts
 
 - Mail-template + sending package. Two delivery-observation paths exist side by side:
-  1. **SNS path** (authoritative for SES events) — `MailTrackingSnsController` → Record*Job → events.
+  1. **SNS path** (authoritative for SES events) — SES → SNS, then either the HTTP webhook (`MailTrackingSnsController`) or the SQS poller (`SqsTrackingPoller`) → Record*Job → events. Both delegate to one transport-agnostic `SnsNotificationProcessor`.
   2. **IMAP path** (optional, additive) — `ProcessImapInboxJob` → `ImapBounceProcessor` → events. Requires `webklex/laravel-imap` (suggested dep).
+- **SES event transport is selectable** via `messenger.tracking.event_transport` (`sns_http` default | `sqs`). SES can't target SQS directly, so the SQS transport is SES → SNS → SQS reusing the same topic; `SesSnsSetupService` provisions the queue + DLQ + queue policy + subscription and `messenger:tracking:sqs-poll` (auto-scheduled) drains it. SQS needs no public endpoint, survives deploys, and has a native DLQ.
+- **HTTP webhook signature verification** is opt-in (`messenger.tracking.sns.verify_signature`, off by default) via `Aws\Sns\MessageValidator` — needs the suggested `aws/aws-php-sns-message-validator` dep; degrades to allow when absent. Not needed for the SQS transport.
 - Both paths fire the same `MessagePermanentBouncedEvent` / `MessageTransientBouncedEvent` / `MessageComplaintEvent`. The IMAP path additionally fires `MessageReplyReceivedEvent` for genuine human replies.
 - `MailTracker::injectCorrelationId()` stamps every outgoing email with `X-Topoff-Message-Id` and an RFC 5322 `Message-ID` that embeds the UUID — this is what the IMAP matcher uses for high-confidence lookup.
 
@@ -22,7 +24,8 @@ It is versioned in this repository and is intended for Claude Code, Codex, and O
 - Run tests: `composer test` (Pest 4.0)
 - Static analysis + style: `composer clean` (Rector + Pint + PHPStan)
 - IMAP sweep: `php artisan messenger:imap:fetch [inboxKey] [--dry-run] [--limit=N]`
-- Scheduler entries are auto-registered when `messenger.imap.enabled` is true — one per inbox.
+- SQS drain: `php artisan messenger:tracking:sqs-poll [--once] [--max-messages=N] [--max-time=S]` (auto-scheduled when `event_transport=sqs`).
+- Scheduler entries are auto-registered when `messenger.imap.enabled` is true (one per inbox) and when `event_transport=sqs` (one sqs-poll drain).
 
 ## Conventions specific to this project
 

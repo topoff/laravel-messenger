@@ -76,9 +76,53 @@ The `messenger:ses-sns:setup-all` command provisions all configured identities a
 1. **1+ Domain Identities** — main domain for transactional, subdomain(s) for outreach/marketing
 2. **1–3 Configuration Sets** (transactional, system, marketing)
 3. **Tenant per Tag** sent with each email
-4. **Events processed** via SNS → SQS → Laravel
+4. **Events processed** via SNS → HTTPS webhook, or SNS → SQS → Laravel
 
 ✅ Done.
+
+---
+
+## 🔀 Event Transport: SNS HTTP vs. SQS
+
+SES delivers events to an SNS topic. `messenger.tracking.event_transport` selects how they reach the app:
+
+| | `sns_http` (default) | `sqs` |
+|---|---|---|
+| Path | SES → SNS → HTTPS `POST` | SES → SNS → SQS → poller |
+| Public endpoint | **Required** | Not needed |
+| Durability across deploys/downtime | SNS retry policy then dropped | Buffered up to 14 days |
+| Dead-letter queue | — | Native (redrive) |
+| Forgery protection | Optional SNS signature verification | IAM / queue policy |
+| Extra moving part | None | A scheduled poller |
+
+SES has no SQS event destination, so the SQS transport is **SES → SNS → SQS** — it reuses the same SNS topic and only adds an SQS queue subscribed to it.
+
+### Enabling the SQS transport
+
+```dotenv
+MESSENGER_EVENT_TRANSPORT=sqs
+```
+
+Then provision and run:
+
+```bash
+php artisan messenger:ses-sns:setup-tracking   # creates the queue + DLQ, subscribes it to the topic
+php artisan messenger:ses-sns:check-tracking    # validates queue / subscription / DLQ
+```
+
+The queue is drained automatically by the scheduled `messenger:tracking:sqs-poll` command (one per-minute background run, `withoutOverlapping` + `onOneServer`). Tune the queue/DLQ names and polling under `messenger.ses_sns.sqs.*`.
+
+### Hardening the HTTP transport
+
+When staying on `sns_http`, enable signature verification so forged events are rejected:
+
+```dotenv
+MESSENGER_SNS_VERIFY_SIGNATURE=true
+```
+
+```bash
+composer require aws/aws-php-sns-message-validator
+```
 
 ---
 

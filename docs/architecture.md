@@ -2,7 +2,18 @@
 
 ## Package Overview
 
-Mail management package: template-driven sending via SES, SNS event tracking (opens, clicks, delivery, bounce, complaint, reject), Nova integration, audit logging.
+Mail management package: template-driven sending via SES, SES event tracking (opens, clicks, delivery, bounce, complaint, reject), Nova integration, audit logging.
+
+### Event transport (SNS HTTP vs. SQS)
+
+SES delivers events to an SNS topic. How those events then reach the application is selectable via `messenger.tracking.event_transport`:
+
+| Transport | Value | Path | Notes |
+|---|---|---|---|
+| SNS HTTP webhook | `sns_http` (default) | SES → SNS → HTTPS `POST` → `MailTrackingSnsController` | Zero extra infra; needs a public HTTPS endpoint. Optional SNS signature verification. |
+| SQS poll | `sqs` | SES → SNS → SQS → `messenger:tracking:sqs-poll` → `SqsTrackingPoller` | No public endpoint; durable buffer (up to 14 days); native DLQ + redrive. |
+
+SES cannot target SQS directly, so the SQS transport is **SES → SNS → SQS** and reuses the same SNS topic and provisioning. Both transports funnel raw payloads through one **`SnsNotificationProcessor`** (`src/Services/SesSns/SnsNotificationProcessor.php`) so envelope parsing, topic verification, test-detection and job routing live in a single place. The processor handles both the SNS envelope shape and raw-message-delivery bodies.
 
 ## Models
 
@@ -165,7 +176,16 @@ Controlled by `config('messenger.tracking.vonage_dlr.enabled')` (default: `false
 - On `MessageSent`: updates `tracking_message_id` from SES response header
 - Respects `X-No-Track` header to skip tracking
 
-### SNS Event Processing
+### SES Event Processing
+
+Ingestion is transport-agnostic. The HTTP controller (`MailTrackingSnsController`) and the SQS poller (`SqsTrackingPoller`) both delegate to `SnsNotificationProcessor::processEnvelope()`, which:
+- confirms SNS `SubscriptionConfirmation` handshakes (HTTP path),
+- unwraps the SNS envelope (or accepts a raw-delivery SES body),
+- optionally rejects payloads whose `TopicArn` ≠ `messenger.tracking.sns_topic`,
+- dispatches the matching `Record*Job` onto `messenger.tracking.tracker_queue` (synchronously for messenger test notifications).
+
+**SNS signature verification (HTTP path only):** when `messenger.tracking.sns.verify_signature` is `true`, `MailTrackingSnsController` validates the SNS message signature via `Aws\Sns\MessageValidator` before processing, rejecting forged events. Requires the suggested `aws/aws-php-sns-message-validator` package; degrades to "allow" when the package is absent. The SQS transport does not need this (queue access is IAM-authenticated).
+
 Jobs in `src/Jobs/`:
 - `RecordDeliveryJob` — sets column `delivered_at`, plus `tracking_meta.success = true`, `tracking_meta.smtpResponse`, `tracking_meta.sns_message_delivery`
 - `RecordBounceJob` — sets column `bounced_at`, appends to `tracking_meta.failures[]`, dispatches Permanent/Transient events. Only sets `tracking_meta.success = false` if no prior delivery — never overwrites a previous `success: true` (handles SES "accept-then-bounce" where the recipient MTA returns `250 OK` and later sends an async DSN)
@@ -224,9 +244,11 @@ Summary:
 ## SES/SNS Provisioning
 
 Services in `src/Services/SesSns/`:
-- `AwsSesSnsProvisioningApi` — AWS SDK wrapper (config sets, event destinations, SNS topics, subscriptions, Route53 records)
+- `AwsSesSnsProvisioningApi` — AWS SDK wrapper (config sets, event destinations, SNS topics, HTTPS + SQS subscriptions, SQS queues/DLQ, Route53 records). Uses `AwsClientConfig::shared()` for credentials.
 - `InfomaniakDnsApi` — Infomaniak DNS API wrapper (zone lookup, record list/create/update/delete, upsert with reconciliation)
-- `SesSnsSetupService` — orchestrates full setup/teardown, provides `check()` with health validation
+- `SesSnsSetupService` — orchestrates full setup/teardown, provides `check()` with health validation. Branches on `messenger.tracking.event_transport`: HTTPS subscription for `sns_http`, SQS queue + DLQ + queue policy + subscription for `sqs`.
+- `SnsNotificationProcessor` — transport-agnostic processing of SES event notifications (used by the HTTP controller and the SQS poller)
+- `SqsTrackingPoller` — drains the SQS queue and feeds bodies through `SnsNotificationProcessor`; failed messages are left for SQS redrive to the DLQ
 - `SesSendingSetupService` — SES identities, DKIM verification, MAIL FROM domains, DMARC, DNS record retrieval, DNS automation (Infomaniak or Route53)
 - `SesEventSimulatorService` — simulates SES events for testing
 
@@ -266,8 +288,9 @@ Returns identity & DNS status:
 | `messenger:ses-sns:setup-sending` | Set up SES identities with DKIM + MAIL FROM |
 | `messenger:ses-sns:check-sending` | Validate identity verification and DNS records |
 | `messenger:ses-sns:test-events` | Simulate SES events (bounce, complaint, delivery) for testing |
-| `messenger:ses-sns:teardown` | Remove all provisioned SES/SNS resources (requires `--force`) |
+| `messenger:ses-sns:teardown` | Remove all provisioned SES/SNS resources, incl. the SQS queue + DLQ when the SQS transport is active (requires `--force`) |
 | `messenger:imap:fetch [inbox] [--dry-run] [--limit=N]` | List or sweep IMAP inboxes for bounces/complaints/replies (see [imap-bounce-handling.md](imap-bounce-handling.md)) |
+| `messenger:tracking:sqs-poll [--once] [--max-messages=N] [--max-time=S]` | Drain the SQS queue that SNS fans SES events into (SQS transport). Auto-scheduled when `event_transport = sqs`. |
 
 ## Nova Integration
 
@@ -337,8 +360,8 @@ Web-based dashboard at `/emessenger/nova/ses-sns-dashboard` (signed URL via `Ope
 | `mail.*` | default_bulk_mail_class, bulk_mail_view/subject/url, custom_message_view |
 | `sending.*` | `check_should_send` callable (null = production only) |
 | `bcc.*` | `check_should_add_bcc` callable (null = always add when provided) |
-| `tracking.*` | inject_pixel, track_links, nova resource class, preview route config, content storage, vonage_dlr (enabled) |
-| `ses_sns.*` | AWS region/credentials, configuration_sets (keyed by name with identity + event_destination + optional `imap_inbox`), topic name, event types, callback endpoint, tenant config, Route53 automation |
+| `tracking.*` | inject_pixel, track_links, nova resource class, preview route config, content storage, vonage_dlr (enabled), `sns.verify_signature` (HTTP signature check), `event_transport` (`sns_http`\|`sqs`) |
+| `ses_sns.*` | AWS region/credentials, configuration_sets (keyed by name with identity + event_destination + optional `imap_inbox`), topic name, event types, callback endpoint, `sqs.*` (queue/DLQ names, raw_message_delivery, long-poll/visibility tuning, schedule), `create_sqs_subscription_if_missing`, tenant config, Route53 automation |
 | `imap.*` | Optional IMAP bounce/complaint/reply ingestion: `enabled`, `inboxes` (keyed), `after_process`, `folders`, `schedule` |
 
 ## Migrations (10 total)

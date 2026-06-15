@@ -13,7 +13,7 @@
 
 - **Open pixel** (`/email/t/{hash}`) — returns 1x1 transparent GIF, increments `tracking_opens`, sets `tracking_opened_at` on first open, dispatches `MessageOpenedEvent`
 - **Link click** (`/email/n?l=...&h=...`) — validates signed URL, increments `tracking_clicks`, sets `tracking_clicked_at` on first click, dispatches `MessageLinkClickedEvent`, redirects to original URL
-- **SNS callback** (`/email/sns`) — receives SNS notifications (SubscriptionConfirmation + Notification), dispatches Record*Jobs based on event type (Delivery, Bounce, Complaint, Reject, Open, Click), fires `SesSnsWebhookReceivedEvent`
+- **SNS callback** (`/email/sns`) — receives SNS notifications (SubscriptionConfirmation + Notification), delegates to `SnsNotificationProcessor`, which dispatches Record*Jobs based on event type (Delivery, Bounce, Complaint, Reject, Open, Click) and fires `SesSnsWebhookReceivedEvent`. Used only by the `sns_http` transport. Optionally verifies the SNS signature (`messenger.tracking.sns.verify_signature`). The `sqs` transport needs no public route — events are pulled by `messenger:tracking:sqs-poll` instead.
 - **Vonage DLR** (`/email/vonage-dlr`) — receives Vonage SMS delivery receipts, dispatches `RecordVonageDlrJob`. Gated by `config('messenger.tracking.vonage_dlr.enabled')` (default: `false`)
 
 ## Web Routes (prefix: `/emessenger/nova`, middleware: `web` + `signed`)

@@ -19,8 +19,8 @@
 
 - `messenger.models.message` / `messenger.models.message_type` — model classes
 - `messenger.database.*` — connection, table names
-- `messenger.tracking.*` — pixel, link tracking, Nova, content storage
-- `messenger.ses_sns.*` — AWS SES/SNS provisioning & config sets
+- `messenger.tracking.*` — pixel, link tracking, Nova, content storage, `sns.verify_signature`, `event_transport` (`sns_http`|`sqs`)
+- `messenger.ses_sns.*` — AWS SES/SNS provisioning & config sets; `sqs.*` for the SQS transport (queue/DLQ, polling, schedule)
 - `messenger.bcc.*` — BCC addition control
 - `messenger.cleanup.*` — retention periods, schedule cron
 - `messenger.sending.*` — environment send check callable
