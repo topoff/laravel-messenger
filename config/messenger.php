@@ -158,6 +158,14 @@ return [
             'verify_signature' => env('MESSENGER_SNS_VERIFY_SIGNATURE', false),
         ],
 
+        // How SES events reach the application:
+        //   'sns_http' — SNS pushes notifications to the HTTPS callback route (default).
+        //   'sqs'      — SNS fans out to an SQS queue, drained by
+        //                `messenger:tracking:sqs-poll` (scheduled automatically).
+        // SES cannot target SQS directly, so the SQS transport is SES -> SNS -> SQS
+        // and reuses the same topic + provisioning. See messenger.ses_sns.sqs.
+        'event_transport' => env('MESSENGER_EVENT_TRANSPORT', 'sns_http'),
+
         // Vonage SMS delivery receipt (DLR) webhook.
         'vonage_dlr' => [
             'enabled' => false,
@@ -204,6 +212,48 @@ return [
 
         // If null, route('messenger.tracking.sns') is used.
         'callback_endpoint' => null,
+
+        // SQS transport (used when messenger.tracking.event_transport = 'sqs').
+        // The package provisions an SQS queue, subscribes it to the SNS topic and
+        // drains it via `messenger:tracking:sqs-poll`. SES events therefore flow
+        // SES -> SNS -> SQS, which needs no public HTTPS endpoint, survives
+        // deploys/downtime, and gets a native dead-letter queue.
+        'sqs' => [
+            // Logical -> AWS resource names. queue_url, when set, takes precedence
+            // over name resolution for the poller.
+            'queue_name' => strtolower((string) env('APP_NAME')).'-'.strtolower((string) env('APP_ENV')).'-messenger-ses-events',
+            'queue_url' => env('MESSENGER_SQS_QUEUE_URL'),
+
+            // Dead-letter queue. Messages that fail max_receive_count deliveries are
+            // moved here instead of being retried forever. Set dlq_name to null to
+            // skip DLQ provisioning.
+            'dlq_name' => strtolower((string) env('APP_NAME')).'-'.strtolower((string) env('APP_ENV')).'-messenger-ses-events-dlq',
+            'max_receive_count' => 5,
+
+            // When true the SNS->SQS subscription strips the SNS envelope and the
+            // SES message lands at the top level of the SQS body. The poller handles
+            // both shapes; off keeps the body identical to the HTTP webhook.
+            'raw_message_delivery' => false,
+
+            // Long-poll + visibility tuning for receiveMessage.
+            'wait_time_seconds' => 20,
+            'visibility_timeout' => 60,
+            'poll_max_messages' => 10,
+
+            // Scheduler: drain the queue on a cron. Each tick runs until the queue is
+            // empty or max_run_seconds elapses, with withoutOverlapping + onOneServer.
+            'schedule' => [
+                'enabled' => true,
+                'cron' => '* * * * *',
+                'max_run_seconds' => 55,
+                'without_overlapping' => true,
+                'on_one_server' => true,
+            ],
+        ],
+
+        // Automation toggle: create + subscribe the SQS queue during setup when the
+        // SQS transport is active.
+        'create_sqs_subscription_if_missing' => true,
 
         // Event types bound to the SES event destination.
         'event_types' => ['SEND', 'REJECT', 'BOUNCE', 'COMPLAINT', 'DELIVERY'],

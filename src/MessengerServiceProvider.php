@@ -14,6 +14,7 @@ use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Topoff\Messenger\Console\CheckSesSendingCommand;
 use Topoff\Messenger\Console\CheckSesSnsTrackingCommand;
 use Topoff\Messenger\Console\FetchImapBouncesCommand;
+use Topoff\Messenger\Console\PollSqsTrackingCommand;
 use Topoff\Messenger\Console\SetupSesSendingCommand;
 use Topoff\Messenger\Console\SetupSesSnsAllCommand;
 use Topoff\Messenger\Console\SetupSesSnsTrackingCommand;
@@ -51,6 +52,7 @@ class MessengerServiceProvider extends PackageServiceProvider
             ->hasCommand(TestSesSnsEventsCommand::class)
             ->hasCommand(TeardownSesSnsTrackingCommand::class)
             ->hasCommand(FetchImapBouncesCommand::class)
+            ->hasCommand(PollSqsTrackingCommand::class)
             ->discoversMigrations()
             // discoversMigrations() alone only enables vendor:publish; runsMigrations()
             // is what actually wires the files into the migrator so `php artisan migrate`
@@ -72,6 +74,7 @@ class MessengerServiceProvider extends PackageServiceProvider
         $this->registerEventListeners();
         $this->registerCleanupSchedule();
         $this->registerImapSchedule();
+        $this->registerSqsPollSchedule();
         $this->registerRoutes();
         $this->registerNovaResources();
     }
@@ -146,6 +149,36 @@ class MessengerServiceProvider extends PackageServiceProvider
                 if ($onOneServer) {
                     $event->onOneServer();
                 }
+            }
+        });
+    }
+
+    protected function registerSqsPollSchedule(): void
+    {
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            if (config('messenger.tracking.event_transport') !== 'sqs') {
+                return;
+            }
+            if (! (bool) config('messenger.ses_sns.sqs.schedule.enabled', true)) {
+                return;
+            }
+
+            $cron = (string) config('messenger.ses_sns.sqs.schedule.cron', '* * * * *');
+            $maxRunSeconds = (int) config('messenger.ses_sns.sqs.schedule.max_run_seconds', 55);
+
+            // The drain may run for most of a minute; run it in a separate process
+            // so it never blocks the scheduler loop.
+            $event = $schedule
+                ->command(PollSqsTrackingCommand::class, ['--max-time' => $maxRunSeconds])
+                ->cron($cron)
+                ->name('messenger.tracking.sqs-poll')
+                ->runInBackground();
+
+            if ((bool) config('messenger.ses_sns.sqs.schedule.without_overlapping', true)) {
+                $event->withoutOverlapping();
+            }
+            if ((bool) config('messenger.ses_sns.sqs.schedule.on_one_server', true)) {
+                $event->onOneServer();
             }
         });
     }
