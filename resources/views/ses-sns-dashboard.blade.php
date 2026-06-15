@@ -94,6 +94,16 @@
     <div class="card">
         <h1>Amazon SES + SNS Dashboard</h1>
         <p class="meta">One place to setup and verify AWS SES sending + SES/SNS event tracking for a new app.</p>
+        @php $transport = $event_transport ?? 'sns_http'; @endphp
+        <p class="meta">
+            Event transport:
+            <code>{{ $transport }}</code>
+            @if($transport === 'sqs')
+                &mdash; SES &rarr; SNS &rarr; SQS, drained by <code>messenger:tracking:sqs-poll</code>. Setup/Check Tracking below also provisions the SQS queue + DLQ.
+            @else
+                &mdash; SES &rarr; SNS &rarr; HTTPS webhook. Switch to SQS with <code>MESSENGER_EVENT_TRANSPORT=sqs</code>.
+            @endif
+        </p>
     </div>
 
     {{-- Section Nav --}}

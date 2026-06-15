@@ -43,6 +43,18 @@ class ListMessages extends ListRecords
                 ->color('gray')
                 ->url(fn () => MessageResource::getUrl('tracking-by-bounce-source')),
 
+            Actions\Action::make('tracking_per_message')
+                ->label('Tracking Details')
+                ->icon('heroicon-o-magnifying-glass')
+                ->color('gray')
+                ->url(fn () => MessageResource::getUrl('tracking-per-message')),
+
+            Actions\Action::make('company_tracking_metrics')
+                ->label('Company Tracking Metrics')
+                ->icon('heroicon-o-building-office-2')
+                ->color('gray')
+                ->url(fn () => MessageResource::getUrl('company-tracking-metrics')),
+
             Actions\Action::make('send_custom_email')
                 ->label('Send Custom Email')
                 ->icon('heroicon-o-paper-airplane')

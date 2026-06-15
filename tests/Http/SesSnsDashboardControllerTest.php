@@ -12,6 +12,7 @@ it('renders the ses sns dashboard with setup guidance', function () {
         ->assertSee('Setup Commands')
         ->assertSee('messenger:ses-sns:setup-sending')
         ->assertSee('messenger:ses-sns:setup-tracking')
+        ->assertSee('Event transport:')
         ->assertSee('Required Environment Variables');
 });
 

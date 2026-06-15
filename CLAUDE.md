@@ -1,6 +1,6 @@
 # Project Documentation
 
-- [docs/architecture.md](docs/architecture.md) — models, sending flow, retry mechanism, tracking, SNS events, BCC guard, events, listeners, provisioning, Nova integration, artisan commands, config reference, migrations, tests, development setup
+- [docs/architecture.md](docs/architecture.md) — models, sending flow, retry mechanism, tracking, SNS events, BCC guard, events, listeners, provisioning, Nova integration, Filament integration, artisan commands, config reference, migrations, tests, development setup
 - [docs/routes.md](docs/routes.md) — API & web routes, tracking endpoints, SES/SNS dashboard, controllers
 - [docs/message-lifecycle-scenarios.md](docs/message-lifecycle-scenarios.md) — all 22 message lifecycle scenarios with field changes at each stage
 - [docs/ses-environment-config.md](docs/ses-environment-config.md) — SES environment configuration (production, staging, local dev, DNS records)

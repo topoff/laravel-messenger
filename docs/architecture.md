@@ -348,6 +348,27 @@ Web-based dashboard at `/emessenger/nova/ses-sns-dashboard` (signed URL via `Ope
 - **Actions** — grouped command buttons for setup, checks, tests, teardown
 - **AWS Console links** — direct links to SES (dashboard, identities, config sets, reputation, tenants) and SNS (topics, subscriptions)
 - **Reference sections** — collapsible env vars, config snapshot, artisan commands
+- **Event transport badge** — shows the active transport (`sns_http` / `sqs`) and the relevant next steps; the same Setup/Check Tracking buttons provision the SQS queue + DLQ when the SQS transport is active.
+
+## Filament Integration
+
+The package ships a Filament panel integration in `src/Filament/Resources/` mirroring the Nova resources, for apps on Filament (the Nova lenses map to Filament custom Pages).
+
+### Resources
+- `MessageResource` — table (all message columns), filters (date range, status, accept-then-bounce, channel, message type, receiver/messageable type, trashed), row actions (show sent, preview, resend) + bulk resend/delete, header actions (send custom email, send notification).
+- `MessageTypeResource` — table + filters (channel, trashed), preview action, and the **SES/SNS Dashboard** header link (opens the shared signed dashboard route — also reachable from Filament).
+- `MessageLogResource` — audit-log listing.
+
+### Tracking Pages (Filament counterparts of the Nova lenses)
+| Filament Page | Nova Lens |
+|---|---|
+| `MessageResource/Pages/TrackingByType` | `MessagesByTypeTrackingLens` |
+| `MessageResource/Pages/TrackingByDomain` | `MessagesByDomainTrackingLens` |
+| `MessageResource/Pages/TrackingByBounceSource` | `MessagesByBounceSourceLens` |
+| `MessageResource/Pages/TrackingPerMessage` | `MessagesTrackingLens` |
+| `MessageResource/Pages/CompanyTrackingMetrics` | `CompanyTrackingMetricsLens` |
+
+All five are linked as header actions on the message list and registered in `MessageResource::getPages()`. `CompanyTrackingMetrics` adds the company status / deleted filters only when a host `companies` table exists, so the page stays usable in apps without one. The Filament resources are excluded from the package's PHPStan run (Filament is only installed in consuming apps); they're validated where Filament runs.
 
 ## Configuration Reference (`config/messenger.php`)
 

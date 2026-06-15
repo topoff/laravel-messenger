@@ -329,6 +329,8 @@ class MessageResource extends Resource
             'tracking-by-type' => Pages\TrackingByType::route('/tracking-by-type'),
             'tracking-by-domain' => Pages\TrackingByDomain::route('/tracking-by-domain'),
             'tracking-by-bounce-source' => Pages\TrackingByBounceSource::route('/tracking-by-bounce-source'),
+            'tracking-per-message' => Pages\TrackingPerMessage::route('/tracking-per-message'),
+            'company-tracking-metrics' => Pages\CompanyTrackingMetrics::route('/company-tracking-metrics'),
         ];
     }
 }
