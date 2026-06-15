@@ -29,6 +29,25 @@ interface SesSnsProvisioningApi
 
     public function deleteTopic(string $topicArn): void;
 
+    public function findQueueUrlByName(string $queueName): ?string;
+
+    public function createQueue(string $queueName): string;
+
+    public function getQueueArn(string $queueUrl): string;
+
+    /**
+     * @param  array<string, string>  $attributes
+     */
+    public function setQueueAttributes(string $queueUrl, array $attributes): void;
+
+    public function hasSqsSubscription(string $topicArn, string $queueArn): bool;
+
+    public function findSqsSubscriptionArn(string $topicArn, string $queueArn): ?string;
+
+    public function subscribeSqs(string $topicArn, string $queueArn, bool $rawMessageDelivery = false): void;
+
+    public function deleteQueue(string $queueUrl): void;
+
     public function configurationSetExists(string $configurationSetName): bool;
 
     public function createConfigurationSet(string $configurationSetName): void;

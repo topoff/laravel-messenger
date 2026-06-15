@@ -5,6 +5,7 @@ namespace Topoff\Messenger\Services\SesSns;
 use Aws\Route53\Route53Client;
 use Aws\SesV2\SesV2Client;
 use Aws\Sns\SnsClient;
+use Aws\Sqs\SqsClient;
 use Aws\Sts\StsClient;
 use Topoff\Messenger\Contracts\SesSnsProvisioningApi;
 
@@ -13,6 +14,8 @@ class AwsSesSnsProvisioningApi implements SesSnsProvisioningApi
     protected object $sesV2;
 
     protected object $sns;
+
+    protected object $sqs;
 
     protected object $sts;
 
@@ -23,15 +26,17 @@ class AwsSesSnsProvisioningApi implements SesSnsProvisioningApi
         $sharedConfig = $this->sharedAwsConfig();
         $sesClientClass = SesV2Client::class;
         $snsClientClass = SnsClient::class;
+        $sqsClientClass = SqsClient::class;
         $stsClientClass = StsClient::class;
         $route53ClientClass = Route53Client::class;
 
-        if (! class_exists($sesClientClass) || ! class_exists($snsClientClass) || ! class_exists($stsClientClass) || ! class_exists($route53ClientClass)) {
+        if (! class_exists($sesClientClass) || ! class_exists($snsClientClass) || ! class_exists($sqsClientClass) || ! class_exists($stsClientClass) || ! class_exists($route53ClientClass)) {
             throw new \RuntimeException('AWS SDK classes not found. Please install aws/aws-sdk-php.');
         }
 
         $this->sesV2 = new $sesClientClass($sharedConfig);
         $this->sns = new $snsClientClass($sharedConfig);
+        $this->sqs = new $sqsClientClass($sharedConfig);
         $this->sts = new $stsClientClass($sharedConfig);
         $this->route53 = new $route53ClientClass($sharedConfig);
     }
@@ -138,6 +143,100 @@ class AwsSesSnsProvisioningApi implements SesSnsProvisioningApi
         $this->sns->deleteTopic([
             'TopicArn' => $topicArn,
         ]);
+    }
+
+    public function findQueueUrlByName(string $queueName): ?string
+    {
+        try {
+            $result = $this->sqs->getQueueUrl(['QueueName' => $queueName]);
+        } catch (\Throwable $e) {
+            $errorCode = method_exists($e, 'getAwsErrorCode') ? (string) $e->getAwsErrorCode() : '';
+            if (in_array($errorCode, ['AWS.SimpleQueueService.NonExistentQueue', 'QueueDoesNotExist'], true)) {
+                return null;
+            }
+
+            throw $e;
+        }
+
+        $url = (string) ($result['QueueUrl'] ?? '');
+
+        return $url !== '' ? $url : null;
+    }
+
+    public function createQueue(string $queueName): string
+    {
+        $result = $this->sqs->createQueue(['QueueName' => $queueName]);
+
+        return (string) ($result['QueueUrl'] ?? '');
+    }
+
+    public function getQueueArn(string $queueUrl): string
+    {
+        $result = $this->sqs->getQueueAttributes([
+            'QueueUrl' => $queueUrl,
+            'AttributeNames' => ['QueueArn'],
+        ]);
+
+        return (string) ($result['Attributes']['QueueArn'] ?? '');
+    }
+
+    public function setQueueAttributes(string $queueUrl, array $attributes): void
+    {
+        $this->sqs->setQueueAttributes([
+            'QueueUrl' => $queueUrl,
+            'Attributes' => $attributes,
+        ]);
+    }
+
+    public function hasSqsSubscription(string $topicArn, string $queueArn): bool
+    {
+        return $this->findSqsSubscriptionArn($topicArn, $queueArn) !== null;
+    }
+
+    public function findSqsSubscriptionArn(string $topicArn, string $queueArn): ?string
+    {
+        $nextToken = null;
+
+        do {
+            $result = $this->sns->listSubscriptionsByTopic(array_filter([
+                'TopicArn' => $topicArn,
+                'NextToken' => $nextToken,
+            ]));
+
+            $subscriptions = (array) ($result['Subscriptions'] ?? []);
+            foreach ($subscriptions as $subscription) {
+                if (($subscription['Protocol'] ?? null) === 'sqs' && ($subscription['Endpoint'] ?? null) === $queueArn) {
+                    $arn = (string) ($subscription['SubscriptionArn'] ?? '');
+
+                    return $arn !== '' ? $arn : null;
+                }
+            }
+
+            $nextToken = $result['NextToken'] ?? null;
+        } while ($nextToken);
+
+        return null;
+    }
+
+    public function subscribeSqs(string $topicArn, string $queueArn, bool $rawMessageDelivery = false): void
+    {
+        $params = [
+            'TopicArn' => $topicArn,
+            'Protocol' => 'sqs',
+            'Endpoint' => $queueArn,
+            'ReturnSubscriptionArn' => true,
+        ];
+
+        if ($rawMessageDelivery) {
+            $params['Attributes'] = ['RawMessageDelivery' => 'true'];
+        }
+
+        $this->sns->subscribe($params);
+    }
+
+    public function deleteQueue(string $queueUrl): void
+    {
+        $this->sqs->deleteQueue(['QueueUrl' => $queueUrl]);
     }
 
     public function configurationSetExists(string $configurationSetName): bool

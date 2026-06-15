@@ -160,6 +160,37 @@ it('creates ses domain identity and returns required dns records', function () {
         }
 
         public function upsertRoute53Record(string $hostedZoneId, string $recordName, string $recordType, array $values, int $ttl = 300): void {}
+
+        public function findQueueUrlByName(string $queueName): ?string
+        {
+            return null;
+        }
+
+        public function createQueue(string $queueName): string
+        {
+            return '';
+        }
+
+        public function getQueueArn(string $queueUrl): string
+        {
+            return '';
+        }
+
+        public function setQueueAttributes(string $queueUrl, array $attributes): void {}
+
+        public function hasSqsSubscription(string $topicArn, string $queueArn): bool
+        {
+            return false;
+        }
+
+        public function findSqsSubscriptionArn(string $topicArn, string $queueArn): ?string
+        {
+            return null;
+        }
+
+        public function subscribeSqs(string $topicArn, string $queueArn, bool $rawMessageDelivery = false): void {}
+
+        public function deleteQueue(string $queueUrl): void {}
     };
 
     $service = new SesSendingSetupService($fake);
@@ -289,6 +320,37 @@ it('checks if mail_from_address matches ses identity', function () {
         }
 
         public function upsertRoute53Record(string $hostedZoneId, string $recordName, string $recordType, array $values, int $ttl = 300): void {}
+
+        public function findQueueUrlByName(string $queueName): ?string
+        {
+            return null;
+        }
+
+        public function createQueue(string $queueName): string
+        {
+            return '';
+        }
+
+        public function getQueueArn(string $queueUrl): string
+        {
+            return '';
+        }
+
+        public function setQueueAttributes(string $queueUrl, array $attributes): void {}
+
+        public function hasSqsSubscription(string $topicArn, string $queueArn): bool
+        {
+            return false;
+        }
+
+        public function findSqsSubscriptionArn(string $topicArn, string $queueArn): ?string
+        {
+            return null;
+        }
+
+        public function subscribeSqs(string $topicArn, string $queueArn, bool $rawMessageDelivery = false): void {}
+
+        public function deleteQueue(string $queueUrl): void {}
     };
 
     $service = new SesSendingSetupService($fake);
@@ -414,6 +476,37 @@ it('check passes when mail.from.address is covered by another identity', functio
         }
 
         public function upsertRoute53Record(string $hostedZoneId, string $recordName, string $recordType, array $values, int $ttl = 300): void {}
+
+        public function findQueueUrlByName(string $queueName): ?string
+        {
+            return null;
+        }
+
+        public function createQueue(string $queueName): string
+        {
+            return '';
+        }
+
+        public function getQueueArn(string $queueUrl): string
+        {
+            return '';
+        }
+
+        public function setQueueAttributes(string $queueUrl, array $attributes): void {}
+
+        public function hasSqsSubscription(string $topicArn, string $queueArn): bool
+        {
+            return false;
+        }
+
+        public function findSqsSubscriptionArn(string $topicArn, string $queueArn): ?string
+        {
+            return null;
+        }
+
+        public function subscribeSqs(string $topicArn, string $queueArn, bool $rawMessageDelivery = false): void {}
+
+        public function deleteQueue(string $queueUrl): void {}
     };
 
     $service = new SesSendingSetupService($fake);

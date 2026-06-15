@@ -23,7 +23,12 @@ class SesSnsSetupService
         $accountId = $this->accountId();
         $topicArn = $this->ensureTopic($steps);
         $this->ensureTopicPolicy($topicArn, $accountId, $configurationSets, $steps);
-        $this->ensureHttpsSubscription($topicArn, $steps);
+
+        if ($this->transport() === 'sqs') {
+            $this->ensureSqsSubscription($topicArn, $accountId, $steps);
+        } else {
+            $this->ensureHttpsSubscription($topicArn, $steps);
+        }
 
         foreach ($configurationSets as $key => $set) {
             $configSetName = $set['configuration_set'];
@@ -64,7 +69,9 @@ class SesSnsSetupService
             $policyAllowsSes = $this->topicPolicyAllowsSesPublish($policyRaw);
             $this->addCheck($checks, 'sns_policy', 'SNS topic policy allows SES publish', $policyAllowsSes, $policyAllowsSes ? 'Policy contains ses.amazonaws.com publish statement.' : 'Missing SES publish permission in policy.');
 
-            if ($endpoint !== '') {
+            if ($this->transport() === 'sqs') {
+                $this->addSqsChecks($checks, $topicArn);
+            } elseif ($endpoint !== '') {
                 $subscriptionExists = $this->api->hasHttpsSubscription($topicArn, $endpoint);
                 $this->addCheck(
                     $checks,
@@ -78,7 +85,7 @@ class SesSnsSetupService
             }
         } else {
             $this->addCheck($checks, 'sns_policy', 'SNS topic policy allows SES publish', false, 'Topic missing.');
-            $this->addCheck($checks, 'sns_subscription', 'HTTPS subscription exists for callback endpoint', false, 'Topic missing.');
+            $this->addCheck($checks, 'sns_subscription', 'Event subscription exists', false, 'Topic missing.');
         }
 
         foreach ($configurationSets as $key => $set) {
@@ -157,10 +164,13 @@ class SesSnsSetupService
             'ok' => $ok,
             'configuration' => [
                 'region' => $region,
+                'event_transport' => $this->transport(),
                 'configuration_sets' => $configurationSets,
                 'topic_arn' => $topicArn,
                 'topic_name' => (string) config('messenger.ses_sns.topic_name', ''),
                 'callback_endpoint' => $endpoint,
+                'sqs_queue_name' => (string) config('messenger.ses_sns.sqs.queue_name', ''),
+                'sqs_dlq_name' => (string) config('messenger.ses_sns.sqs.dlq_name', ''),
                 'event_types' => $eventTypes,
             ],
             'checks' => $checks,
@@ -186,7 +196,9 @@ class SesSnsSetupService
         $topicArn = $this->resolveTopicArn();
         $endpoint = $this->callbackEndpoint();
 
-        if ($topicArn !== '' && $endpoint !== '') {
+        if ($this->transport() === 'sqs') {
+            $this->teardownSqsResources($topicArn, $steps);
+        } elseif ($topicArn !== '' && $endpoint !== '') {
             $subscriptionArn = $this->api->findHttpsSubscriptionArn($topicArn, $endpoint);
             if (! in_array($subscriptionArn, [null, '', 'PendingConfirmation'], true)) {
                 $this->api->unsubscribe($subscriptionArn);
@@ -240,6 +252,172 @@ class SesSnsSetupService
         return [
             'ok' => true,
             'steps' => $steps,
+        ];
+    }
+
+    protected function transport(): string
+    {
+        return (string) config('messenger.tracking.event_transport', 'sns_http');
+    }
+
+    /**
+     * Provision the SQS queue (+ optional DLQ), allow the SNS topic to publish to
+     * it, and subscribe it to the topic. Idempotent.
+     *
+     * @param  array<int, array{label: string, ok: bool, details: string}>  $steps
+     */
+    protected function ensureSqsSubscription(string $topicArn, string $accountId, array &$steps): void
+    {
+        if (! (bool) config('messenger.ses_sns.create_sqs_subscription_if_missing', true)) {
+            $steps[] = ['label' => 'SQS subscription', 'ok' => true, 'details' => 'Skipped by configuration.'];
+
+            return;
+        }
+
+        $queueName = (string) config('messenger.ses_sns.sqs.queue_name', '');
+        if ($queueName === '') {
+            throw new RuntimeException('messenger.ses_sns.sqs.queue_name is empty.');
+        }
+
+        $dlqArn = $this->ensureDeadLetterQueue($steps);
+
+        $queueUrl = $this->api->findQueueUrlByName($queueName);
+        if ($queueUrl === null) {
+            $queueUrl = $this->api->createQueue($queueName);
+            $steps[] = ['label' => 'SQS queue', 'ok' => true, 'details' => 'Created: '.$queueName];
+        } else {
+            $steps[] = ['label' => 'SQS queue', 'ok' => true, 'details' => 'Already exists: '.$queueName];
+        }
+
+        $queueArn = $this->api->getQueueArn($queueUrl);
+
+        $attributes = ['Policy' => json_encode($this->buildQueuePolicy($queueArn, $topicArn), JSON_THROW_ON_ERROR)];
+        if ($dlqArn !== '') {
+            $attributes['RedrivePolicy'] = json_encode([
+                'deadLetterTargetArn' => $dlqArn,
+                'maxReceiveCount' => (string) (int) config('messenger.ses_sns.sqs.max_receive_count', 5),
+            ], JSON_THROW_ON_ERROR);
+        }
+        $this->api->setQueueAttributes($queueUrl, $attributes);
+        $steps[] = ['label' => 'SQS queue policy', 'ok' => true, 'details' => 'Policy'.($dlqArn !== '' ? ' + redrive policy' : '').' updated.'];
+
+        if ($this->api->hasSqsSubscription($topicArn, $queueArn)) {
+            $steps[] = ['label' => 'SQS subscription', 'ok' => true, 'details' => 'Already subscribed: '.$queueArn];
+
+            return;
+        }
+
+        $this->api->subscribeSqs($topicArn, $queueArn, (bool) config('messenger.ses_sns.sqs.raw_message_delivery', false));
+        $steps[] = ['label' => 'SQS subscription', 'ok' => true, 'details' => 'Subscribed: '.$queueArn];
+    }
+
+    /**
+     * @param  array<int, array{label: string, ok: bool, details: string}>  $steps
+     */
+    protected function ensureDeadLetterQueue(array &$steps): string
+    {
+        $dlqName = (string) config('messenger.ses_sns.sqs.dlq_name', '');
+        if ($dlqName === '') {
+            $steps[] = ['label' => 'SQS dead-letter queue', 'ok' => true, 'details' => 'Skipped (not configured).'];
+
+            return '';
+        }
+
+        $dlqUrl = $this->api->findQueueUrlByName($dlqName);
+        if ($dlqUrl === null) {
+            $dlqUrl = $this->api->createQueue($dlqName);
+            $steps[] = ['label' => 'SQS dead-letter queue', 'ok' => true, 'details' => 'Created: '.$dlqName];
+        } else {
+            $steps[] = ['label' => 'SQS dead-letter queue', 'ok' => true, 'details' => 'Already exists: '.$dlqName];
+        }
+
+        return $this->api->getQueueArn($dlqUrl);
+    }
+
+    /**
+     * @param  array<int, array{key: string, label: string, ok: bool, details: string}>  $checks
+     */
+    protected function addSqsChecks(array &$checks, string $topicArn): void
+    {
+        $queueName = (string) config('messenger.ses_sns.sqs.queue_name', '');
+        $queueUrl = $queueName !== '' ? $this->api->findQueueUrlByName($queueName) : null;
+
+        $this->addCheck($checks, 'sqs_queue', 'SQS queue exists', $queueUrl !== null, $queueUrl !== null ? $queueName : 'Missing queue: '.$queueName);
+
+        if ($queueUrl === null) {
+            $this->addCheck($checks, 'sns_subscription', 'SQS subscription exists', false, 'Queue missing.');
+
+            return;
+        }
+
+        $queueArn = $this->api->getQueueArn($queueUrl);
+        $subscriptionExists = $this->api->hasSqsSubscription($topicArn, $queueArn);
+        $this->addCheck($checks, 'sns_subscription', 'SQS subscription exists', $subscriptionExists, $subscriptionExists ? $queueArn : 'Missing SQS subscription for: '.$queueArn);
+
+        $dlqName = (string) config('messenger.ses_sns.sqs.dlq_name', '');
+        if ($dlqName !== '') {
+            $dlqExists = $this->api->findQueueUrlByName($dlqName) !== null;
+            $this->addCheck($checks, 'sqs_dlq', 'SQS dead-letter queue exists', $dlqExists, $dlqExists ? $dlqName : 'Missing DLQ: '.$dlqName);
+        }
+    }
+
+    /**
+     * @param  array<int, array{label: string, ok: bool, details: string}>  $steps
+     */
+    protected function teardownSqsResources(string $topicArn, array &$steps): void
+    {
+        $queueName = (string) config('messenger.ses_sns.sqs.queue_name', '');
+        $queueUrl = $queueName !== '' ? $this->api->findQueueUrlByName($queueName) : null;
+
+        if ($topicArn !== '' && $queueUrl !== null) {
+            $queueArn = $this->api->getQueueArn($queueUrl);
+            $subscriptionArn = $this->api->findSqsSubscriptionArn($topicArn, $queueArn);
+            if (! in_array($subscriptionArn, [null, '', 'PendingConfirmation'], true)) {
+                $this->api->unsubscribe($subscriptionArn);
+                $steps[] = ['label' => 'SQS subscription', 'ok' => true, 'details' => 'Removed: '.$subscriptionArn];
+            } else {
+                $steps[] = ['label' => 'SQS subscription', 'ok' => true, 'details' => 'Nothing to remove.'];
+            }
+        } else {
+            $steps[] = ['label' => 'SQS subscription', 'ok' => true, 'details' => 'Skipped: missing topic or queue.'];
+        }
+
+        if ($queueUrl !== null) {
+            $this->api->deleteQueue($queueUrl);
+            $steps[] = ['label' => 'SQS queue', 'ok' => true, 'details' => 'Removed: '.$queueName];
+        } else {
+            $steps[] = ['label' => 'SQS queue', 'ok' => true, 'details' => 'Nothing to remove.'];
+        }
+
+        $dlqName = (string) config('messenger.ses_sns.sqs.dlq_name', '');
+        $dlqUrl = $dlqName !== '' ? $this->api->findQueueUrlByName($dlqName) : null;
+        if ($dlqUrl !== null) {
+            $this->api->deleteQueue($dlqUrl);
+            $steps[] = ['label' => 'SQS dead-letter queue', 'ok' => true, 'details' => 'Removed: '.$dlqName];
+        } else {
+            $steps[] = ['label' => 'SQS dead-letter queue', 'ok' => true, 'details' => 'Nothing to remove.'];
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function buildQueuePolicy(string $queueArn, string $topicArn): array
+    {
+        return [
+            'Version' => '2012-10-17',
+            'Statement' => [
+                [
+                    'Sid' => 'AllowSnsPublish',
+                    'Effect' => 'Allow',
+                    'Principal' => ['Service' => 'sns.amazonaws.com'],
+                    'Action' => 'sqs:SendMessage',
+                    'Resource' => $queueArn,
+                    'Condition' => [
+                        'ArnEquals' => ['aws:SourceArn' => $topicArn],
+                    ],
+                ],
+            ],
         ];
     }
 

@@ -154,6 +154,37 @@ it('renders healthy sending and tracking checks on the ses sns dashboard', funct
         }
 
         public function upsertRoute53Record(string $hostedZoneId, string $recordName, string $recordType, array $values, int $ttl = 300): void {}
+
+        public function findQueueUrlByName(string $queueName): ?string
+        {
+            return null;
+        }
+
+        public function createQueue(string $queueName): string
+        {
+            return '';
+        }
+
+        public function getQueueArn(string $queueUrl): string
+        {
+            return '';
+        }
+
+        public function setQueueAttributes(string $queueUrl, array $attributes): void {}
+
+        public function hasSqsSubscription(string $topicArn, string $queueArn): bool
+        {
+            return false;
+        }
+
+        public function findSqsSubscriptionArn(string $topicArn, string $queueArn): ?string
+        {
+            return null;
+        }
+
+        public function subscribeSqs(string $topicArn, string $queueArn, bool $rawMessageDelivery = false): void {}
+
+        public function deleteQueue(string $queueUrl): void {}
     });
 
     $url = URL::temporarySignedRoute('messenger.ses-sns.dashboard', now()->addMinutes(10));
