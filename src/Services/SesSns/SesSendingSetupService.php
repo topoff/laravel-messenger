@@ -10,11 +10,35 @@ class SesSendingSetupService
 {
     protected ?InfomaniakDnsApi $infomaniakDnsApi = null;
 
+    /**
+     * Resolver used to probe whether a DKIM endpoint exists in DNS. Injectable
+     * so tests can exercise both region paths without hitting the network.
+     *
+     * @var (\Closure(string): bool)|null
+     */
+    protected ?\Closure $dkimEndpointResolver = null;
+
+    /**
+     * Per-region cache of the resolved DKIM signing domain for this instance.
+     *
+     * @var array<string, string>
+     */
+    protected array $dkimSigningDomainCache = [];
+
     public function __construct(protected SesSnsProvisioningApi $api) {}
 
     public function setInfomaniakDnsApi(?InfomaniakDnsApi $api): void
     {
         $this->infomaniakDnsApi = $api;
+    }
+
+    /**
+     * @param  (\Closure(string): bool)|null  $resolver
+     */
+    public function setDkimEndpointResolver(?\Closure $resolver): void
+    {
+        $this->dkimEndpointResolver = $resolver;
+        $this->dkimSigningDomainCache = [];
     }
 
     /**
@@ -239,6 +263,9 @@ class SesSendingSetupService
                     'next_signing_key_length' => (string) Arr::get($identityData, 'DkimAttributes.NextSigningKeyLength', ''),
                     'last_key_generation_timestamp' => (string) Arr::get($identityData, 'DkimAttributes.LastKeyGenerationTimestamp', ''),
                     'tokens' => (array) Arr::get($identityData, 'DkimAttributes.Tokens', []),
+                    'signing_domain' => $this->dkimSigningDomainForTokens(
+                        (array) Arr::get($identityData, 'DkimAttributes.Tokens', [])
+                    ),
                 ],
                 'mail_from' => [
                     'domain' => (string) Arr::get($identityData, 'MailFromAttributes.MailFromDomain', ''),
@@ -492,11 +519,76 @@ class SesSendingSetupService
             $records[] = [
                 'name' => $token.'._domainkey.'.$domain,
                 'type' => 'CNAME',
-                'values' => [$token.'.dkim.amazonses.com'],
+                'values' => [$token.'.'.$this->dkimSigningDomain($token)],
             ];
         }
 
         return $records;
+    }
+
+    /**
+     * Resolve the SES Easy DKIM signing domain that DKIM CNAME records must
+     * point at. The correct value differs per region: newer SES regions (e.g.
+     * eu-central-2) publish the public key at a region-specific domain
+     * (dkim.<region>.amazonses.com), while older regions (e.g. eu-central-1)
+     * use the global dkim.amazonses.com. AWS exposes only the DKIM tokens via
+     * the API — not the literal CNAME target — and documents that the DKIM
+     * domain varies by region, so instead of hard-coding a guess we probe DNS
+     * for where AWS actually serves the key and fall back to the global domain.
+     * A `messenger.ses_sns.aws.dkim_domain` config value overrides the probe.
+     */
+    protected function dkimSigningDomain(string $sampleToken): string
+    {
+        $override = trim((string) config('messenger.ses_sns.aws.dkim_domain', ''));
+        if ($override !== '') {
+            return $override;
+        }
+
+        $region = (string) config('messenger.ses_sns.aws.region', 'eu-central-1');
+
+        if (array_key_exists($region, $this->dkimSigningDomainCache)) {
+            return $this->dkimSigningDomainCache[$region];
+        }
+
+        $regional = 'dkim.'.$region.'.amazonses.com';
+        $resolved = $this->dkimEndpointResolves($sampleToken.'.'.$regional)
+            ? $regional
+            : 'dkim.amazonses.com';
+
+        return $this->dkimSigningDomainCache[$region] = $resolved;
+    }
+
+    /**
+     * Resolve the DKIM signing domain from a token list, defaulting to the
+     * global domain when no tokens are available to probe with.
+     *
+     * @param  array<int, mixed>  $tokens
+     */
+    protected function dkimSigningDomainForTokens(array $tokens): string
+    {
+        foreach ($tokens as $tokenRaw) {
+            $token = trim((string) $tokenRaw);
+            if ($token !== '') {
+                return $this->dkimSigningDomain($token);
+            }
+        }
+
+        return 'dkim.amazonses.com';
+    }
+
+    /**
+     * Whether AWS publishes a record at the given DKIM endpoint. Uses the
+     * injected resolver when set (tests), otherwise a live DNS lookup.
+     */
+    protected function dkimEndpointResolves(string $name): bool
+    {
+        $resolver = $this->dkimEndpointResolver ?? static function (string $endpoint): bool {
+            $records = @dns_get_record($endpoint, DNS_TXT | DNS_CNAME);
+
+            return is_array($records) && $records !== [];
+        };
+
+        return ($resolver)($name);
     }
 
     /**

@@ -334,6 +334,7 @@
                         <th>Value</th>
                     </tr>
                     @php $dkimDomain = (string) data_get($detail, 'domain', ''); @endphp
+                    @php $dkimSigningDomain = (string) data_get($detail, 'dkim.signing_domain', 'dkim.amazonses.com'); @endphp
                     @foreach($dkimTokens as $token)
                         <tr>
                             <td><code>CNAME</code></td>
@@ -342,7 +343,7 @@
                                 <button class="copy-btn" onclick="copyValue(this)">Copy</button>
                             </td>
                             <td class="copyable">
-                                <code>{{ $token }}.dkim.amazonses.com</code>
+                                <code>{{ $token }}.{{ $dkimSigningDomain }}</code>
                                 <button class="copy-btn" onclick="copyValue(this)">Copy</button>
                             </td>
                         </tr>

@@ -2,6 +2,68 @@
 
 use Topoff\Messenger\Contracts\SesSnsProvisioningApi;
 use Topoff\Messenger\Services\SesSns\SesSendingSetupService;
+use Topoff\Messenger\Tests\Doubles\InMemorySesSnsProvisioningApi;
+
+/**
+ * Run check() against a single domain identity with three fixed DKIM tokens
+ * and a stubbed DNS resolver, returning the first DKIM CNAME value produced.
+ */
+function dkimCnameValueFor(string $region, bool $regionalResolves, ?string $override = null): string
+{
+    config()->set('messenger.ses_sns.aws.region', $region);
+    config()->set('messenger.ses_sns.aws.dkim_domain', $override);
+    config()->set('messenger.ses_sns.tenant.name', '');
+    config()->set('messenger.ses_sns.sending.identities', [
+        'default' => [
+            'identity_domain' => 'example.com',
+            'mail_from_domain' => 'mail.example.com',
+            'mail_from_address' => 'noreply@example.com',
+        ],
+    ]);
+    config()->set('messenger.ses_sns.configuration_sets', [
+        'default' => [
+            'configuration_set' => 'cs',
+            'event_destination' => 'ed',
+            'identity' => 'default',
+        ],
+    ]);
+
+    $fake = new class extends InMemorySesSnsProvisioningApi
+    {
+        public function getEmailIdentity(string $identity): array
+        {
+            return [
+                'VerifiedForSendingStatus' => false,
+                'DkimAttributes' => ['Tokens' => ['aaa', 'bbb', 'ccc'], 'Status' => 'PENDING'],
+                'MailFromAttributes' => ['MailFromDomainStatus' => 'PENDING'],
+            ];
+        }
+    };
+
+    $service = new SesSendingSetupService($fake);
+    $service->setDkimEndpointResolver(
+        fn (string $name): bool => $regionalResolves && str_contains($name, '.dkim.'.$region.'.amazonses.com')
+    );
+
+    $record = collect($service->check()['dns_records'])->firstWhere('type', 'CNAME');
+
+    return (string) ($record['values'][0] ?? '');
+}
+
+it('builds a region-specific DKIM CNAME when AWS publishes the regional endpoint', function () {
+    expect(dkimCnameValueFor('eu-central-2', regionalResolves: true))
+        ->toBe('aaa.dkim.eu-central-2.amazonses.com');
+});
+
+it('falls back to the global DKIM domain when the regional endpoint does not resolve', function () {
+    expect(dkimCnameValueFor('eu-central-1', regionalResolves: false))
+        ->toBe('aaa.dkim.amazonses.com');
+});
+
+it('lets the dkim_domain config override win over the DNS probe', function () {
+    expect(dkimCnameValueFor('eu-central-2', regionalResolves: true, override: 'dkim.eu-west-1.amazonses.com'))
+        ->toBe('aaa.dkim.eu-west-1.amazonses.com');
+});
 
 it('creates ses domain identity and returns required dns records', function () {
     config()->set('messenger.ses_sns.sending.enabled', true);
@@ -194,6 +256,7 @@ it('creates ses domain identity and returns required dns records', function () {
     };
 
     $service = new SesSendingSetupService($fake);
+    $service->setDkimEndpointResolver(fn (): bool => false); // deterministic, no live DNS
     $result = $service->setup();
 
     expect($result['ok'])->toBeTrue()

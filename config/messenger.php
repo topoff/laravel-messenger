@@ -182,6 +182,14 @@ return [
 
             // Optional override. When null, fetched via STS GetCallerIdentity.
             'account_id' => null,
+
+            // Optional override for the SES Easy DKIM signing domain that the
+            // CNAME records point at. Leave null to auto-detect per region:
+            // newer SES regions publish keys at a region-specific domain
+            // (dkim.<region>.amazonses.com), older regions use the global
+            // dkim.amazonses.com. Set this only to pin the value explicitly
+            // (e.g. when DNS resolution is unavailable in the setup context).
+            'dkim_domain' => env('MESSENGER_SES_DKIM_DOMAIN'),
         ],
 
         // SES v2 configuration sets managed by this package.
