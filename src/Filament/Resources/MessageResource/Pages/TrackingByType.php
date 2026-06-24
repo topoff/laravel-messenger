@@ -7,6 +7,7 @@ use Filament\Tables;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Topoff\Messenger\Filament\Resources\MessageResource;
@@ -21,6 +22,17 @@ class TrackingByType extends Page implements HasTable
     protected string $view = 'messenger::filament.pages.tracking-table';
 
     protected static ?string $title = 'Tracking Metrics by Type';
+
+    /**
+     * The table query is a GROUP BY aggregate that never selects the Message
+     * primary key, so the default record-key resolution returns null and trips
+     * the `: string` return type. The grouped `message_type_id` is unique per
+     * row, so use it as the stable record key.
+     */
+    public function getTableRecordKey(Model | array $record): string
+    {
+        return (string) (is_array($record) ? $record['message_type_id'] : $record->message_type_id);
+    }
 
     public function table(Table $table): Table
     {
