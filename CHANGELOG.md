@@ -2,6 +2,18 @@
 
 All notable changes to `laravel-messenger` will be documented in this file.
 
+## 9.0.0 - Unreleased
+
+Start of the v9 line (host: top-offerten 4.0, decision E79/E123).
+
+- PHP requirement raised to `^8.5` (E106 runtime baseline). The v8 line
+  remains available for hosts on PHP 8.4.
+- Planned for v9 (work packages): `message_class` (transactional|marketing),
+  status-driven fallback engine (follow-up message on another channel when
+  no delivery confirmation after timeout), preference/consent tables with a
+  central guard in MessageService, RFC 8058 List-Unsubscribe, send-time
+  payload resolver hook (short-lived links), SMS rate guard.
+
 ## 8.4.0 - Support string/UUID morph IDs, backwards compatible
 
 Added support for host applications whose receiver / sender / messagable /
