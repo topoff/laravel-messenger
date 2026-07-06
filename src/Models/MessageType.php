@@ -11,6 +11,7 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property string $channel
+ * @property string $message_class transactional|marketing (v9: consent guard + List-Unsubscribe)
  * @property string $notification_class
  * @property string|null $single_handler
  * @property string|null $bulk_handler
@@ -33,6 +34,10 @@ use Illuminate\Support\Carbon;
 class MessageType extends Model
 {
     use SoftDeletes;
+
+    public const string CLASS_TRANSACTIONAL = 'transactional';
+
+    public const string CLASS_MARKETING = 'marketing';
 
     public $timestamps = false;
 

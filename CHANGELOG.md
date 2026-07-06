@@ -6,6 +6,12 @@ All notable changes to `laravel-messenger` will be documented in this file.
 
 Start of the v9 line (host: top-offerten 4.0, decision E79/E123).
 
+- `message_types.message_class` (`transactional`|`marketing`, default transactional,
+  migration 0018): drives the upcoming consent guard (marketing requires
+  consent) and RFC 8058 List-Unsubscribe headers (marketing only). Constants
+  `MessageType::CLASS_TRANSACTIONAL`/`CLASS_MARKETING`; Filament/Nova selects.
+  `channel` columns widened to 20 chars for upcoming channels (whatsapp,
+  expo_push); SQLite skips the widening (dynamic typing, see migration 0017).
 - PHP requirement raised to `^8.5` (E106 runtime baseline). The v8 line
   remains available for hosts on PHP 8.4.
 - Planned for v9 (work packages): `message_class` (transactional|marketing),

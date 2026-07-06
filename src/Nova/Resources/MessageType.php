@@ -8,6 +8,7 @@ use Laravel\Nova\Fields\DateTime;
 use Laravel\Nova\Fields\HasMany;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Number;
+use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
@@ -54,6 +55,10 @@ class MessageType extends Resource
         return [
             ID::make()->sortable(),
             Text::make('Channel', 'channel')->sortable(),
+            Select::make('Message Class', 'message_class')->options([
+                \Topoff\Messenger\Models\MessageType::CLASS_TRANSACTIONAL => 'Transactional',
+                \Topoff\Messenger\Models\MessageType::CLASS_MARKETING => 'Marketing',
+            ])->default(\Topoff\Messenger\Models\MessageType::CLASS_TRANSACTIONAL)->sortable(),
             Text::make('Notification Class', 'notification_class')->sortable()->rules('required'),
             Text::make('Single Handler', 'single_handler')->nullable()->sortable(),
             Text::make('Bulk Handler', 'bulk_handler')->nullable()->sortable(),

@@ -35,6 +35,13 @@ class MessageTypeResource extends Resource
                     ->schema([
                         Forms\Components\TextInput::make('channel')
                             ->required(),
+                        Forms\Components\Select::make('message_class')
+                            ->options([
+                                MessageType::CLASS_TRANSACTIONAL => 'Transactional',
+                                MessageType::CLASS_MARKETING => 'Marketing',
+                            ])
+                            ->default(MessageType::CLASS_TRANSACTIONAL)
+                            ->required(),
                         Forms\Components\TextInput::make('notification_class')
                             ->required(),
                         Forms\Components\TextInput::make('single_handler'),
