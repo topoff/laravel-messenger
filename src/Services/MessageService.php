@@ -290,6 +290,12 @@ class MessageService
      */
     protected function preventCreateMessage(): bool
     {
+        // Central consent guard (v9, E79): marketing types respect opt-outs.
+        if ($this->receiverClass !== null && $this->receiverId !== null
+            && app(\Topoff\Messenger\Services\ConsentService::class)->isOptedOut($this->receiverClass, $this->receiverId, $this->messageType)) {
+            return true;
+        }
+
         $checker = config('messenger.sending.prevent_create_message');
 
         if (is_callable($checker)) {

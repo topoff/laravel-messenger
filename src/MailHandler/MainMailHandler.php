@@ -88,6 +88,15 @@ class MainMailHandler implements GroupableMailTypeInterface
             return true;
         }
 
+        // Consent guard, second line (v9, E79): an opt-out between creation
+        // and send still wins. Transactional types are never affected.
+        if (app(\Topoff\Messenger\Services\ConsentService::class)->isOptedOut($this->message->receiver_type, $this->message->receiver_id, $messageType)) {
+            $this->message->error_message = 'Message has been deleted, because the receiver opted out (consent guard).';
+            $this->message->save();
+
+            return true;
+        }
+
         return false;
     }
 

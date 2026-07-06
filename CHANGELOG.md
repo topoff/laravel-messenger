@@ -6,6 +6,13 @@ All notable changes to `laravel-messenger` will be documented in this file.
 
 Start of the v9 line (host: top-offerten 4.0, decision E79/E123).
 
+- Preference / consent guard (migration 0019, `message_opt_outs`): central
+  guard in `MessageService` blocks creation of marketing-class messages for
+  opted-out receivers and deletes already-created ones at send time (both
+  handler base classes) — an opt-out between creation and send still wins.
+  Scopes: `marketing` (all), `channel:<channel>`, `type:<notification_class>`.
+  `ConsentService` API: `optOut()`, `optIn()`, `isOptedOut()`. Transactional
+  types never consult the opt-outs (password resets always go through).
 - `message_types.message_class` (`transactional`|`marketing`, default transactional,
   migration 0018): drives the upcoming consent guard (marketing requires
   consent) and RFC 8058 List-Unsubscribe headers (marketing only). Constants
