@@ -24,6 +24,7 @@ use Topoff\Messenger\Contracts\SesSnsProvisioningApi;
 use Topoff\Messenger\Jobs\CleanupMessengerTablesJob;
 use Topoff\Messenger\Jobs\ProcessImapInboxJob;
 use Topoff\Messenger\Listeners\AddBccToEmailsListener;
+use Topoff\Messenger\Listeners\AddListUnsubscribeHeadersListener;
 use Topoff\Messenger\Listeners\LogEmailToMessageLogListener;
 use Topoff\Messenger\Listeners\LogNotificationToMessageLogListener;
 use Topoff\Messenger\Listeners\RecordNotificationSentListener;
@@ -88,6 +89,7 @@ class MessengerServiceProvider extends PackageServiceProvider
     protected function registerEventListeners(): void
     {
         Event::listen(MessageSending::class, AddBccToEmailsListener::class);
+        Event::listen(MessageSending::class, AddListUnsubscribeHeadersListener::class);
         Event::listen(MessageSending::class, fn (MessageSending $event) => app(MailTracker::class)->messageSending($event));
         Event::listen(MessageSent::class, fn (MessageSent $event) => app(MailTracker::class)->messageSent($event));
         Event::listen(MessageSent::class, LogEmailToMessageLogListener::class);

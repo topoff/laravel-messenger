@@ -6,6 +6,11 @@ All notable changes to `laravel-messenger` will be documented in this file.
 
 Start of the v9 line (host: top-offerten 4.0, decision E79/E123).
 
+- RFC 8058 List-Unsubscribe (marketing only): `List-Unsubscribe` with a
+  signed one-click URL + `List-Unsubscribe-Post` headers, injected by a
+  MessageSending listener; signature-protected GET|POST endpoint
+  `messenger.unsubscribe` writes a `marketing` opt-out via ConsentService.
+  Transactional mails are never touched.
 - Preference / consent guard (migration 0019, `message_opt_outs`): central
   guard in `MessageService` blocks creation of marketing-class messages for
   opted-out receivers and deletes already-created ones at send time (both

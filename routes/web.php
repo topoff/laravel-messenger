@@ -39,3 +39,9 @@ $customPreviewRoute = config('messenger.tracking.custom_preview_route', [
 Route::group($customPreviewRoute, function (): void {
     Route::get('custom-preview', [NovaCustomMessagePreviewController::class, 'show'])->name('messenger.tracking.nova.custom-preview');
 });
+
+// RFC 8058 one-click unsubscribe (v9): signed URL from the
+// List-Unsubscribe header of marketing mails.
+Route::match(['get', 'post'], 'emessenger/unsubscribe/{message}', \Topoff\Messenger\Http\Controllers\UnsubscribeController::class)
+    ->middleware(['signed'])
+    ->name('messenger.unsubscribe');
