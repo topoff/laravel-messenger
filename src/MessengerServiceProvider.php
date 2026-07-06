@@ -74,6 +74,7 @@ class MessengerServiceProvider extends PackageServiceProvider
         $this->registerObservers();
         $this->registerEventListeners();
         $this->registerCleanupSchedule();
+        $this->registerFallbackSchedule();
         $this->registerImapSchedule();
         $this->registerSqsPollSchedule();
         $this->registerRoutes();
@@ -116,6 +117,23 @@ class MessengerServiceProvider extends PackageServiceProvider
             if ((bool) config('messenger.cleanup.schedule.on_one_server', false)) {
                 $event->onOneServer();
             }
+        });
+    }
+
+    protected function registerFallbackSchedule(): void
+    {
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            if (! (bool) config('messenger.fallback.schedule.enabled', false)) {
+                return;
+            }
+
+            $cronExpression = (string) config('messenger.fallback.schedule.cron', '*/10 * * * *');
+            $queue = config('messenger.fallback.schedule.queue');
+
+            $schedule->job(new \Topoff\Messenger\Jobs\RunFallbackEngineJob, $queue)
+                ->cron($cronExpression)
+                ->name('messenger.fallback')
+                ->withoutOverlapping();
         });
     }
 

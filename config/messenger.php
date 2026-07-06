@@ -28,6 +28,16 @@ return [
         'ttl' => 60 * 60 * 24 * 30,
     ],
 
+    // Status-driven fallback engine (v9): disabled by default — enable per
+    // host once fallback types are configured on message_types.
+    'fallback' => [
+        'schedule' => [
+            'enabled' => env('MESSENGER_FALLBACK_ENABLED', false),
+            'cron' => '*/10 * * * *',
+            'queue' => null,
+        ],
+    ],
+
     'cleanup' => [
         // Null disables deletion. Positive integer = delete records older than X months.
         'messages_delete_after_months' => 24,

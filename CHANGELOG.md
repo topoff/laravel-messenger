@@ -6,6 +6,16 @@ All notable changes to `laravel-messenger` will be documented in this file.
 
 Start of the v9 line (host: top-offerten 4.0, decision E79/E123).
 
+- Status-driven fallback engine (migration 0020): a message type can name a
+  `fallback_message_type_id` (usually another channel) plus
+  `fallback_after_minutes` — sent messages without delivery confirmation
+  after the timeout, or with a bounce, get a follow-up message of the
+  fallback type (same receiver/context/params/locale, linked via
+  `messages.fallback_of_message_id`). Guards: one follow-up per message,
+  chain never revisits a type and is capped, marketing fallbacks respect
+  the consent guard. `FallbackEngine`, `RunFallbackEngineJob`, schedule via
+  `messenger.fallback.schedule.*` (disabled by default),
+  `MessageFallbackCreatedEvent`.
 - RFC 8058 List-Unsubscribe (marketing only): `List-Unsubscribe` with a
   signed one-click URL + `List-Unsubscribe-Post` headers, injected by a
   MessageSending listener; signature-protected GET|POST endpoint

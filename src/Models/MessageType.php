@@ -24,6 +24,8 @@ use Illuminate\Support\Carbon;
  * @property bool $required_scheduled
  * @property bool $required_text
  * @property bool $required_params
+ * @property int|null $fallback_message_type_id v9 fallback engine
+ * @property int|null $fallback_after_minutes v9 fallback engine
  * @property string|null $bulk_message_line
  * @property string|null $ses_configuration_set
  * @property int $max_retry_attempts
