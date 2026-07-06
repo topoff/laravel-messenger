@@ -28,6 +28,19 @@ return [
         'ttl' => 60 * 60 * 24 * 30,
     ],
 
+    // Send-time payload resolver (v9): callable(Message): array — enrich
+    // params right before rendering (e.g. short-lived signed links).
+    'rendering' => [
+        'resolve_params' => null,
+    ],
+
+    // Per-channel send rate guard (v9): e.g. 'vonage' => [
+    //   'min_interval_seconds' => 60, 'per_receiver_per_day' => 10,
+    //   'per_channel_per_day' => 1000].
+    'rate_limit' => [
+        'channels' => [],
+    ],
+
     // Status-driven fallback engine (v9): disabled by default — enable per
     // host once fallback types are configured on message_types.
     'fallback' => [

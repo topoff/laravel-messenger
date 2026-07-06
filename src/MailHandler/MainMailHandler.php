@@ -53,7 +53,9 @@ class MainMailHandler implements GroupableMailTypeInterface
      */
     public function shouldBeSentNow(): bool
     {
-        return true;
+        // Per-channel rate guard (v9): a deferred message keeps its record
+        // and goes out on a later run. Call parent when overriding.
+        return ! app(\Topoff\Messenger\Services\SendRateGuard::class)->defers($this->message);
     }
 
     public function shouldBeSentInThisEnvironment(): bool
@@ -121,6 +123,26 @@ class MainMailHandler implements GroupableMailTypeInterface
     }
 
     /**
+     * Send-time payload resolver (v9, E79): the host can enrich
+     * `message->params` right before rendering — e.g. short-lived signed
+     * links whose TTL must start at SEND time, not at creation time. The
+     * resolved params are used for this send and persisted with the
+     * message (support can see exactly what went out).
+     */
+    protected function applySendTimeParams(): void
+    {
+        $resolver = config('messenger.rendering.resolve_params');
+
+        if (is_callable($resolver)) {
+            $resolved = $resolver($this->message);
+
+            if (is_array($resolved)) {
+                $this->message->params = $resolved;
+            }
+        }
+    }
+
+    /**
      * Optional, implement what to do on building the message
      */
     public function onBuilding(): void
@@ -153,6 +175,8 @@ class MainMailHandler implements GroupableMailTypeInterface
 
                 return;
             }
+
+            $this->applySendTimeParams();
 
             $mailClass = $this->mailClass();
             $mail = new $mailClass(...$this->getMailParameters());

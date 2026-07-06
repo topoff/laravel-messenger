@@ -6,6 +6,15 @@ All notable changes to `laravel-messenger` will be documented in this file.
 
 Start of the v9 line (host: top-offerten 4.0, decision E79/E123).
 
+- Send-time payload resolver (`messenger.rendering.resolve_params`,
+  callable(Message): array): enrich params right before rendering — e.g.
+  short-lived signed links whose TTL must start at send time. Resolved
+  params are persisted with the message.
+- Per-channel send rate guard (`messenger.rate_limit.channels.<channel>`):
+  `min_interval_seconds`, `per_receiver_per_day`, `per_channel_per_day` —
+  deferred messages are rescheduled, never errored (SMS-pumping defence).
+  Wired into both handler base classes via `shouldBeSentNow()`; call
+  `parent::shouldBeSentNow()` when overriding.
 - Status-driven fallback engine (migration 0020): a message type can name a
   `fallback_message_type_id` (usually another channel) plus
   `fallback_after_minutes` — sent messages without delivery confirmation

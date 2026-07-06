@@ -31,7 +31,9 @@ class MainNotificationHandler
      */
     public function shouldBeSentNow(): bool
     {
-        return true;
+        // Per-channel rate guard (v9): a deferred message keeps its record
+        // and goes out on a later run. Call parent when overriding.
+        return ! app(\Topoff\Messenger\Services\SendRateGuard::class)->defers($this->message);
     }
 
     public function shouldBeSentInThisEnvironment(): bool
@@ -59,6 +61,22 @@ class MainNotificationHandler
         }
 
         return false;
+    }
+
+    /**
+     * Send-time payload resolver (v9, E79) — see MainMailHandler.
+     */
+    protected function applySendTimeParams(): void
+    {
+        $resolver = config('messenger.rendering.resolve_params');
+
+        if (is_callable($resolver)) {
+            $resolved = $resolver($this->message);
+
+            if (is_array($resolved)) {
+                $this->message->params = $resolved;
+            }
+        }
     }
 
     /**
@@ -118,6 +136,8 @@ class MainNotificationHandler
 
                 return;
             }
+
+            $this->applySendTimeParams();
 
             $notificationClass = $this->notificationClass();
             $notification = new $notificationClass(...$this->getNotificationParameters());
