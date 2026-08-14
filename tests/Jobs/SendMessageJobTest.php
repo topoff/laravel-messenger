@@ -73,6 +73,28 @@ it('does not send direct messages that are reserved', function () {
     Mail::assertNothingSent();
 });
 
+it('leaves an old reservation to the retry sweep instead of resending it blindly', function () {
+    // A worker killed mid-send leaves reserved_at set. The normal sweep must not
+    // pick such a row up: recovery belongs to retryDirectMessages(), which honours
+    // backoff, max_retry_attempts and error_stop_send_minutes. Reclaiming here
+    // would resend messages that are months old.
+    $messageType = createMessageType(['direct' => true]);
+
+    createMessage([
+        'receiver_type' => TestReceiver::class,
+        'receiver_id' => $this->receiver->id,
+        'message_type_id' => $messageType->id,
+        'messagable_type' => TestMessagable::class,
+        'messagable_id' => $this->messagable->id,
+        'reserved_at' => now()->subDays(30),
+    ]);
+
+    $job = new SendMessageJob;
+    $job->handle();
+
+    Mail::assertNothingSent();
+});
+
 it('does not send direct messages that have errors', function () {
     $messageType = createMessageType(['direct' => true]);
 
