@@ -33,8 +33,13 @@ class SendMessageJob implements ShouldBeUnique, ShouldQueue
     /**
      * Release the unique lock after this many seconds, even if the job is still running.
      * Prevents permanent lock when the worker is killed by timeout.
+     *
+     * Must stay ABOVE the queue timeout of the worker running this job: while the
+     * lock is gone the scheduler enqueues the next sweep, so a value below the
+     * timeout means two sweeps for the same messages. 250s covers a 240s worker
+     * timeout; raise both together or neither.
      */
-    public int $uniqueFor = 55;
+    public int $uniqueFor = 250;
 
     /**
      * Create a new job instance.
@@ -153,6 +158,14 @@ class SendMessageJob implements ShouldBeUnique, ShouldQueue
 
     /**
      * Send all direct messages
+     *
+     * Reservations left behind by a killed worker are deliberately NOT reclaimed
+     * here. retryDirectMessages() already does that — with backoff,
+     * max_retry_attempts and the type's error_stop_send_minutes window — and
+     * reclaiming without those guards would resend messages that are months old
+     * and long irrelevant. What broke the recovery was not this filter but the
+     * queue timeout: both sweeps were killed mid-run, so the retry sweep never
+     * reached the stranded rows before their window closed.
      */
     protected function sendDirectMessages(): void
     {
