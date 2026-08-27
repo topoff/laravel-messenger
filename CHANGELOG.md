@@ -6,6 +6,15 @@ All notable changes to `laravel-messenger` will be documented in this file.
 
 Start of the v9 line (host: top-offerten 4.0, decision E79/E123).
 
+- PHP 8.5 baseline (E92): `"php": "^8.5"`, suite green on 8.5.7; Rector
+  PHP-8.5 set applied (#[\Override] on overridden properties,
+  strict_types declares, dead null named args removed).
+- MessageTypeRepository caches scalar attribute arrays instead of
+  serialized Eloquent objects (shared database cache returned
+  __PHP_Incomplete_Class in other processes, e.g. parallel E2E ticks);
+  models are rehydrated via newFromBuilder, cache key format bumped to
+  `f2` so stale object entries are never read.
+
 - Send-time payload resolver (`messenger.rendering.resolve_params`,
   callable(Message): array): enrich params right before rendering — e.g.
   short-lived signed links whose TTL must start at send time. Resolved

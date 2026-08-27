@@ -8,8 +8,10 @@ use Topoff\Messenger\Services\SesSns\SesSnsSetupService;
 
 class TeardownSesSnsTrackingCommand extends Command
 {
+    #[\Override]
     protected $signature = 'messenger:ses-sns:teardown {--force : Skip confirmation prompt}';
 
+    #[\Override]
     protected $description = 'Remove SES/SNS tracking resources created by messenger setup.';
 
     public function handle(SesSnsSetupService $service): int

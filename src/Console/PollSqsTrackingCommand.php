@@ -10,11 +10,13 @@ use Topoff\Messenger\Services\SesSns\SqsTrackingPoller;
 
 class PollSqsTrackingCommand extends Command
 {
+    #[\Override]
     protected $signature = 'messenger:tracking:sqs-poll
         {--once : Receive a single batch and exit instead of draining the queue.}
         {--max-messages= : Stop after processing this many messages.}
         {--max-time= : Stop after this many seconds (default: messenger.ses_sns.sqs.schedule.max_run_seconds).}';
 
+    #[\Override]
     protected $description = 'Drain the SQS queue that SNS fans SES tracking events into (SES -> SNS -> SQS transport).';
 
     public function handle(SqsTrackingPoller $poller): int

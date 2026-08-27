@@ -280,7 +280,7 @@ class SendNotificationAction extends Action
     {
         static $gsmCharacters = "@£\$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ`¿abcdefghijklmnopqrstuvwxyzäöñüà^{}\\[~]|€";
 
-        return mb_strpos($gsmCharacters, $character) !== false;
+        return str_contains($gsmCharacters, $character);
     }
 
     protected function resolveRouteForChannel(object $model, string $channel): ?string

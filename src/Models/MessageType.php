@@ -41,8 +41,10 @@ class MessageType extends Model
 
     public const string CLASS_MARKETING = 'marketing';
 
+    #[\Override]
     public $timestamps = false;
 
+    #[\Override]
     protected $guarded = [];
 
     public function __construct(array $attributes = [])

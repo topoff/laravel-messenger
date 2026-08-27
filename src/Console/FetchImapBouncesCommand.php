@@ -12,11 +12,13 @@ use Topoff\Messenger\Services\Imap\ImapClientFactory;
 
 class FetchImapBouncesCommand extends Command
 {
+    #[\Override]
     protected $signature = 'messenger:imap:fetch
         {inbox? : Inbox key from messenger.imap.inboxes. Omit to list all configured inboxes.}
         {--limit= : Override messenger.imap.inboxes.<key>.max_messages_per_run for this run.}
         {--dry-run : Print resolved config and what would be processed, without connecting to IMAP.}';
 
+    #[\Override]
     protected $description = 'Fetch and classify bounces / complaints / replies from the reply-to inbox(es).';
 
     public function handle(ImapClientFactory $factory, ImapBounceProcessor $processor): int

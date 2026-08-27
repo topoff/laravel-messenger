@@ -2,10 +2,11 @@
 
 use Illuminate\Support\Carbon;
 use Topoff\Messenger\Models\Message;
+use Topoff\Messenger\Models\MessageType;
 use Topoff\Messenger\Services\SendRateGuard;
 use Workbench\App\Models\TestReceiver;
 
-function vonageType(): Topoff\Messenger\Models\MessageType
+function vonageType(): MessageType
 {
     return createMessageType(['channel' => 'vonage']);
 }
@@ -57,9 +58,7 @@ it('defers at the global channel cap, leaves other channels alone (v9)', functio
 });
 
 it('resolves params at send time through the configured resolver (v9)', function () {
-    config()->set('messenger.rendering.resolve_params', function (Message $message): array {
-        return array_merge($message->params ?? [], ['link' => 'https://example.com/l/short-'.$message->id]);
-    });
+    config()->set('messenger.rendering.resolve_params', fn (Message $message): array => array_merge($message->params ?? [], ['link' => 'https://example.com/l/short-'.$message->id]));
 
     $type = createMessageType();
     $receiver = createReceiver();
@@ -71,7 +70,7 @@ it('resolves params at send time through the configured resolver (v9)', function
     ]);
 
     $handlerClass = $type->single_handler;
-    (new $handlerClass($message))->send();
+    new $handlerClass($message)->send();
 
     $fresh = $message->fresh();
     expect($fresh->sent_at)->not->toBeNull()

@@ -8,10 +8,13 @@ use Topoff\Messenger\Services\SesSns\SesSnsSetupService;
 
 class SetupSesSnsTrackingCommand extends Command
 {
+    #[\Override]
     protected $signature = 'messenger:ses-sns:setup-tracking';
 
+    #[\Override]
     protected $aliases = ['messenger:ses-sns:setup'];
 
+    #[\Override]
     protected $description = 'Provision SES v2 configuration set + SNS destination + subscription for messenger tracking.';
 
     public function handle(SesSnsSetupService $service): int

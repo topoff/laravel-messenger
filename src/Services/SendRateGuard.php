@@ -25,7 +25,7 @@ class SendRateGuard
      */
     public function defers(Message $message): bool
     {
-        $channel = $message->messageType?->channel;
+        $channel = $message->messageType->channel;
         $limits = config('messenger.rate_limit.channels.'.$channel);
 
         if (! is_array($limits) || $limits === []) {

@@ -8,8 +8,10 @@ use Topoff\Messenger\Services\SesSns\SesSendingSetupService;
 
 class SetupSesSendingCommand extends Command
 {
+    #[\Override]
     protected $signature = 'messenger:ses-sns:setup-sending';
 
+    #[\Override]
     protected $description = 'Provision SES sending identity and DNS requirements.';
 
     public function handle(SesSendingSetupService $service): int

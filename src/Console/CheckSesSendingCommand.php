@@ -8,8 +8,10 @@ use Topoff\Messenger\Services\SesSns\SesSendingSetupService;
 
 class CheckSesSendingCommand extends Command
 {
+    #[\Override]
     protected $signature = 'messenger:ses-sns:check-sending';
 
+    #[\Override]
     protected $description = 'Check SES sending identity and DNS-related status.';
 
     public function handle(SesSendingSetupService $service): int

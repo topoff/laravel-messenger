@@ -177,8 +177,6 @@ final class BounceClassifier
 
         return new BounceReport(
             classification: BounceClassification::Complaint,
-            statusCode: null,
-            diagnosticCode: null,
             recipients: $recipients,
             originalCorrelationId: $correlationId,
             originalMessageId: $originalMessageId,

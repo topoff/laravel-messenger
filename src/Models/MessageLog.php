@@ -11,8 +11,10 @@ class MessageLog extends Model
 {
     use DateScopesTrait;
 
+    #[\Override]
     public $timestamps = false;
 
+    #[\Override]
     protected $guarded = [];
 
     public function __construct(array $attributes = [])

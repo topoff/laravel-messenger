@@ -9,8 +9,10 @@ use Topoff\Messenger\Services\SesSns\SesSnsSetupService;
 
 class SetupSesSnsAllCommand extends Command
 {
+    #[\Override]
     protected $signature = 'messenger:ses-sns:setup-all';
 
+    #[\Override]
     protected $description = 'Provision SES sending + SES/SNS tracking (one-shot setup).';
 
     public function handle(SesSendingSetupService $sendingService, SesSnsSetupService $trackingService): int

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Topoff\Messenger\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -18,6 +20,7 @@ use Illuminate\Support\Carbon;
  */
 class MessageOptOut extends Model
 {
+    #[\Override]
     protected $guarded = [];
 
     public function __construct(array $attributes = [])

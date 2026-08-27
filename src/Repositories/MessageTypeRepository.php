@@ -30,10 +30,10 @@ class MessageTypeRepository
     {
         $messageTypeClass = config('messenger.models.message_type');
 
-        return $this->remember(
+        return $this->hydrate($this->remember(
             static::class.':'.__FUNCTION__.':'.$type,
-            fn () => $messageTypeClass::where('notification_class', $type)->first()
-        );
+            fn () => $messageTypeClass::where('notification_class', $type)->first()?->getAttributes()
+        ));
     }
 
     /**
@@ -43,10 +43,27 @@ class MessageTypeRepository
     {
         $messageTypeClass = config('messenger.models.message_type');
 
-        return $this->remember(
+        return $this->hydrate($this->remember(
             static::class.':'.__FUNCTION__.':'.$id,
-            fn () => $messageTypeClass::where('id', $id)->first()
-        );
+            fn () => $messageTypeClass::where('id', $id)->first()?->getAttributes()
+        ));
+    }
+
+    /**
+     * Only scalar attribute arrays are cached — serialized Eloquent objects
+     * come back as __PHP_Incomplete_Class from a shared (e.g. database)
+     * cache store when another process reads them.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    protected function hydrate(array $attributes): MessageType
+    {
+        $messageTypeClass = config('messenger.models.message_type');
+
+        /** @var MessageType $model */
+        $model = (new $messageTypeClass)->newFromBuilder($attributes);
+
+        return $model;
     }
 
     protected function remember(string $key, \Closure $callback): mixed
@@ -64,7 +81,10 @@ class MessageTypeRepository
 
     protected function cacheKey(string $key): string
     {
-        return 'messenger:message-types:v'.$this->cacheVersion().':'.$key;
+        // `f2` = cache format 2 (attribute arrays) — entries written by
+        // older releases hold serialized objects and must never be read
+        // by this code path; they simply expire.
+        return 'messenger:message-types:f2:v'.$this->cacheVersion().':'.$key;
     }
 
     protected function cacheVersion(): int

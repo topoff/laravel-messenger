@@ -34,7 +34,6 @@ it('falls back to ses message id when correlation id misses', function () {
         classification: BounceClassification::HardBounce,
         statusCode: '5.1.1',
         recipients: ['user@example.com'],
-        originalCorrelationId: null,
         originalSesMessageId: 'ses-id-7777',
     );
 

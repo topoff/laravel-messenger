@@ -10,6 +10,7 @@ use Topoff\Messenger\Services\SesSns\SesEventSimulatorService;
 
 class TestSesSnsEventsCommand extends Command
 {
+    #[\Override]
     protected $signature = 'messenger:ses-sns:test-events
         {--from= : Sender email identity}
         {--scenario=* : Scenarios: delivery,bounce,complaint}
@@ -19,6 +20,7 @@ class TestSesSnsEventsCommand extends Command
         {--wait=30 : Seconds to wait for tracking updates}
         {--poll-interval=2 : Poll interval in seconds while waiting}';
 
+    #[\Override]
     protected $description = 'Send SES mailbox simulator events via API and optionally verify tracking_meta updates.';
 
     /**

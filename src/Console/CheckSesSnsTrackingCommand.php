@@ -8,10 +8,13 @@ use Topoff\Messenger\Services\SesSns\SesSnsSetupService;
 
 class CheckSesSnsTrackingCommand extends Command
 {
+    #[\Override]
     protected $signature = 'messenger:ses-sns:check-tracking';
 
+    #[\Override]
     protected $aliases = ['messenger:ses-sns:check'];
 
+    #[\Override]
     protected $description = 'Check SES/SNS tracking provisioning state via AWS API.';
 
     public function handle(SesSnsSetupService $service): int

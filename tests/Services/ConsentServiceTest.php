@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\Cache;
 use Topoff\Messenger\Models\MessageType;
 use Topoff\Messenger\Services\ConsentService;
 use Topoff\Messenger\Services\MessageService;
@@ -20,7 +21,7 @@ it('blocks marketing creation for opted-out receivers, transactional always goes
 
     // Same receiver, same opt-out — a TRANSACTIONAL type still goes through.
     $marketing->update(['message_class' => MessageType::CLASS_TRANSACTIONAL]);
-    \Illuminate\Support\Facades\Cache::flush();
+    Cache::flush();
 
     (new MessageService)->setReceiver(TestReceiver::class, $receiver->id)
         ->setMessageTypeClass(TestMail::class)
@@ -55,7 +56,7 @@ it('deletes an already created marketing message at send time after a late opt-o
     app(ConsentService::class)->optOut(TestReceiver::class, $receiver->id);
 
     $handlerClass = $marketing->single_handler;
-    (new $handlerClass($message))->send();
+    new $handlerClass($message)->send();
 
     expect(config('messenger.models.message')::find($message->id))->toBeNull();
 });
