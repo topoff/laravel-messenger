@@ -9,6 +9,8 @@ use ReflectionClass;
 use ReflectionParameter;
 use Throwable;
 use Topoff\Messenger\Models\Message;
+use Topoff\Messenger\Services\ConsentService;
+use Topoff\Messenger\Services\SendRateGuard;
 
 /**
  * Base handler for notification-based channels (SMS, push, etc.).
@@ -33,7 +35,7 @@ class MainNotificationHandler
     {
         // Per-channel rate guard (v9): a deferred message keeps its record
         // and goes out on a later run. Call parent when overriding.
-        return ! app(\Topoff\Messenger\Services\SendRateGuard::class)->defers($this->message);
+        return ! app(SendRateGuard::class)->defers($this->message);
     }
 
     public function shouldBeSentInThisEnvironment(): bool
@@ -54,7 +56,7 @@ class MainNotificationHandler
     {
         // Consent guard, second line (v9, E79): an opt-out between creation
         // and send still wins. Transactional types are never affected.
-        if (app(\Topoff\Messenger\Services\ConsentService::class)->isOptedOut($this->message->receiver_type, $this->message->receiver_id, $this->message->messageType)) {
+        if (app(ConsentService::class)->isOptedOut($this->message->receiver_type, $this->message->receiver_id, $this->message->messageType)) {
             $this->message->error_message = 'Message has been deleted, because the receiver opted out (consent guard).';
 
             return true;

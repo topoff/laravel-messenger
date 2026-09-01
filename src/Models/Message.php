@@ -101,9 +101,6 @@ class Message extends Model
         return $this->belongsTo(config('messenger.models.message_type'));
     }
 
-    /**
-     * @return MorphTo|Model|MessageReceiverInterface
-     */
     public function receiver(): MorphTo
     {
         return $this->morphTo(__FUNCTION__, 'receiver_type', 'receiver_id');

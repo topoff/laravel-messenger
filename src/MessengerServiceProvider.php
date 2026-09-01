@@ -23,6 +23,7 @@ use Topoff\Messenger\Console\TestSesSnsEventsCommand;
 use Topoff\Messenger\Contracts\SesSnsProvisioningApi;
 use Topoff\Messenger\Jobs\CleanupMessengerTablesJob;
 use Topoff\Messenger\Jobs\ProcessImapInboxJob;
+use Topoff\Messenger\Jobs\RunFallbackEngineJob;
 use Topoff\Messenger\Listeners\AddBccToEmailsListener;
 use Topoff\Messenger\Listeners\AddListUnsubscribeHeadersListener;
 use Topoff\Messenger\Listeners\LogEmailToMessageLogListener;
@@ -130,7 +131,7 @@ class MessengerServiceProvider extends PackageServiceProvider
             $cronExpression = (string) config('messenger.fallback.schedule.cron', '*/10 * * * *');
             $queue = config('messenger.fallback.schedule.queue');
 
-            $schedule->job(new \Topoff\Messenger\Jobs\RunFallbackEngineJob, $queue)
+            $schedule->job(new RunFallbackEngineJob, $queue)
                 ->cron($cronExpression)
                 ->name('messenger.fallback')
                 ->withoutOverlapping();

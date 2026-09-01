@@ -1,7 +1,9 @@
 <?php
 
 use Illuminate\Mail\Events\MessageSending;
+use Illuminate\Mail\Message;
 use Illuminate\Support\Facades\URL;
+use Symfony\Component\Mime\Email;
 use Topoff\Messenger\Listeners\AddListUnsubscribeHeadersListener;
 use Topoff\Messenger\Models\MessageOptOut;
 use Topoff\Messenger\Models\MessageType;
@@ -10,7 +12,7 @@ use Workbench\App\Models\TestReceiver;
 
 function sendingEventFor($messageModel): MessageSending
 {
-    $email = new Illuminate\Mail\Message(new Symfony\Component\Mime\Email);
+    $email = new Message(new Email);
     $email->to('someone@example.com')->from('noreply@example.com')->html('<p>Hi</p>');
 
     return new MessageSending($email->getSymfonyMessage(), ['messageModel' => $messageModel]);

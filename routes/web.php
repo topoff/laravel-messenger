@@ -8,6 +8,7 @@ use Topoff\Messenger\Http\Controllers\SesSnsDashboardCommandController;
 use Topoff\Messenger\Http\Controllers\SesSnsDashboardController;
 use Topoff\Messenger\Http\Controllers\SesSnsDashboardCustomMailController;
 use Topoff\Messenger\Http\Controllers\SesSnsSetupStatusController;
+use Topoff\Messenger\Http\Controllers\UnsubscribeController;
 
 $novaConfig = array_replace_recursive([
     'enabled' => true,
@@ -42,6 +43,6 @@ Route::group($customPreviewRoute, function (): void {
 
 // RFC 8058 one-click unsubscribe (v9): signed URL from the
 // List-Unsubscribe header of marketing mails.
-Route::match(['get', 'post'], 'emessenger/unsubscribe/{message}', \Topoff\Messenger\Http\Controllers\UnsubscribeController::class)
+Route::match(['get', 'post'], 'emessenger/unsubscribe/{message}', UnsubscribeController::class)
     ->middleware(['signed'])
     ->name('messenger.unsubscribe');

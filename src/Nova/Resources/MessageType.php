@@ -56,9 +56,9 @@ class MessageType extends Resource
             ID::make()->sortable(),
             Text::make('Channel', 'channel')->sortable(),
             Select::make('Message Class', 'message_class')->options([
-                \Topoff\Messenger\Models\MessageType::CLASS_TRANSACTIONAL => 'Transactional',
-                \Topoff\Messenger\Models\MessageType::CLASS_MARKETING => 'Marketing',
-            ])->default(\Topoff\Messenger\Models\MessageType::CLASS_TRANSACTIONAL)->sortable(),
+                MessageTypeModel::CLASS_TRANSACTIONAL => 'Transactional',
+                MessageTypeModel::CLASS_MARKETING => 'Marketing',
+            ])->default(MessageTypeModel::CLASS_TRANSACTIONAL)->sortable(),
             Text::make('Notification Class', 'notification_class')->sortable()->rules('required'),
             Text::make('Single Handler', 'single_handler')->nullable()->sortable(),
             Text::make('Bulk Handler', 'bulk_handler')->nullable()->sortable(),

@@ -29,7 +29,7 @@ class TrackingByType extends Page implements HasTable
      * the `: string` return type. The grouped `message_type_id` is unique per
      * row, so use it as the stable record key.
      */
-    public function getTableRecordKey(Model | array $record): string
+    public function getTableRecordKey(Model|array $record): string
     {
         return (string) (is_array($record) ? $record['message_type_id'] : $record->message_type_id);
     }

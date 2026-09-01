@@ -60,8 +60,8 @@ it('supports soft deletes', function () {
 it('classifies message types as transactional by default and knows marketing (v9)', function () {
     $type = createMessageType();
 
-    expect($type->fresh()->message_class)->toBe(Topoff\Messenger\Models\MessageType::CLASS_TRANSACTIONAL);
+    expect($type->fresh()->message_class)->toBe(MessageType::CLASS_TRANSACTIONAL);
 
-    $marketing = createMessageType(['message_class' => Topoff\Messenger\Models\MessageType::CLASS_MARKETING]);
+    $marketing = createMessageType(['message_class' => MessageType::CLASS_MARKETING]);
     expect($marketing->fresh()->message_class)->toBe('marketing');
 });
