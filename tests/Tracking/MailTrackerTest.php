@@ -9,6 +9,7 @@ use Symfony\Component\Mailer\Envelope;
 use Symfony\Component\Mailer\SentMessage as SymfonySentMessage;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
+use Topoff\Messenger\Services\MessageService;
 use Topoff\Messenger\Tracking\MailTracker;
 
 it('injects tracking pixel and links and persists tracking metadata on messageSending', function () {
@@ -471,4 +472,56 @@ it('stores content to filesystem when log_content_strategy is filesystem', funct
         ->and($messageModel->tracking_content_path)->toEndWith('.html');
 
     Storage::disk('local')->assertExists($messageModel->tracking_content_path);
+});
+
+it('sets In-Reply-To and References from the thread reference of the message', function () {
+    $messageModel = createMessage([
+        'params' => [MessageService::THREAD_REFERENCE_PARAM => 'aaaaaaaa-bbbb-7ccc-8ddd-eeeeeeeeeeee@bounce.mailer.example.com'],
+    ]);
+
+    $email = (new Email)
+        ->from(new Address('sender@example.com', 'Sender Name'))
+        ->to(new Address('receiver@example.com', 'Receiver Name'))
+        ->subject('Threaded reply')
+        ->text('Plain text');
+
+    $event = new MessageSending($email, ['messageModel' => $messageModel]);
+    app(MailTracker::class)->messageSending($event);
+
+    expect($email->getHeaders()->get('In-Reply-To')?->getBodyAsString())
+        ->toBe('<aaaaaaaa-bbbb-7ccc-8ddd-eeeeeeeeeeee@bounce.mailer.example.com>')
+        ->and($email->getHeaders()->get('References')?->getBodyAsString())
+        ->toBe('<aaaaaaaa-bbbb-7ccc-8ddd-eeeeeeeeeeee@bounce.mailer.example.com>');
+});
+
+it('accepts a thread reference that already carries angle brackets', function () {
+    $messageModel = createMessage([
+        'params' => [MessageService::THREAD_REFERENCE_PARAM => '<11112222-3333-7444-8555-666677778888@example.com>'],
+    ]);
+
+    $email = (new Email)
+        ->from(new Address('sender@example.com', 'Sender Name'))
+        ->to(new Address('receiver@example.com', 'Receiver Name'))
+        ->subject('Threaded reply')
+        ->text('Plain text');
+
+    app(MailTracker::class)->messageSending(new MessageSending($email, ['messageModel' => $messageModel]));
+
+    expect($email->getHeaders()->get('In-Reply-To')?->getBodyAsString())
+        ->toBe('<11112222-3333-7444-8555-666677778888@example.com>');
+});
+
+it('leaves threading headers untouched without a thread reference', function () {
+    $messageModel = createMessage();
+
+    $email = (new Email)
+        ->from(new Address('sender@example.com', 'Sender Name'))
+        ->to(new Address('receiver@example.com', 'Receiver Name'))
+        ->subject('Unthreaded')
+        ->text('Plain text');
+
+    app(MailTracker::class)->messageSending(new MessageSending($email, ['messageModel' => $messageModel]));
+
+    expect($email->getHeaders()->has('In-Reply-To'))->toBeFalse()
+        ->and($email->getHeaders()->has('References'))->toBeFalse();
 });

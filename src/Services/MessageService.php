@@ -15,6 +15,11 @@ use Topoff\Messenger\Repositories\MessageTypeRepository;
  */
 class MessageService
 {
+    /**
+     * Params key carrying the thread reference set via setThreadReference().
+     */
+    public const THREAD_REFERENCE_PARAM = 'thread_reference';
+
     protected MessageTypeRepository $messageTypeRepository;
 
     protected ?string $senderClass = null;
@@ -40,6 +45,8 @@ class MessageService
     protected ?array $params = null;
 
     protected ?string $locale = null;
+
+    protected ?string $threadReference = null;
 
     /**
      * Initialized as false, when a receiver is set it is set to true
@@ -125,6 +132,19 @@ class MessageService
         return $this;
     }
 
+    /**
+     * Thread this mail onto a previous one of the same conversation. Expects the
+     * stamped Message-ID of that earlier mail (see MailTracker::injectCorrelationId),
+     * which MailTracker turns into In-Reply-To / References headers so mail clients
+     * show the exchange as one thread. Null keeps the mail unthreaded.
+     */
+    public function setThreadReference(?string $correlationMessageId = null): self
+    {
+        $this->threadReference = $correlationMessageId;
+
+        return $this;
+    }
+
     public function setLocale(?string $locale = null): self
     {
         $this->locale = $locale;
@@ -164,7 +184,7 @@ class MessageService
                 'message_type_id' => $this->messageType->id,
                 'messagable_type' => $this->messagableClass,
                 'messagable_id' => $this->messagableId,
-                'params' => $this->params,
+                'params' => $this->paramsForPersist(),
                 'locale' => $this->locale,
                 'scheduled_at' => $this->scheduled,
             ]);
@@ -200,7 +220,7 @@ class MessageService
                 'message_type_id' => $this->messageType->id,
                 'messagable_type' => $this->messagableClass,
                 'messagable_id' => $this->messagableId,
-                'params' => $this->params,
+                'params' => $this->paramsForPersist(),
                 'locale' => $this->locale,
                 'scheduled_at' => null,
             ]);
@@ -292,7 +312,7 @@ class MessageService
     {
         // Central consent guard (v9, E79): marketing types respect opt-outs.
         if ($this->receiverClass !== null && $this->receiverId !== null
-            && app(\Topoff\Messenger\Services\ConsentService::class)->isOptedOut($this->receiverClass, $this->receiverId, $this->messageType)) {
+            && app(ConsentService::class)->isOptedOut($this->receiverClass, $this->receiverId, $this->messageType)) {
             return true;
         }
 
@@ -311,6 +331,20 @@ class MessageService
     protected function getScheduled(): ?Carbon
     {
         return null;
+    }
+
+    /**
+     * Params as persisted on the Message. A thread reference travels with them —
+     * same pattern as the existing 'mailer' / 'ses_configuration_set' params — so
+     * MailTracker can pick it up at send time without a schema change.
+     */
+    private function paramsForPersist(): ?array
+    {
+        if ($this->threadReference === null || trim($this->threadReference) === '') {
+            return $this->params;
+        }
+
+        return array_merge($this->params ?? [], [self::THREAD_REFERENCE_PARAM => trim($this->threadReference)]);
     }
 
     /**
@@ -410,6 +444,7 @@ class MessageService
         $this->scheduled = null;
         $this->params = null;
         $this->locale = null;
+        $this->threadReference = null;
         $this->actionMissing = false;
     }
 }

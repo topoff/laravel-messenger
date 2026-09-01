@@ -91,6 +91,10 @@ return [
 
         // View used by the package custom message mail action.
         'custom_message_view' => 'messenger::customMessage',
+
+        // Plain-text view used when forwarding unhandled inbound mail
+        // (see messenger.imap.forward).
+        'forwarded_inbound_view' => 'messenger::forwardedInbound',
     ],
 
     'sending' => [
@@ -434,6 +438,42 @@ return [
             'bounce' => 'INBOX.Bounces',
             'complaint' => 'INBOX.Complaints',
             'reply' => 'INBOX.Processed',
+        ],
+
+        // Forwarding of inbound mail nobody handled.
+        //
+        // After the processor dispatched MessageReplyReceivedEvent, a reply that no
+        // listener marked handled (MessageReplyReceivedEvent::markHandled()) — and
+        // every message classified as Unknown — is forwarded as a real email to
+        // `unhandled_to`, so a human sees it in a normal mailbox. Bounces, complaints
+        // and auto-replies are never forwarded (already automated / pure noise).
+        //
+        // The forward carries Reply-To = original sender, the original text body
+        // inline, the original attachments plus the untouched original as a .eml
+        // attachment, and the marker header X-Topoff-Forwarded. Inbound mail carrying
+        // that marker is never forwarded again (loop protection).
+        'forward' => [
+            // Target address. Null / empty disables forwarding entirely — unhandled
+            // mail is then only logged, as before.
+            'unhandled_to' => env('MESSENGER_IMAP_FORWARD_TO'),
+
+            // Sender identity of the forwarding mail. Null falls back to the
+            // application's global mail.from address (SES / DMARC aligned).
+            'from' => env('MESSENGER_IMAP_FORWARD_FROM'),
+
+            // Optional blind copy, e.g. for supervision during an introduction
+            // phase. Null / empty = off.
+            'bcc' => env('MESSENGER_IMAP_FORWARD_BCC'),
+
+            // Spam guard: forwarding spam over our own sending path (SES) would hurt
+            // the sender reputation and flood the target mailbox. Inbound mail whose
+            // header value starts with one of the listed markers (case-insensitive)
+            // is logged and never forwarded. Header name => list of markers.
+            'spam_headers' => [
+                'x-spam-flag' => ['yes'],
+                'x-spam-status' => ['yes'],
+                'x-spamd-result' => ['default: true'],
+            ],
         ],
 
         // One entry per IMAP account. Reference one of these keys from a

@@ -1,0 +1,26 @@
+From: Beatrice Muster <beatrice@kundin.example>
+To: no-reply@top-offerten.ch
+Subject: =?UTF-8?B?R3LDvGV6aSDigJMgUsO8Y2tmcmFnZSB6dXIgT2ZmZXJ0ZQ==?=
+Date: Mon, 01 Sep 2026 08:30:00 +0200
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="outer-boundary"
+
+--outer-boundary
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+
+Guten Tag
+
+Ich haette eine Rueckfrage zur Offerte. Die Unterlagen sind angehaengt.
+
+Freundliche Gruesse
+Beatrice Muster
+
+--outer-boundary
+Content-Type: application/pdf; name="rechnung.pdf"
+Content-Disposition: attachment; filename="rechnung.pdf"
+Content-Transfer-Encoding: base64
+
+UERGLURVTU1ZLVBBWUxPQUQ=
+
+--outer-boundary--

@@ -358,3 +358,38 @@ it('passes validation when all required fields are provided', function () {
 
     expect(Message::count())->toBe(1);
 });
+
+it('persists the thread reference in the message params', function () {
+    $service = new MessageService;
+
+    $service->setReceiver(TestReceiver::class, $this->receiver->id)
+        ->setMessageTypeClass(TestMail::class)
+        ->setParams(['text' => 'Hello'])
+        ->setThreadReference('aaaaaaaa-bbbb-7ccc-8ddd-eeeeeeeeeeee@bounce.mailer.example.com')
+        ->create();
+
+    $message = Message::first();
+
+    expect($message->params[MessageService::THREAD_REFERENCE_PARAM])
+        ->toBe('aaaaaaaa-bbbb-7ccc-8ddd-eeeeeeeeeeee@bounce.mailer.example.com')
+        ->and($message->params['text'])->toBe('Hello');
+});
+
+it('leaves params untouched without a thread reference and resets it between messages', function () {
+    $service = new MessageService;
+
+    $service->setReceiver(TestReceiver::class, $this->receiver->id)
+        ->setMessageTypeClass(TestMail::class)
+        ->setParams(['text' => 'First'])
+        ->setThreadReference('aaaaaaaa-bbbb-7ccc-8ddd-eeeeeeeeeeee@example.com')
+        ->create();
+
+    $service->setReceiver(TestReceiver::class, $this->receiver->id)
+        ->setMessageTypeClass(TestMail::class)
+        ->setParams(['text' => 'Second'])
+        ->create();
+
+    $second = Message::orderByDesc('id')->first();
+
+    expect($second->params)->toBe(['text' => 'Second']);
+});

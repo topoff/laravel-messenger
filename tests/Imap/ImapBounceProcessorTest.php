@@ -11,6 +11,7 @@ use Topoff\Messenger\Events\MessageTransientBouncedEvent;
 use Topoff\Messenger\Services\Imap\BounceClassification;
 use Topoff\Messenger\Services\Imap\BounceClassifier;
 use Topoff\Messenger\Services\Imap\ImapBounceProcessor;
+use Topoff\Messenger\Services\Imap\InboundMailForwarder;
 use Topoff\Messenger\Services\Imap\InboundMessageParser;
 use Topoff\Messenger\Services\Imap\InMemoryInboundMessageSource;
 use Topoff\Messenger\Services\Imap\MessageMatcher;
@@ -28,6 +29,7 @@ function makeProcessor(): ImapBounceProcessor
         classifier: new BounceClassifier,
         matcher: new MessageMatcher,
         tracker: new ProcessedMessageTracker,
+        forwarder: new InboundMailForwarder,
     );
 }
 

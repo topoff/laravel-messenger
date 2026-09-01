@@ -26,7 +26,13 @@ use Topoff\Messenger\Models\Message;
  *   5. Persist bounce / complaint state into Message.tracking_meta
  *   6. Dispatch higher-level events (PermanentBounced / TransientBounced /
  *      Complaint / ReplyReceived) plus the low-level ImapMessageProcessedEvent
- *   7. Tell the source what classification we landed on so it can move/flag/delete
+ *   7. Forward what nobody handled to a human mailbox (see InboundMailForwarder)
+ *   8. Tell the source what classification we landed on so it can move/flag/delete
+ *
+ * Forwarding decision (step 7): a Reply that no listener marked handled and every
+ * Unknown-classified message are forwarded. Bounces, complaints and auto-replies
+ * never are — they are automated traffic and would only be noise in a mailbox.
+ * Without messenger.imap.forward.unhandled_to nothing is forwarded at all.
  *
  * Bounce handling intentionally mirrors RecordBounceJob's tracking_meta layout
  * (failures[], success flag, sns_message_bounce surrogate as imap_message_bounce)
@@ -41,6 +47,7 @@ class ImapBounceProcessor
         private readonly BounceClassifier $classifier,
         private readonly MessageMatcher $matcher,
         private readonly ProcessedMessageTracker $tracker,
+        private readonly InboundMailForwarder $forwarder,
     ) {}
 
     public function process(InboundMessageSource $source, int $limit = 200): ProcessingResult
@@ -90,7 +97,8 @@ class ImapBounceProcessor
 
         $inbound = $this->parser->parse($raw);
         $report = $this->classifier->classify($inbound);
-        $matches = $this->matcher->match($report);
+        $matchOutcome = $this->matcher->matchDetailed($report);
+        $matches = $matchOutcome->matches;
 
         $reserved = $this->tracker->reserve($inboxKey, $fingerprint, $uid, $report->classification);
         if (! $reserved) {
@@ -107,9 +115,9 @@ class ImapBounceProcessor
             BounceClassification::HardBounce,
             BounceClassification::SoftBounce => $this->handleBounce($result, $inbound, $report, $matches),
             BounceClassification::Complaint => $this->handleComplaint($result, $inbound, $report, $matches),
-            BounceClassification::Reply => $this->handleReply($result, $inbound, $matches, $inboxKey),
+            BounceClassification::Reply => $this->handleReply($result, $inbound, $matchOutcome, $inboxKey, $raw),
             BounceClassification::AutoReply => $result->autoReplies++,
-            BounceClassification::Unknown => $result->unknown++,
+            BounceClassification::Unknown => $this->handleUnknown($result, $inbound, $inboxKey, $raw),
         };
 
         Event::dispatch(new ImapMessageProcessedEvent(
@@ -228,20 +236,18 @@ class ImapBounceProcessor
         }
     }
 
-    /**
-     * @param  Collection<int, Message>  $matches
-     */
     private function handleReply(
         ProcessingResult $result,
         InboundMessage $inbound,
-        $matches,
+        MatchOutcome $matchOutcome,
         string $inboxKey,
+        string $raw,
     ): void {
         $result->replies++;
 
-        $matched = $matches->first();
+        $matched = $matchOutcome->matches->first();
 
-        Event::dispatch(new MessageReplyReceivedEvent(
+        $event = new MessageReplyReceivedEvent(
             message: $matched,
             inboxKey: $inboxKey,
             fromAddress: $this->extractEmailAddress($inbound->from()),
@@ -250,7 +256,40 @@ class ImapBounceProcessor
             htmlBody: $inbound->firstPartByType('text/html')?->body,
             rawHeaders: $inbound->headers,
             attachments: $this->extractAttachmentManifest($inbound),
-        ));
+            matchedVia: $matched === null ? null : $matchOutcome->via,
+        );
+
+        try {
+            Event::dispatch($event);
+        } catch (Throwable $e) {
+            // The fingerprint is already reserved, so a rethrown listener error
+            // would drop this mail for good. A failing listener is treated like
+            // one that declined: the reply stays un-handled and goes to a human.
+            Log::error('ImapBounceProcessor: reply listener threw, treating reply as un-handled', [
+                'inbox_key' => $inboxKey,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile().':'.$e->getLine(),
+            ]);
+        }
+
+        if (! $event->isHandled()) {
+            $this->forwarder->forward($inbound, $raw, $inboxKey, 'unhandled_reply');
+        }
+    }
+
+    /**
+     * Unknown inbound mail is never automated traffic we understand, so it always
+     * goes to a human — there is no listener that could have handled it.
+     */
+    private function handleUnknown(
+        ProcessingResult $result,
+        InboundMessage $inbound,
+        string $inboxKey,
+        string $raw,
+    ): void {
+        $result->unknown++;
+
+        $this->forwarder->forward($inbound, $raw, $inboxKey, 'unknown_classification');
     }
 
     private function extractEmailAddress(string $value): string

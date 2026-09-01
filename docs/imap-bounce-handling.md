@@ -142,9 +142,53 @@ For inbound mail that is not a DSN or ARF, the processor fires `MessageReplyRece
 
 The default `after_process.reply` action is `seen` (flag as read). Override per-inbox via `messenger.imap.after_process` if you want move/delete behavior.
 
+Listeners run synchronously. A listener that consumed the reply says so with `$event->markHandled()` — everything left un-handled is forwarded to a human (see below).
+
+## Forwarding what nobody handled
+
+Set `messenger.imap.forward.unhandled_to` and the processor forwards inbound mail that no code took care of, as a real outgoing email — so a person sees it in a normal mailbox instead of it being dropped with a log line.
+
+| Classification | Forwarded? |
+|---|---|
+| Reply, no listener called `markHandled()` | yes |
+| Reply, a listener called `markHandled()` | no |
+| Unknown | always |
+| Hard bounce / soft bounce / complaint / auto-reply | never (automated traffic) |
+
+The forwarding mail (`Topoff\Messenger\Mail\ForwardedInboundMail`) carries:
+
+- **From** — `messenger.imap.forward.from`, or the app's global `mail.from.address` when unset (keep it on a verified sending identity so SPF/DKIM/DMARC stay aligned).
+- **Reply-To** — the original sender, so "reply" in the mail client reaches them directly.
+- **Subject** — `Fwd: <original subject>` (RFC 2047 encoded words are decoded first).
+- **Body** — a forwarding header block (from / to / date / subject / inbox / reason) plus the original text body inline.
+- **Attachments** — the original attachments, plus the untouched original as `original-message.eml` (`message/rfc822`).
+- **`X-Topoff-Forwarded: 1`** — marker header.
+
+Two guards run before every send:
+
+- **Loop protection** — inbound mail carrying `X-Topoff-Forwarded` is never forwarded again (e.g. one of our own forwards bouncing back into the reply-to inbox).
+- **Spam guard** — `messenger.imap.forward.spam_headers` maps header names to markers (case-insensitive prefix match on the header value, default `X-Spam-Flag: yes`, `X-Spam-Status: yes`, `X-Spamd-Result: default: true`). A match is logged and never forwarded — forwarding spam over our own sending path would hurt the sender reputation.
+
+Config keys:
+
+| Key | Env | Default | Meaning |
+|---|---|---|---|
+| `messenger.imap.forward.unhandled_to` | `MESSENGER_IMAP_FORWARD_TO` | `null` | Target address. Empty disables forwarding — unhandled mail is only logged, as before. |
+| `messenger.imap.forward.from` | `MESSENGER_IMAP_FORWARD_FROM` | `null` | Sender identity of the forward; falls back to `mail.from.address`. |
+| `messenger.imap.forward.bcc` | `MESSENGER_IMAP_FORWARD_BCC` | `null` | Optional blind copy, e.g. for supervision during an introduction phase. |
+| `messenger.imap.forward.spam_headers` | — | see above | Header ⇒ marker list for the spam guard. |
+| `messenger.mail.forwarded_inbound_view` | — | `messenger::forwardedInbound` | Plain-text view of the forward. |
+
+A failing forward never aborts the sweep: the error is logged and processing continues, so the message stays in the inbox (as long as `after_process.reply` is `seen`).
+
+## Cleaning a reply for re-use
+
+`Topoff\Messenger\Services\Imap\ReplyTextExtractor::extract($textBody)` returns just the visible answer — quoted history and signature removed. It is adapted from `willdurand/email-reply-parser` (MIT, see the class docblock) and additionally recognizes the German Outlook separator (`Von: … Gesendet: …`) plus its French (`De : … Envoyé :`) and Italian (`Da: … Inviato:`) equivalents.
+
 ## Troubleshooting
 
 - **Bounce arrived but no `MessagePermanentBouncedEvent` fired** → check the log for `"ImapBounceProcessor: no matching tracked message"`; the orphan context shows whether the correlation id was visible and which recipients the DSN named.
 - **A bounce was processed but isn't reflected in `messages.bounced_at`** → check `tracking_meta.imap_message_bounce` for the parsed DSN. The `bounced_at` column is only set if the message has not previously been flagged bounced.
 - **Duplicate events** → the idempotency table (`messenger_imap_processed`) should prevent this. If you see one, check the unique constraint and the row count for the `(inbox_key, fingerprint)` of the affected message.
 - **Reply events with `message === null`** → expected for unsolicited inbound; host application must decide what to do.
+- **Nothing arrives at the forwarding address** → check `messenger.imap.forward.unhandled_to` (empty disables forwarding), then the log for `"InboundMailForwarder: ..."` — it names the case: spam-flagged, own forward (loop protection), or a failed send.

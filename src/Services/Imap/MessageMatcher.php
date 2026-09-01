@@ -34,25 +34,36 @@ final readonly class MessageMatcher
      */
     public function match(BounceReport $report): Collection
     {
+        return $this->matchDetailed($report)->matches;
+    }
+
+    /**
+     * Same lookup, but the outcome also names the path that produced the match
+     * (see MatchOutcome) so callers can judge how trustworthy it is.
+     */
+    public function matchDetailed(BounceReport $report): MatchOutcome
+    {
         if ($report->originalCorrelationId !== null && $report->originalCorrelationId !== '') {
             $matches = $this->byCorrelationId($report->originalCorrelationId);
             if ($matches->isNotEmpty()) {
-                return $matches;
+                return new MatchOutcome($matches, MatchOutcome::VIA_CORRELATION_ID);
             }
         }
 
         if ($report->originalSesMessageId !== null && $report->originalSesMessageId !== '') {
             $matches = $this->bySesMessageId($report->originalSesMessageId);
             if ($matches->isNotEmpty()) {
-                return $matches;
+                return new MatchOutcome($matches, MatchOutcome::VIA_SES_MESSAGE_ID);
             }
         }
 
         if ($report->recipients !== []) {
-            return $this->byRecipientRecent($report->recipients);
+            $matches = $this->byRecipientRecent($report->recipients);
+
+            return new MatchOutcome($matches, $matches->isEmpty() ? null : MatchOutcome::VIA_RECIPIENT_FALLBACK);
         }
 
-        return $this->emptyCollection();
+        return new MatchOutcome($this->emptyCollection(), null);
     }
 
     /**

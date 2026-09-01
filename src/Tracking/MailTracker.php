@@ -19,6 +19,7 @@ use Symfony\Component\Mime\Part\Multipart\MixedPart;
 use Symfony\Component\Mime\Part\Multipart\RelatedPart;
 use Symfony\Component\Mime\Part\TextPart;
 use Topoff\Messenger\Models\Message;
+use Topoff\Messenger\Services\MessageService;
 
 class MailTracker
 {
@@ -57,6 +58,7 @@ class MailTracker
             $this->injectFromAddressOverride($messageModels, $message);
             $this->injectReplyToOverride($messageModels, $message);
             $correlationId = $this->injectCorrelationId($messageModels, $message);
+            $this->injectThreadHeaders($messageModels, $message);
             $this->persistTrackingMetadata($messageModels, $message, $hash, $correlationId, $html, $mutated);
             $this->injectMessageTags($messageModels, $message);
         } catch (\Throwable $e) {
@@ -193,7 +195,7 @@ class MailTracker
         }
 
         if (config('messenger.tracking.track_links')) {
-            $result = preg_replace_callback('/(<a[^>]*href=["\'])([^"\']*)/i', function (array $matches) use ($hash): string {
+            return preg_replace_callback('/(<a[^>]*href=["\'])([^"\']*)/i', function (array $matches) use ($hash): string {
                 $url = $matches[2] !== '' ? str_replace('&amp;', '&', $matches[2]) : url('/');
 
                 return $matches[1].URL::signedRoute('messenger.tracking.click', [
@@ -370,6 +372,39 @@ class MailTracker
         }
 
         return $correlationId;
+    }
+
+    /**
+     * Thread this mail onto an earlier one of the same conversation, when the
+     * sender asked for it via MessageService::setThreadReference(). The referenced
+     * value is the Message-ID stamped on that earlier mail; In-Reply-To plus
+     * References is what mail clients group a thread by.
+     *
+     * Without a thread reference nothing is touched — unthreaded mail keeps its
+     * previous headers exactly.
+     *
+     * @param  Collection<int, Message>  $messageModels
+     */
+    protected function injectThreadHeaders(Collection $messageModels, Email $message): void
+    {
+        $params = $messageModels->first()?->params;
+        $reference = is_array($params) ? Arr::get($params, MessageService::THREAD_REFERENCE_PARAM) : null;
+        if (! is_string($reference)) {
+            return;
+        }
+
+        $reference = trim($reference, " \t<>");
+        if ($reference === '') {
+            return;
+        }
+
+        if (! $message->getHeaders()->has('In-Reply-To')) {
+            $message->getHeaders()->addIdHeader('In-Reply-To', $reference);
+        }
+
+        if (! $message->getHeaders()->has('References')) {
+            $message->getHeaders()->addIdHeader('References', $reference);
+        }
     }
 
     /**

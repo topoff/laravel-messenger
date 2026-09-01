@@ -10,6 +10,11 @@ use Workbench\App\Models\TestReceiver;
 use Workbench\App\Models\TestSender;
 use Workbench\App\Models\TestUuidReceiver;
 
+function readImapFixture(string $name): string
+{
+    return (string) file_get_contents(__DIR__.'/Imap/fixtures/'.$name);
+}
+
 function createMessageType(array $attributes = []): MessageType
 {
     return MessageType::create(array_merge([
