@@ -14,7 +14,8 @@ use Throwable;
  *
  *   $folder->messages()->unseen()->get()
  *   $folder->messages()->since($carbonDate)->unseen()->get()
- *   $message->getRawBody(): string
+ *   $message->getRawBody(): string          — body ONLY, headers stripped
+ *   $message->getHeader()?->raw: string     — the raw RFC 822 header block
  *   $message->getUid(): int|string
  *   $message->setFlag('Seen' | …): bool
  *   $message->move(string $targetFolder): bool
@@ -55,10 +56,26 @@ class WebklexInboundMessageSource implements InboundMessageSource
         foreach ($messages as $message) {
             yield [
                 'uid' => (string) $message->getUid(),
-                'raw' => (string) $message->getRawBody(),
+                'raw' => $this->rawSource($message),
                 '__source' => $message,
             ];
         }
+    }
+
+    /**
+     * Webklex splits a fetched message into header and body — getRawBody() is
+     * the body ONLY. Everything downstream (header parsing, matching, the .eml
+     * in the forward) needs the full RFC 822 source, so recompose it from the
+     * raw header block plus the raw body.
+     */
+    private function rawSource(object $message): string
+    {
+        $rawBody = (string) $message->getRawBody();
+
+        $header = method_exists($message, 'getHeader') ? $message->getHeader() : null;
+        $rawHeader = is_object($header) && property_exists($header, 'raw') ? rtrim((string) $header->raw, "\r\n") : '';
+
+        return $rawHeader === '' ? $rawBody : $rawHeader."\r\n\r\n".$rawBody;
     }
 
     public function markProcessed(string $uid, BounceClassification $classification): void
