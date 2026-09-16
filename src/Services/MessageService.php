@@ -262,13 +262,19 @@ class MessageService
             return $message;
         }
 
-        Log::error('MessageService::change(): No existing message found to reschedule.', [
+        // Expected when the message was already sent and pruned, or was never
+        // created (e.g. finishing an old/test lead) — a warning, not an error.
+        Log::warning('MessageService::change(): No existing message found to reschedule.', [
             'receiver_class' => $this->receiverClass,
             'receiver_id' => $this->receiverId,
             'message_type_id' => $this->messageType->id,
             'messagable_class' => $this->messagableClass,
             'messagable_id' => $this->messagableId,
         ]);
+
+        // Without this the destructor logged a second "Destroyed without calling
+        // create(), change() or delete()" error for the same, already-logged event.
+        $this->resetVars();
 
         return null;
 

@@ -2,6 +2,7 @@
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Topoff\Messenger\Models\Message;
 use Topoff\Messenger\Services\MessageService;
@@ -202,6 +203,24 @@ it('returns null when changing a non-existent message', function () {
         ->change();
 
     expect($result)->toBeNull();
+});
+
+it('logs one warning and no destructor error when changing a non-existent message', function () {
+    // The not-found path is an expected state (message already sent and pruned,
+    // or never created). It used to Log::error AND leave actionMissing set, so
+    // the destructor logged a second error for the same event.
+    Log::spy();
+
+    $service = new MessageService;
+    $service->setReceiver(TestReceiver::class, $this->receiver->id)
+        ->setMessagable(TestMessagable::class, $this->messagable->id)
+        ->setMessageTypeClass(TestMail::class)
+        ->setCompanyId(1)
+        ->change();
+    unset($service);
+
+    Log::shouldHaveReceived('warning')->once();
+    Log::shouldNotHaveReceived('error');
 });
 
 it('deletes a message', function () {
