@@ -181,6 +181,31 @@ Config keys:
 
 A failing forward never aborts the sweep: the error is logged and processing continues, so the message stays in the inbox (as long as `after_process.reply` is `seen`).
 
+## Answering instead of forwarding (auto-responder)
+
+Set `messenger.imap.auto_reply.enabled` **and** `messenger.imap.auto_reply.contact_address` and the processor stops forwarding unhandled mail — instead the **sender** gets a short automatic notice (`Topoff\Messenger\Mail\NoReplyAutoResponseMail`, view `messenger::noReplyAutoResponse`): this mailbox is send-only and not read, please write to the contact address. Use this when the goal is that senders learn the monitored address instead of a human triaging the no-reply inbox.
+
+Scope is exactly the two forwarding cases: replies no listener marked handled, and mail classified Unknown. Bounces, complaints and auto-replies are never answered.
+
+The notice quotes **nothing** from the original mail (no backscatter reflection), threads onto the original `Message-ID` via `References`, carries `Reply-To: contact_address`, and is marked as automated (`Auto-Submitted: auto-replied`, `X-Auto-Response-Suppress: All`, `Precedence: auto_reply`, marker `X-Topoff-Auto-Replied: 1`).
+
+Guards — each suppresses the notice with a log line only (`UnhandledMailAutoResponder: ...`); guard-blocked mail is **not** forwarded either, so the human mailbox stays free of unroutable machine mail:
+
+- our own marker headers (`X-Topoff-Auto-Replied`, `X-Topoff-Forwarded`) — loop protection
+- the spam guard (same `messenger.imap.forward.spam_headers` config)
+- mail from one of our own addresses (forward + auto-reply identities, `mail.from.address`, sending identities)
+- automated senders: `Precedence` bulk/junk/list/auto_reply, `List-Id`/`List-Unsubscribe`, `X-Auto-Response-Suppress`, or a `mailer-daemon`/`postmaster`/`no-reply`-style local part
+- the per-sender throttle: at most one notice per sender address per `throttle_hours` (cache-based; a failed send releases the slot)
+
+| Config | Env | Default | Meaning |
+| --- | --- | --- | --- |
+| `messenger.imap.auto_reply.enabled` | `MESSENGER_IMAP_AUTO_REPLY_ENABLED` | `false` | Master switch. Off = forwarding behavior above. |
+| `messenger.imap.auto_reply.contact_address` | `MESSENGER_IMAP_AUTO_REPLY_CONTACT` | `null` | Monitored address the notice points to. Required — empty keeps the responder disabled. |
+| `messenger.imap.auto_reply.from` | `MESSENGER_IMAP_AUTO_REPLY_FROM` | `null` | Sender identity; falls back to `forward.from`, then `mail.from.address`. |
+| `messenger.imap.auto_reply.bcc` | `MESSENGER_IMAP_AUTO_REPLY_BCC` | `null` | Optional blind copy for supervision during an introduction phase. |
+| `messenger.imap.auto_reply.throttle_hours` | `MESSENGER_IMAP_AUTO_REPLY_THROTTLE_HOURS` | `24` | Per-sender throttle window; `0` disables the throttle. |
+| `messenger.mail.no_reply_auto_response_view` | — | `messenger::noReplyAutoResponse` | Plain-text view of the notice (German wording; override to change it). |
+
 ## Cleaning a reply for re-use
 
 `Topoff\Messenger\Services\Imap\ReplyTextExtractor::extract($textBody)` returns just the visible answer — quoted history and signature removed. It is adapted from `willdurand/email-reply-parser` (MIT, see the class docblock) and additionally recognizes the German Outlook separator (`Von: … Gesendet: …`) plus its French (`De : … Envoyé :`) and Italian (`Da: … Inviato:`) equivalents.

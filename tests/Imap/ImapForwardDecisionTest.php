@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Mail;
 use Topoff\Messenger\Events\MessageReplyReceivedEvent;
 use Topoff\Messenger\Mail\ForwardedInboundMail;
+use Topoff\Messenger\Mail\NoReplyAutoResponseMail;
 use Topoff\Messenger\Services\Imap\BounceClassifier;
 use Topoff\Messenger\Services\Imap\ImapBounceProcessor;
 use Topoff\Messenger\Services\Imap\InboundMailForwarder;
@@ -13,6 +14,7 @@ use Topoff\Messenger\Services\Imap\InboundMessageParser;
 use Topoff\Messenger\Services\Imap\InMemoryInboundMessageSource;
 use Topoff\Messenger\Services\Imap\MessageMatcher;
 use Topoff\Messenger\Services\Imap\ProcessedMessageTracker;
+use Topoff\Messenger\Services\Imap\UnhandledMailAutoResponder;
 
 function processFixture(string $fixture): void
 {
@@ -21,7 +23,8 @@ function processFixture(string $fixture): void
         classifier: new BounceClassifier,
         matcher: new MessageMatcher,
         tracker: new ProcessedMessageTracker,
-        forwarder: new InboundMailForwarder,
+        forwarder: $forwarder = new InboundMailForwarder,
+        responder: new UnhandledMailAutoResponder($forwarder),
     );
 
     $processor->process(new InMemoryInboundMessageSource('noreply-topofferten', [
@@ -129,4 +132,42 @@ it('still forwards a reply when the listener throws — a failing listener must 
 
     Mail::assertSent(ForwardedInboundMail::class, fn (ForwardedInboundMail $mail): bool => $mail->hasTo('info@top-offerten.ch')
         && $mail->reason === 'unhandled_reply');
+});
+
+it('answers instead of forwarding when the auto-responder is enabled', function () {
+    config()->set('messenger.imap.auto_reply.enabled', true);
+    config()->set('messenger.imap.auto_reply.contact_address', 'info@top-offerten.ch');
+    Mail::fake();
+
+    processFixture('unsolicited_with_attachment.eml');
+
+    Mail::assertSent(NoReplyAutoResponseMail::class, fn (NoReplyAutoResponseMail $mail): bool => $mail->hasTo('beatrice@kundin.example')
+        && $mail->contactAddress === 'info@top-offerten.ch');
+    Mail::assertNotSent(ForwardedInboundMail::class);
+});
+
+it('answers an unhandled reply when the auto-responder is enabled', function () {
+    config()->set('messenger.imap.auto_reply.enabled', true);
+    config()->set('messenger.imap.auto_reply.contact_address', 'info@top-offerten.ch');
+    Mail::fake();
+
+    createMessage([
+        'tracking_correlation_id' => '77778888-9999-7aaa-8bbb-cccccccccccc',
+        'tracking_recipient_contact' => 'bob@customer.example',
+    ]);
+
+    processFixture('genuine_reply.eml');
+
+    Mail::assertSent(NoReplyAutoResponseMail::class, fn (NoReplyAutoResponseMail $mail): bool => $mail->hasTo('bob@customer.example'));
+    Mail::assertNotSent(ForwardedInboundMail::class);
+});
+
+it('neither answers nor forwards guard-blocked mail when the auto-responder is enabled', function () {
+    config()->set('messenger.imap.auto_reply.enabled', true);
+    config()->set('messenger.imap.auto_reply.contact_address', 'info@top-offerten.ch');
+    Mail::fake();
+
+    processFixture('spam_flagged_reply.eml');
+
+    Mail::assertNothingSent();
 });

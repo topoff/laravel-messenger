@@ -16,6 +16,7 @@ use Topoff\Messenger\Services\Imap\InboundMessageParser;
 use Topoff\Messenger\Services\Imap\InMemoryInboundMessageSource;
 use Topoff\Messenger\Services\Imap\MessageMatcher;
 use Topoff\Messenger\Services\Imap\ProcessedMessageTracker;
+use Topoff\Messenger\Services\Imap\UnhandledMailAutoResponder;
 
 function readFixture(string $name): string
 {
@@ -29,7 +30,8 @@ function makeProcessor(): ImapBounceProcessor
         classifier: new BounceClassifier,
         matcher: new MessageMatcher,
         tracker: new ProcessedMessageTracker,
-        forwarder: new InboundMailForwarder,
+        forwarder: $forwarder = new InboundMailForwarder,
+        responder: new UnhandledMailAutoResponder($forwarder),
     );
 }
 

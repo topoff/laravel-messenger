@@ -48,6 +48,7 @@ class ImapBounceProcessor
         private readonly MessageMatcher $matcher,
         private readonly ProcessedMessageTracker $tracker,
         private readonly InboundMailForwarder $forwarder,
+        private readonly UnhandledMailAutoResponder $responder,
     ) {}
 
     public function process(InboundMessageSource $source, int $limit = 200): ProcessingResult
@@ -273,7 +274,7 @@ class ImapBounceProcessor
         }
 
         if (! $event->isHandled()) {
-            $this->forwarder->forward($inbound, $raw, $inboxKey, 'unhandled_reply');
+            $this->dispatchUnhandled($inbound, $raw, $inboxKey, 'unhandled_reply');
         }
     }
 
@@ -289,7 +290,30 @@ class ImapBounceProcessor
     ): void {
         $result->unknown++;
 
-        $this->forwarder->forward($inbound, $raw, $inboxKey, 'unknown_classification');
+        $this->dispatchUnhandled($inbound, $raw, $inboxKey, 'unknown_classification');
+    }
+
+    /**
+     * What happens to mail nobody handled: with the auto-responder enabled the
+     * sender gets an automatic "this mailbox is not read" notice and NOTHING is
+     * forwarded — mail its guards refuse (spam, automated senders, throttle) is
+     * logged only, so the human mailbox stays free of unroutable machine mail.
+     * With the responder disabled the previous behavior stands: forward to the
+     * human mailbox.
+     */
+    private function dispatchUnhandled(
+        InboundMessage $inbound,
+        string $raw,
+        string $inboxKey,
+        string $reason,
+    ): void {
+        if ($this->responder->isEnabled()) {
+            $this->responder->respond($inbound, $inboxKey, $reason);
+
+            return;
+        }
+
+        $this->forwarder->forward($inbound, $raw, $inboxKey, $reason);
     }
 
     private function extractEmailAddress(string $value): string

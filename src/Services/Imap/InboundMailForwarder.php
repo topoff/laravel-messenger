@@ -183,8 +183,9 @@ class InboundMailForwarder
      * brand-new mail from one of our own addresses (forward target, sending
      * identities) carries no marker and gets a fresh fingerprint on every turn —
      * forwarding it back would loop every sweep. Own mail never needs forwarding.
+     * Public because UnhandledMailAutoResponder shares this guard.
      */
-    private function comesFromOwnAddress(InboundMessage $inbound): bool
+    public function comesFromOwnAddress(InboundMessage $inbound): bool
     {
         $from = $this->extractEmailAddress($inbound->from());
         if ($from === '') {

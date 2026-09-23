@@ -95,6 +95,10 @@ return [
         // Plain-text view used when forwarding unhandled inbound mail
         // (see messenger.imap.forward).
         'forwarded_inbound_view' => 'messenger::forwardedInbound',
+
+        // Plain-text view of the automatic "this mailbox is not read" notice
+        // (see messenger.imap.auto_reply). Override to change the wording.
+        'no_reply_auto_response_view' => 'messenger::noReplyAutoResponse',
     ],
 
     'sending' => [
@@ -474,6 +478,41 @@ return [
                 'x-spam-status' => ['yes'],
                 'x-spamd-result' => ['default: true'],
             ],
+        ],
+
+        // Automatic answer to inbound mail nobody handled.
+        //
+        // When enabled (flag AND contact_address set), unhandled replies and
+        // mail classified as Unknown are no longer forwarded to
+        // forward.unhandled_to — instead the SENDER gets a short automatic
+        // notice: this mailbox is send-only and not read, please write to
+        // `contact_address`. Bounces, complaints and auto-replies are never
+        // answered. Spam, mail from our own addresses, our own forwards and
+        // responses (marker headers), and automated senders (Precedence
+        // bulk/list, List-* headers, mailer-daemon / no-reply local parts) are
+        // suppressed and only logged — as is any sender already answered
+        // within the throttle window (loop and backscatter protection). The
+        // notice quotes nothing from the original mail.
+        'auto_reply' => [
+            'enabled' => (bool) env('MESSENGER_IMAP_AUTO_REPLY_ENABLED', false),
+
+            // The monitored address the notice points senders to. Required —
+            // without it the responder stays disabled and unhandled mail keeps
+            // being forwarded (or logged) as before.
+            'contact_address' => env('MESSENGER_IMAP_AUTO_REPLY_CONTACT'),
+
+            // Sender identity of the notice. Null falls back to forward.from,
+            // then the application's global mail.from address (SES / DMARC
+            // aligned).
+            'from' => env('MESSENGER_IMAP_AUTO_REPLY_FROM'),
+
+            // Optional blind copy, e.g. for supervision during an introduction
+            // phase. Null / empty = off.
+            'bcc' => env('MESSENGER_IMAP_AUTO_REPLY_BCC'),
+
+            // At most one notice per sender address within this window.
+            // 0 disables the throttle.
+            'throttle_hours' => (int) env('MESSENGER_IMAP_AUTO_REPLY_THROTTLE_HOURS', 24),
         ],
 
         // One entry per IMAP account. Reference one of these keys from a
