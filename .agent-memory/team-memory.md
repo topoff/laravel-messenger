@@ -22,7 +22,7 @@ It is versioned in this repository and is intended for Claude Code and Codex.
 
 ## Commands and workflows
 
-- Run tests: `composer test` (Pest 4.0)
+- Before committing: `composer gates` (`composer test` + `composer clean`). Run tests: `composer test` (Pest 4.0)
 - Static analysis + style: `composer clean` (Rector + Pint + PHPStan)
 - IMAP sweep: `php artisan messenger:imap:fetch [inboxKey] [--dry-run] [--limit=N]`
 - SQS drain: `php artisan messenger:tracking:sqs-poll [--once] [--max-messages=N] [--max-time=S]` (auto-scheduled when `event_transport=sqs`).
