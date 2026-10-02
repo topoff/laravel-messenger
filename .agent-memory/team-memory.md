@@ -1,7 +1,7 @@
 # Team Memory: laravel-messenger
 
 This file contains deliberate, team-reviewed memory for this project.
-It is versioned in this repository and is intended for Claude Code, Codex, and OpenCode.
+It is versioned in this repository and is intended for Claude Code and Codex.
 
 ## Stable facts
 
@@ -30,7 +30,7 @@ It is versioned in this repository and is intended for Claude Code, Codex, and O
 
 ## Conventions specific to this project
 
-- **Every commit gets a SemVer git tag** (`vX.Y.Z`). Composer pulls this package by tag from GitHub, so an untagged commit is invisible to host apps. Per commit: `patch` for bug fixes, `minor` for new features, `major` for breaking changes. Workflow per commit: (1) commit, (2) `git tag vX.Y.Z <sha>` (next SemVer step from the latest existing tag — check with `git tag --sort=-creatordate | head -1`), (3) `git push origin master && git push origin vX.Y.Z`. Don't batch multiple commits under one tag — each commit ships its own version so the changelog stays one-to-one with releases.
+- **Every commit gets a SemVer git tag** (`vX.Y.Z`). Host apps pull this package by tag via packagist (see workspace «Package distribution»), so an untagged commit is invisible to host apps. Per commit: `patch` for bug fixes, `minor` for new features, `major` for breaking changes. Workflow per commit: (1) commit, (2) `git tag vX.Y.Z <sha>` (next SemVer step from the latest existing tag — check with `git tag --sort=-v:refname | head -1`), (3) **after the owner's push go** `git push origin master && git push origin vX.Y.Z`. Don't batch multiple commits under one tag — each commit ships its own version so the changelog stays one-to-one with releases.
 - Inbox ↔ configuration-set link is **explicit**: `ses_sns.configuration_sets[<key>].imap_inbox` references `imap.inboxes[<key>]`. Multiple configuration sets may share one inbox.
 - **The IMAP path must never write to the SES suppression list.** IMAP DSNs are heuristically parsed; misclassification must not globally block real recipients. Host applications add their own suppression by subscribing to `MessagePermanentBouncedEvent`.
 - New PHP files in `src/` should use `declare(strict_types=1);` (most files already do).
