@@ -87,3 +87,24 @@ it('extracts SES message id from In-Reply-To when SES rewrote our Message-ID hea
         '0102030405060708-aabbccdd-1122-3344-5566-778899aabbcc-000000'
     );
 });
+
+it('classifies an out-of-office notice forwarded by SES from MAILER-DAEMON as auto reply', function () {
+    // SES forwards auto-replies to the envelope sender from MAILER-DAEMON@…amazonses.com
+    // without a DSN part — the sender alone must not make it a bounce.
+    $report = classifyFixture('ses_forwarded_auto_reply.eml');
+
+    expect($report->classification)->toBe(BounceClassification::AutoReply);
+    expect($report->originalSesMessageId)->toBe('0109019a1234abcd-11112222-3333-4444-5555-666677778888-000000');
+});
+
+it('still classifies a plain-text mailer-daemon notice with Auto-Submitted: auto-generated as bounce', function () {
+    $report = classifyFixture('plain_mailer_daemon_bounce.eml');
+
+    expect($report->classification)->toBeIn([BounceClassification::HardBounce, BounceClassification::SoftBounce]);
+});
+
+it('keeps a DSN with Auto-Submitted header a bounce', function () {
+    $report = classifyFixture('postfix_soft_bounce.eml');
+
+    expect($report->classification)->toBe(BounceClassification::SoftBounce);
+});

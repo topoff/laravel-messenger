@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Topoff\Messenger\Services\Imap\BounceClassification;
 use Topoff\Messenger\Services\Imap\WebklexInboundMessageSource;
 
 /**
@@ -137,4 +138,90 @@ it('falls back to the body alone when no header block is available', function ()
     $items = iterator_to_array($source->fetch(10), preserve_keys: false);
 
     expect($items[0]['raw'])->toBe('Body only');
+});
+
+/**
+ * @param  Closure(): mixed  $move
+ */
+function fakeFlaggableMessage(Closure $move): object
+{
+    return new class($move)
+    {
+        public array $flags = [];
+
+        public array $moves = [];
+
+        public function __construct(private readonly Closure $move) {}
+
+        public function setFlag(string $flag): bool
+        {
+            $this->flags[] = $flag;
+
+            return true;
+        }
+
+        public function move(string $target): mixed
+        {
+            $this->moves[] = $target;
+
+            return ($this->move)();
+        }
+    };
+}
+
+function sourceFindingMessage(object $message): WebklexInboundMessageSource
+{
+    $query = new readonly class($message)
+    {
+        public function __construct(private object $message) {}
+
+        public function getMessageByUid(string $uid): object
+        {
+            return $this->message;
+        }
+    };
+
+    $folder = new readonly class($query)
+    {
+        public function __construct(private object $query) {}
+
+        public function messages(): object
+        {
+            return $this->query;
+        }
+    };
+
+    return new WebklexInboundMessageSource(
+        inboxKey: 'noreply',
+        folder: $folder,
+        afterProcess: ['bounce' => 'move', 'complaint' => 'move', 'reply' => 'seen', 'auto_reply' => 'seen', 'unknown' => 'seen'],
+        folders: ['bounce' => 'INBOX.Bounces', 'complaint' => 'INBOX.Complaints', 'reply' => 'INBOX.Processed'],
+    );
+}
+
+it('moves a bounce into its folder without flagging it', function () {
+    $message = fakeFlaggableMessage(fn (): object => new stdClass);
+
+    sourceFindingMessage($message)->markProcessed('1', BounceClassification::SoftBounce);
+
+    expect($message->moves)->toBe(['INBOX.Bounces'])
+        ->and($message->flags)->toBe([]);
+});
+
+it('marks the message seen when the target folder does not exist', function () {
+    $message = fakeFlaggableMessage(fn () => throw new RuntimeException('NO [NONEXISTENT] Mailbox does not exist'));
+
+    sourceFindingMessage($message)->markProcessed('1', BounceClassification::SoftBounce);
+
+    expect($message->moves)->toBe(['INBOX.Bounces'])
+        ->and($message->flags)->toBe(['Seen']);
+});
+
+it('marks the message seen when the move reports no result', function () {
+    $message = fakeFlaggableMessage(fn (): null => null);
+
+    sourceFindingMessage($message)->markProcessed('1', BounceClassification::Complaint);
+
+    expect($message->moves)->toBe(['INBOX.Complaints'])
+        ->and($message->flags)->toBe(['Seen']);
 });

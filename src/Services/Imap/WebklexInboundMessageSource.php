@@ -18,7 +18,7 @@ use Throwable;
  *   $message->getHeader()?->raw: string     — the raw RFC 822 header block
  *   $message->getUid(): int|string
  *   $message->setFlag('Seen' | …): bool
- *   $message->move(string $targetFolder): bool
+ *   $message->move(string $targetFolder): ?Message (null on failure)
  *   $message->delete(): bool
  *
  * The `afterProcess` map controls what to do post-classification per category;
@@ -121,6 +121,10 @@ class WebklexInboundMessageSource implements InboundMessageSource
         return is_object($msg) ? $msg : null;
     }
 
+    /**
+     * A failed move (e.g. the target folder does not exist) falls back to
+     * flagging the message as seen, so it does not stay unread in the inbox.
+     */
     private function moveMessage(object $message, string $category): void
     {
         $target = $this->folders[$category] ?? null;
@@ -129,6 +133,25 @@ class WebklexInboundMessageSource implements InboundMessageSource
 
             return;
         }
-        $message->move($target);
+
+        try {
+            $moved = $message->move($target);
+            $error = null;
+        } catch (Throwable $e) {
+            $moved = null;
+            $error = $e->getMessage();
+        }
+
+        if ($moved !== null && $moved !== false) {
+            return;
+        }
+
+        Log::warning('WebklexInboundMessageSource: move failed, marking the message seen instead', [
+            'inbox_key' => $this->inboxKey,
+            'target_folder' => $target,
+            'error' => $error,
+        ]);
+
+        $message->setFlag('Seen');
     }
 }

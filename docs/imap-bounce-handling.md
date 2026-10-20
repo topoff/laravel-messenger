@@ -114,6 +114,8 @@ Diagnostic-code fallback: an SMTP code of `550`/`553`/`521`/`556` in the diagnos
 
 ARF feedback reports (`message/feedback-report`) fire `MessageComplaintEvent` with `complaint_type = feedback-type` (typically `abuse`).
 
+A message without a DSN part counts as a bounce only by heuristic (bounce subject line, or a `mailer-daemon` / `postmaster` sender). The sender heuristic is checked **after** the auto-reply check: SES forwards recipients' out-of-office notices from `MAILER-DAEMON@…amazonses.com` with `Auto-Submitted: auto-replied` — those are auto-replies, not bounces.
+
 ## Idempotency
 
 Every processed inbound message is recorded in the `messenger_imap_processed` table, keyed by `(inbox_key, sha256(raw_message[0..2048]))`. Re-fetching the same message — for any reason, including a worker that crashed before flagging — is a no-op.
@@ -141,6 +143,8 @@ For inbound mail that is not a DSN or ARF, the processor fires `MessageReplyRece
 | `attachments` | manifest only (`filename`, `mime`, `size`) — no payloads, so the event is queueable |
 
 The default `after_process.reply` action is `seen` (flag as read). Override per-inbox via `messenger.imap.after_process` if you want move/delete behavior.
+
+A `move` whose target folder does not exist (or that fails otherwise) is logged and falls back to `seen`, so the message never stays unread in the inbox.
 
 Listeners run synchronously. A listener that consumed the reply says so with `$event->markHandled()` — everything left un-handled is forwarded to a human (see below).
 

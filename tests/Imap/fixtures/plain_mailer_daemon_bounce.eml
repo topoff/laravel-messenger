@@ -1,0 +1,10 @@
+From: MAILER-DAEMON@mx.example.net (Mail Delivery System)
+To: no-reply@top-offerten.ch
+Subject: Returned mail: see transcript for details
+Date: Tue, 20 Oct 2026 08:15:00 +0000
+Auto-Submitted: auto-generated
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+
+The original message was received but could not be delivered.
+  smtp; 550 5.1.1 <gone@example.net>... User unknown

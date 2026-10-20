@@ -11,13 +11,20 @@ use Throwable;
  * Inspects an InboundMessage and produces a BounceReport.
  *
  * Detection order:
- *   1. RFC 3464 DSN     — multipart/report; report-type=delivery-status,
- *                         OR a message/delivery-status part anywhere.
- *   2. RFC 5965 ARF     — multipart/report; report-type=feedback-report,
+ *   1. RFC 5965 ARF     — multipart/report; report-type=feedback-report,
  *                         OR a message/feedback-report part.
- *   3. Auto-reply       — Auto-Submitted header or vacation-style subject.
- *   4. Reply            — Has In-Reply-To / References and looks human-authored.
- *   5. Unknown          — anything else.
+ *   2. RFC 3464 DSN     — multipart/report; report-type=delivery-status,
+ *                         OR a message/delivery-status part anywhere,
+ *                         OR a well-known bounce subject line.
+ *   3. Bounce heuristic — mailer-daemon / postmaster sender without a DSN,
+ *                         unless it carries Auto-Submitted: auto-replied
+ *                         (RFC 3834). SES forwards the recipients'
+ *                         out-of-office notices from MAILER-DAEMON@…amazonses.com
+ *                         — those are auto-replies, not bounces. Bounces
+ *                         themselves use auto-generated.
+ *   4. Auto-reply       — Auto-Submitted header or vacation-style subject.
+ *   5. Reply            — Has In-Reply-To / References and looks human-authored.
+ *   6. Unknown          — anything else.
  */
 final class BounceClassifier
 {
@@ -28,6 +35,10 @@ final class BounceClassifier
         }
 
         if ($this->isBounce($message)) {
+            return $this->buildBounceReport($message);
+        }
+
+        if ($this->isFromMailerDaemon($message) && ! $this->isAutoReplied($message)) {
             return $this->buildBounceReport($message);
         }
 
@@ -76,20 +87,25 @@ final class BounceClassifier
             return true;
         }
 
-        // Heuristic fallback: well-known mailer-daemon senders + subject lines.
-        $from = mb_strtolower($message->from());
-        if (
-            str_contains($from, 'mailer-daemon')
-            || str_contains($from, 'postmaster@')
-        ) {
-            return true;
-        }
-
+        // Heuristic fallback: well-known bounce subject lines.
         $subject = mb_strtolower($message->subject());
 
         return str_contains($subject, 'undelivered mail returned')
             || str_contains($subject, 'mail delivery failed')
             || str_contains($subject, 'delivery status notification (failure)');
+    }
+
+    private function isFromMailerDaemon(InboundMessage $message): bool
+    {
+        $from = mb_strtolower($message->from());
+
+        return str_contains($from, 'mailer-daemon')
+            || str_contains($from, 'postmaster@');
+    }
+
+    private function isAutoReplied(InboundMessage $message): bool
+    {
+        return str_starts_with(mb_strtolower(trim((string) $message->header('auto-submitted'))), 'auto-replied');
     }
 
     private function isAutoReply(InboundMessage $message): bool
