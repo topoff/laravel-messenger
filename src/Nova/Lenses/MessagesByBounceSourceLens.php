@@ -4,6 +4,7 @@ namespace Topoff\Messenger\Nova\Lenses;
 
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Fields\DateTime;
 use Laravel\Nova\Fields\Number;
@@ -85,9 +86,18 @@ class MessagesByBounceSourceLens extends Lens
             Text::make('Source', 'bounce_source')->sortable(),
             Number::make('Bounced Messages', 'total_bounced')->sortable(),
             Number::make('With Prior Delivery', 'with_prior_delivery')->sortable(),
-            DateTime::make('First Bounce', 'first_bounced_at')->sortable(),
-            DateTime::make('Last Bounce', 'last_bounced_at')->sortable(),
+            DateTime::make('First Bounce', 'first_bounced_at', self::resolveAggregatedDate(...))->sortable(),
+            DateTime::make('Last Bounce', 'last_bounced_at', self::resolveAggregatedDate(...))->sortable(),
         ];
+    }
+
+    /**
+     * MIN()/MAX() aggregates come back as raw strings without the model's
+     * datetime cast, which Nova's DateTime field rejects with an exception.
+     */
+    public static function resolveAggregatedDate(mixed $value): ?string
+    {
+        return $value === null ? null : Carbon::parse($value)->toIso8601String();
     }
 
     /**
