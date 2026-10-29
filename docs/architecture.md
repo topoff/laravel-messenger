@@ -144,13 +144,26 @@ Key differences from `MainMailHandler`:
 
 Route: `GET|POST {prefix}/vonage-dlr` — receives Vonage delivery receipts.
 
-Controlled by `config('messenger.tracking.vonage_dlr.enabled')` (default: `false`). Controller returns early if disabled.
+Controlled by `config('messenger.tracking.vonage_dlr.enabled')` (default: `false`). Controller returns early if disabled. With `vonage_dlr.token` set, requests must carry `?token=` (403 otherwise); the token is stripped before the job is dispatched.
 
 `RecordVonageDlrJob` processes the raw webhook payload:
 - Finds Message by `tracking_message_id` = Vonage `messageId`
 - Updates `tracking_meta`: `dlr_status`, `dlr_err_code`, `dlr_timestamp`, `dlr_price`, `dlr_network_code`
 - On `delivered` status: sets column `delivered_at` (from `message-timestamp`), plus `tracking_meta.success = true`
 - On `failed`/`rejected`/`expired`: sets `failed_at = now()` (permanent, no retry)
+
+### AWS End User Messaging SMS (`aws-sms`, since 8.11)
+
+- Channel `Topoff\Messenger\Channels\AwsSmsChannel`, registered as `aws-sms`. Notifications implement
+  `toAwsSms()` (string or `AwsSmsMessage`); the number comes from `routeNotificationFor('aws-sms')`.
+  Config `messenger.sms.aws.*` (own IAM credentials, region, origination identity, configuration set).
+- The response (`AwsSmsSentMessage`) has the same shape as Vonage's, so `RecordNotificationSentListener`
+  stores the AWS message id as `tracking_message_id` (`tracking_meta.provider = aws`).
+- Events: configuration set → SNS topic → `POST {prefix}/sms-sns` (`AwsSmsEventsController`, signature +
+  topic required) → `RecordAwsSmsEventJob` → `SmsDeliveryRecorder`.
+- `SmsDeliveryRecorder` is shared with the Vonage DLR job: row-locked meta updates, first final state wins,
+  at-least-once business events (`sms_final_event_pending`, swept by `messenger:dispatch-pending-sms-events`).
+- Failures fire `SmsDeliveryFailedEvent` (Vonage additionally `MessageRejectedEvent`, kept for existing hosts).
 
 ### Mail vs SMS Tracking Comparison
 

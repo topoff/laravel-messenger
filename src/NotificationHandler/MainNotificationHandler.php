@@ -207,7 +207,7 @@ class MainNotificationHandler
 
         $constructor = new ReflectionClass($class)->getConstructor();
 
-        if ($constructor === null) {
+        if (! $constructor instanceof \ReflectionMethod) {
             return [];
         }
 

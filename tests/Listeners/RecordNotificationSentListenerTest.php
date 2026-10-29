@@ -3,6 +3,7 @@
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Notifications\Events\NotificationSent;
 use Illuminate\Notifications\Notification;
+use Topoff\Messenger\Channels\AwsSmsSentMessage;
 use Topoff\Messenger\Listeners\RecordNotificationSentListener;
 
 beforeEach(function () {
@@ -114,4 +115,57 @@ it('skips when response is not traversable', function () {
     $message->refresh();
 
     expect($message->tracking_message_id)->toBeNull();
+});
+
+function sentSmsResponse(string $messageId, string $to = '+41791234567'): object
+{
+    return new AwsSmsSentMessage($messageId, $to);
+}
+
+it('records the aws-sms channel with provider aws', function () {
+    $message = createMessage(['tracking_meta' => []]);
+    $notification = new class extends Notification {};
+    $notification->messengerMessageId = $message->id;
+
+    $this->listener->handle(new NotificationSent(new AnonymousNotifiable, $notification, 'aws-sms', sentSmsResponse('aws-001')));
+
+    $message->refresh();
+    expect($message->tracking_message_id)->toBe('aws-001')
+        ->and($message->tracking_recipient_contact)->toBe('+41791234567')
+        ->and(data_get($message->tracking_meta, 'provider'))->toBe('aws');
+});
+
+it('keeps tracking vonage when the host config has no sms_channels key', function () {
+    config()->set('messenger.tracking', ['route' => ['prefix' => 'email']]);
+    $message = createMessage(['tracking_meta' => []]);
+    $notification = new class extends Notification {};
+    $notification->messengerMessageId = $message->id;
+
+    $this->listener->handle(new NotificationSent(new AnonymousNotifiable, $notification, 'vonage', sentSmsResponse('vonage-xyz')));
+
+    expect($message->refresh()->tracking_message_id)->toBe('vonage-xyz');
+});
+
+it('does not track channels outside sms_channels', function () {
+    config()->set('messenger.tracking.sms_channels', ['vonage']);
+    $message = createMessage(['tracking_meta' => []]);
+    $notification = new class extends Notification {};
+    $notification->messengerMessageId = $message->id;
+
+    $this->listener->handle(new NotificationSent(new AnonymousNotifiable, $notification, 'aws-sms', sentSmsResponse('aws-001')));
+
+    expect($message->refresh()->tracking_message_id)->toBeNull();
+});
+
+it('keeps the provider id of an earlier send of the same message', function () {
+    $message = createMessage(['tracking_message_id' => 'aws-first', 'tracking_meta' => ['aws_sms_status' => 'TEXT_PENDING']]);
+    $notification = new class extends Notification {};
+    $notification->messengerMessageId = $message->id;
+
+    $this->listener->handle(new NotificationSent(new AnonymousNotifiable, $notification, 'aws-sms', sentSmsResponse('aws-second')));
+
+    $message->refresh();
+    expect($message->tracking_message_id)->toBe('aws-second')
+        ->and(data_get($message->tracking_meta, 'previous_message_ids'))->toBe(['aws-first'])
+        ->and(data_get($message->tracking_meta, 'aws_sms_status'))->toBe('TEXT_PENDING');
 });

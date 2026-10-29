@@ -197,9 +197,48 @@ return [
         // and reuses the same topic + provisioning. See messenger.ses_sns.sqs.
         'event_transport' => env('MESSENGER_EVENT_TRANSPORT', 'sns_http'),
 
-        // Vonage SMS delivery receipt (DLR) webhook.
+        // Vonage SMS delivery receipt (DLR) webhook. Set a token and append it
+        // to the DLR URL in the Vonage dashboard (…/vonage-dlr?token=…); without
+        // a token the endpoint accepts unauthenticated requests.
         'vonage_dlr' => [
             'enabled' => false,
+            'token' => null,
+        ],
+
+        // Notification channels whose provider message id is stored after
+        // sending (for delivery receipts). Default also applies in code when a
+        // host overrides the whole `tracking` block.
+        'sms_channels' => ['vonage', 'aws-sms'],
+
+        // AWS End User Messaging SMS events (configuration set -> SNS topic ->
+        // POST {prefix}/sms-sns). Requires a topic ARN and
+        // aws/aws-php-sns-message-validator; the signature is always verified.
+        'aws_sms_events' => [
+            'enabled' => false,
+            'topic_arn' => null,
+
+            // Safety net messenger:dispatch-pending-sms-events (scheduled only
+            // when enabled). skip_between: e.g. ['01:00', '02:45'].
+            'pending_sweep' => [
+                'enabled' => true,
+                'cron' => '*/10 * * * *',
+                'timezone' => 'UTC',
+                'skip_between' => null,
+            ],
+        ],
+    ],
+
+    // AWS End User Messaging SMS (notification channel `aws-sms`). Dedicated
+    // credentials; the channel refuses to send without them instead of
+    // falling back to the SDK default chain.
+    'sms' => [
+        'aws' => [
+            'key' => env('MESSENGER_AWS_SMS_KEY'),
+            'secret' => env('MESSENGER_AWS_SMS_SECRET'),
+            'region' => env('MESSENGER_AWS_SMS_REGION', 'eu-central-2'),
+            'origination_identity' => env('MESSENGER_AWS_SMS_ORIGINATION_IDENTITY'),
+            'configuration_set' => env('MESSENGER_AWS_SMS_CONFIGURATION_SET'),
+            'message_type' => 'TRANSACTIONAL',
         ],
     ],
 

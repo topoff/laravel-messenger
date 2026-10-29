@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Topoff\Messenger\Http\Controllers\AwsSmsEventsController;
 use Topoff\Messenger\Http\Controllers\MailTrackingController;
 use Topoff\Messenger\Http\Controllers\MailTrackingSnsController;
 use Topoff\Messenger\Http\Controllers\VonageDlrController;
@@ -11,4 +12,5 @@ Route::group($routeConfig, function (): void {
     Route::get('n', [MailTrackingController::class, 'click'])->name('messenger.tracking.click')->middleware('signed');
     Route::post('sns', [MailTrackingSnsController::class, 'callback'])->name('messenger.tracking.sns');
     Route::match(['get', 'post'], 'vonage-dlr', [VonageDlrController::class, 'callback'])->name('messenger.tracking.vonage-dlr');
+    Route::post('sms-sns', [AwsSmsEventsController::class, 'callback'])->name('messenger.tracking.sms-sns');
 });

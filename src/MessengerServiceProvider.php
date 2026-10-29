@@ -6,13 +6,16 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Mail\Events\MessageSent;
+use Illuminate\Notifications\ChannelManager;
 use Illuminate\Notifications\Events\NotificationSent;
 use Illuminate\Support\Facades\Event;
 use Laravel\Nova\Nova;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Topoff\Messenger\Channels\AwsSmsChannel;
 use Topoff\Messenger\Console\CheckSesSendingCommand;
 use Topoff\Messenger\Console\CheckSesSnsTrackingCommand;
+use Topoff\Messenger\Console\DispatchPendingSmsEventsCommand;
 use Topoff\Messenger\Console\FetchImapBouncesCommand;
 use Topoff\Messenger\Console\PollSqsTrackingCommand;
 use Topoff\Messenger\Console\SetupSesSendingCommand;
@@ -55,6 +58,7 @@ class MessengerServiceProvider extends PackageServiceProvider
             ->hasCommand(TeardownSesSnsTrackingCommand::class)
             ->hasCommand(FetchImapBouncesCommand::class)
             ->hasCommand(PollSqsTrackingCommand::class)
+            ->hasCommand(DispatchPendingSmsEventsCommand::class)
             ->discoversMigrations()
             // discoversMigrations() alone only enables vendor:publish; runsMigrations()
             // is what actually wires the files into the migrator so `php artisan migrate`
@@ -78,6 +82,8 @@ class MessengerServiceProvider extends PackageServiceProvider
         $this->registerFallbackSchedule();
         $this->registerImapSchedule();
         $this->registerSqsPollSchedule();
+        $this->registerPendingSmsEventsSchedule();
+        $this->registerAwsSmsChannel();
         $this->registerRoutes();
         $this->registerNovaResources();
     }
@@ -200,6 +206,51 @@ class MessengerServiceProvider extends PackageServiceProvider
             }
             if ((bool) config('messenger.ses_sns.sqs.schedule.on_one_server', true)) {
                 $event->onOneServer();
+            }
+        });
+    }
+
+    /**
+     * Notification channel `aws-sms` (AWS End User Messaging SMS). Registering
+     * it is harmless: it only sends when a notification's via() selects it.
+     */
+    protected function registerAwsSmsChannel(): void
+    {
+        $this->callAfterResolving(ChannelManager::class, function (ChannelManager $manager): void {
+            $manager->extend('aws-sms', fn ($app) => $app->make(AwsSmsChannel::class));
+        });
+    }
+
+    /**
+     * Safety net for SMS final states whose event is still pending. Only
+     * scheduled when an SMS receipt endpoint (AWS events or Vonage DLR) is
+     * enabled; hosts can shift the
+     * cron and skip a maintenance window (times in the given timezone).
+     */
+    protected function registerPendingSmsEventsSchedule(): void
+    {
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            // Both SMS receipt paths (AWS events, Vonage DLR) use pending markers.
+            if (! (bool) config('messenger.tracking.aws_sms_events.enabled', false)
+                && ! (bool) config('messenger.tracking.vonage_dlr.enabled', false)) {
+                return;
+            }
+
+            $sweep = (array) config('messenger.tracking.aws_sms_events.pending_sweep', []);
+            if (! (bool) ($sweep['enabled'] ?? true)) {
+                return;
+            }
+
+            $event = $schedule->command(DispatchPendingSmsEventsCommand::class)
+                ->cron((string) ($sweep['cron'] ?? '*/10 * * * *'))
+                ->timezone((string) ($sweep['timezone'] ?? 'UTC'))
+                ->name('messenger.tracking.pending-sms-events')
+                ->withoutOverlapping()
+                ->onOneServer();
+
+            $skip = $sweep['skip_between'] ?? null;
+            if (is_array($skip) && count($skip) === 2) {
+                $event->unlessBetween((string) $skip[0], (string) $skip[1]);
             }
         });
     }

@@ -2,6 +2,30 @@
 
 All notable changes to `laravel-messenger` will be documented in this file.
 
+## 8.11.0 - 2026-10-29
+
+- New notification channel `aws-sms` (AWS End User Messaging SMS, SMS-Voice v2):
+  `toAwsSms()` + `routeNotificationFor('aws-sms')`, sender/configuration set from
+  `messenger.sms.aws`, `Context.messenger_message_id` for correlation, SDK retries
+  off (no idempotency token), never the SDK default credential chain.
+- `RecordNotificationSentListener` tracks every channel in
+  `messenger.tracking.sms_channels` (default `['vonage', 'aws-sms']`, also when a
+  host overrides the whole `tracking` block); a second send keeps the earlier
+  provider id in `tracking_meta.previous_message_ids`.
+- New endpoint `POST {prefix}/sms-sns` (`messenger.tracking.aws_sms_events`):
+  only with an explicit topic ARN, SNS signature always verified (503 without
+  the validator package), subscription confirmed only for that topic and a
+  failed confirmation answered with 502.
+- `RecordAwsSmsEventJob`: final events set `delivered_at`/`failed_at`; first final
+  state wins, later ones go to `tracking_meta.late_events`; business events are
+  fired at least once (`sms_final_event_pending` marker + safety net
+  `messenger:dispatch-pending-sms-events`, scheduled while the endpoint is enabled).
+- New `SmsDeliveryFailedEvent` (AWS and Vonage) so e-mail bounce listeners do not
+  react to SMS failures; Vonage still also fires `MessageRejectedEvent` first.
+- Vonage DLR endpoint: optional shared secret `messenger.tracking.vonage_dlr.token`
+  (`?token=`, stripped before the job), DLR lookup also via previous provider ids and
+  retried while the send listener has not stored the id yet; first final state wins.
+
 ## 9.0.0 - Unreleased
 
 Start of the v9 line (host: top-offerten 4.0, decision E79/E123).

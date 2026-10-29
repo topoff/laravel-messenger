@@ -8,15 +8,16 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
-use Topoff\Messenger\Events\MessageDeliveredEvent;
-use Topoff\Messenger\Events\MessageRejectedEvent;
 use Topoff\Messenger\Jobs\Concerns\ParsesEventTimestamp;
+use Topoff\Messenger\Services\Sms\SmsDeliveryRecorder;
 
 class RecordVonageDlrJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, ParsesEventTimestamp, Queueable, SerializesModels;
+
+    /** Lookup attempts while the DLR overtook the send listener (provider id not stored yet). */
+    public const int MAX_LOOKUP_ATTEMPTS = 6;
 
     public int $maxExceptions = 3;
 
@@ -28,8 +29,10 @@ class RecordVonageDlrJob implements ShouldQueue
         return Carbon::now()->addDays(5);
     }
 
-    public function handle(): void
+    public function handle(?SmsDeliveryRecorder $recorder = null): void
     {
+        $recorder ??= app(SmsDeliveryRecorder::class);
+
         $vonageMessageId = $this->data['messageId'] ?? null;
         if (! $vonageMessageId) {
             Log::warning('RecordVonageDlrJob: Missing messageId in DLR payload');
@@ -37,12 +40,15 @@ class RecordVonageDlrJob implements ShouldQueue
             return;
         }
 
-        $messageClass = config('messenger.models.message');
-        $message = $messageClass::query()
-            ->where('tracking_message_id', $vonageMessageId)
-            ->first();
+        $message = $recorder->findMessage(null, (string) $vonageMessageId);
 
         if (! $message) {
+            if ($this->job !== null && $this->attempts() < self::MAX_LOOKUP_ATTEMPTS) {
+                $this->release(min(30 * $this->attempts(), 120));
+
+                return;
+            }
+
             Log::error('RecordVonageDlrJob: No message found for tracking_message_id.', ['vonageMessageId' => $vonageMessageId]);
 
             return;
@@ -50,37 +56,27 @@ class RecordVonageDlrJob implements ShouldQueue
 
         $status = (string) ($this->data['status'] ?? '');
 
-        $meta = collect($message->tracking_meta ?: []);
-        $meta->put('dlr_status', $status);
-        $meta->put('dlr_err_code', (int) ($this->data['err-code'] ?? 0));
-        $meta->put('dlr_timestamp', $this->data['message-timestamp'] ?? null);
-        $meta->put('dlr_price', $this->data['price'] ?? null);
-        $meta->put('dlr_network_code', $this->data['network-code'] ?? null);
+        $meta = [
+            'dlr_status' => $status,
+            'dlr_err_code' => (int) ($this->data['err-code'] ?? 0),
+            'dlr_timestamp' => $this->data['message-timestamp'] ?? null,
+            'dlr_price' => $this->data['price'] ?? null,
+            'dlr_network_code' => $this->data['network-code'] ?? null,
+        ];
 
         if ($status === 'delivered') {
-            $meta->put('success', true);
+            $meta['success'] = true;
+            $recorder->recordFinal($message, 'vonage', $status, true, $this->parseEventTimestamp($this->data['message-timestamp'] ?? null), $meta);
+
+            return;
         }
 
-        $message->tracking_meta = $meta->toArray();
+        if (in_array($status, ['failed', 'rejected', 'expired'], true)) {
+            $recorder->recordFinal($message, 'vonage', $status, false, now(), $meta);
 
-        if ($status === 'delivered') {
-            $message->delivered_at = $this->parseEventTimestamp($this->data['message-timestamp'] ?? null);
+            return;
         }
 
-        $permanentFailureStatuses = ['failed', 'rejected', 'expired'];
-
-        if (in_array($status, $permanentFailureStatuses, true)) {
-            $message->failed_at = now();
-        }
-
-        $message->save();
-
-        if ($status === 'delivered') {
-            Event::dispatch(new MessageDeliveredEvent($message));
-        }
-
-        if (in_array($status, $permanentFailureStatuses, true)) {
-            Event::dispatch(new MessageRejectedEvent($status, $message));
-        }
+        $recorder->mergeMeta($message->getKey(), $meta);
     }
 }
