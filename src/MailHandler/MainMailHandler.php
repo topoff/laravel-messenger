@@ -41,6 +41,9 @@ class MainMailHandler implements GroupableMailTypeInterface
      */
     protected bool $reserved = false;
 
+    /** Value of this handler's claim in `reserved_at` (written by query, not by the model). */
+    private ?\DateTimeInterface $claimedAt = null;
+
     public function __construct(protected Message $message)
     {
         $this->reserved = $this->setMessageReserved();
@@ -171,6 +174,7 @@ class MainMailHandler implements GroupableMailTypeInterface
                 // max_retry_attempts only reflect real attempts (v8.12.1).
                 $this->message->attempts = max(0, (int) $this->message->attempts - 1);
                 $this->message->save();
+                $this->releaseClaimOnDeferral();
 
                 return;
             }
@@ -279,6 +283,25 @@ class MainMailHandler implements GroupableMailTypeInterface
      * For retries: reserved_at must match the current value (optimistic locking).
      * Returns true if this process successfully reserved the message, false if another process got it first.
      */
+    /**
+     * A deferral resets `reserved_at` to null, but the claim was written by a
+     * query — the model sees no change and save() would leave the reservation
+     * in the database (the message then waited for the retry backoff). Release
+     * exactly our own claim (v8.12.1). The error path keeps its reservation on
+     * purpose: a worker holding a stale snapshot must not claim it again.
+     */
+    private function releaseClaimOnDeferral(): void
+    {
+        if ($this->message->reserved_at !== null || ! $this->claimedAt instanceof \DateTimeInterface) {
+            return;
+        }
+
+        $this->message->newQuery()
+            ->whereKey($this->message->getKey())
+            ->where('reserved_at', $this->claimedAt)
+            ->update(['reserved_at' => null]);
+    }
+
     protected function setMessageReserved(): bool
     {
         $now = Date::now();
@@ -295,9 +318,7 @@ class MainMailHandler implements GroupableMailTypeInterface
         }
 
         $this->message->reserved_at = $now;
-        // The claim was written by the query above: mark it as persisted, so a
-        // later reset to null (deferral in shouldBeSentNow) is saved (v8.12.1).
-        $this->message->syncOriginalAttribute('reserved_at');
+        $this->claimedAt = $now;
 
         return true;
     }

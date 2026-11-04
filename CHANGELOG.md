@@ -11,10 +11,12 @@ All notable changes to `laravel-messenger` will be documented in this file.
   message is no longer dropped after a few rate-guard deferrals. Exceptions in
   `shouldBeSentNow()` still count. Handlers that already gave the attempt back
   themselves must stop doing so.
-- `MainMailHandler`: resetting `reserved_at` to `null` on a deferral is persisted now.
-  The claim was written by a query, so the model saw no change and the reservation
-  stayed in the database — the deferred message then waited for the retry sweep's
-  backoff instead of going out with the normal run once `scheduled_at` was due.
+- `MainMailHandler`: a deferral releases the handler's own claim now. The claim was
+  written by a query, so resetting `reserved_at` to `null` on the model was no change
+  and the reservation stayed in the database — the deferred message then waited for
+  the retry sweep's backoff instead of going out with the normal run once
+  `scheduled_at` was due. The error path keeps its reservation as before, so a worker
+  holding a stale snapshot cannot claim the message again.
 - Unchanged, for the record: the bulk path (`MainBulkMailHandler`) does not call
   `shouldBeSentNow()`; the normal run has no attempt or time limit, so a handler that
   defers forever keeps a message waiting; `MainNotificationHandler` loads the receiver

@@ -158,3 +158,24 @@ it('still counts the attempt when shouldBeSentNow throws', function (): void {
     expect($message->attempts)->toBe(1)
         ->and($message->error_at)->not->toBeNull();
 });
+
+it('keeps the reservation after a send error, so a worker with a stale snapshot cannot claim it', function (): void {
+    config()->set('messenger.rate_limit.channels.vonage', []);
+    $message = createMessage($this->base);
+    $staleB = Message::with('messageType')->findOrFail($message->id);
+
+    config()->set('messenger.sending.check_should_send', function (): bool {
+        throw new RuntimeException('provider down');
+    });
+    new MainMailHandler(Message::with('messageType')->findOrFail($message->id))->send();
+    expect($message->refresh()->error_at)->not->toBeNull()
+        ->and($message->reserved_at)->not->toBeNull()
+        ->and($message->attempts)->toBe(1);
+
+    config()->set('messenger.sending.check_should_send', fn (): bool => true);
+    new MainMailHandler($staleB)->send();
+
+    expect($message->refresh()->sent_at)->toBeNull()
+        ->and($message->attempts)->toBe(1);
+    Mail::assertNothingSent();
+});
