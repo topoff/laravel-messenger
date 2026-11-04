@@ -117,6 +117,10 @@ class MainNotificationHandler
             }
 
             if (! $this->shouldBeSentNow()) {
+                // A deferral (rate guard or handler logic) is not a send
+                // attempt: give the counted attempt back, so backoff and
+                // max_retry_attempts only reflect real attempts (v8.12.1).
+                $this->message->attempts = max(0, (int) $this->message->attempts - 1);
                 $this->message->save();
 
                 return;

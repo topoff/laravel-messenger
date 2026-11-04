@@ -2,6 +2,25 @@
 
 All notable changes to `laravel-messenger` will be documented in this file.
 
+## 8.12.1 - 2026-11-04
+
+- A deferral is no longer a send attempt: when `shouldBeSentNow()` returns `false`
+  (per-channel `SendRateGuard` or handler logic), `MainMailHandler` and
+  `MainNotificationHandler` give the counted attempt back. Backoff and
+  `max_retry_attempts` of the retry sweep now only reflect real attempts — a failed
+  message is no longer dropped after a few rate-guard deferrals. Exceptions in
+  `shouldBeSentNow()` still count. Handlers that already gave the attempt back
+  themselves must stop doing so.
+- `MainMailHandler`: resetting `reserved_at` to `null` on a deferral is persisted now.
+  The claim was written by a query, so the model saw no change and the reservation
+  stayed in the database — the deferred message then waited for the retry sweep's
+  backoff instead of going out with the normal run once `scheduled_at` was due.
+- Unchanged, for the record: the bulk path (`MainBulkMailHandler`) does not call
+  `shouldBeSentNow()`; the normal run has no attempt or time limit, so a handler that
+  defers forever keeps a message waiting; `MainNotificationHandler` loads the receiver
+  before `shouldBeSentNow()` — set it yourself before `parent::send()` if your
+  handler decides the receiver at send time.
+
 ## 8.12.0 - 2026-11-04
 
 - Vonage delivery receipts of multipart SMS: every part has its own provider id;

@@ -166,6 +166,10 @@ class MainMailHandler implements GroupableMailTypeInterface
             $this->receiver = $this->getReceiver();
 
             if (! $this->shouldBeSentNow()) {
+                // A deferral (rate guard or handler logic) is not a send
+                // attempt: give the counted attempt back, so backoff and
+                // max_retry_attempts only reflect real attempts (v8.12.1).
+                $this->message->attempts = max(0, (int) $this->message->attempts - 1);
                 $this->message->save();
 
                 return;
@@ -291,6 +295,9 @@ class MainMailHandler implements GroupableMailTypeInterface
         }
 
         $this->message->reserved_at = $now;
+        // The claim was written by the query above: mark it as persisted, so a
+        // later reset to null (deferral in shouldBeSentNow) is saved (v8.12.1).
+        $this->message->syncOriginalAttribute('reserved_at');
 
         return true;
     }
