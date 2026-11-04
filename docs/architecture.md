@@ -147,7 +147,15 @@ Route: `GET|POST {prefix}/vonage-dlr` — receives Vonage delivery receipts.
 Controlled by `config('messenger.tracking.vonage_dlr.enabled')` (default: `false`). Controller returns early if disabled. With `vonage_dlr.token` set, requests must carry `?token=` (403 otherwise); the token is stripped before the job is dispatched.
 
 `RecordVonageDlrJob` processes the raw webhook payload:
-- Finds Message by `tracking_message_id` = Vonage `messageId`
+- Finds the Message by the messenger client reference `client-ref` = `msg:<message id>` (primary key),
+  else by `tracking_message_id` = Vonage `messageId` (or an earlier send's id in `previous_message_ids`).
+  Set the reference in the host notification: `use TracksSmsDelivery;` and
+  `->clientReference($this->messengerClientReference())` on the `VonageMessage` (since 8.12).
+- Multipart SMS (one Vonage id per part): with the reference the send listener stores all part ids in
+  `tracking_meta.sms_part_ids`; per-part statuses go to `sms_part_statuses`. Delivered only once every
+  part was delivered, any failed part fails the message. Without the reference only part 1 counts.
+- Receipts of an earlier send (`previous_message_ids`, `previous_sms_part_ids`) only land in
+  `tracking_meta.late_events`; a receipt that overtook the send listener is released for another lookup.
 - Updates `tracking_meta`: `dlr_status`, `dlr_err_code`, `dlr_timestamp`, `dlr_price`, `dlr_network_code`
 - On `delivered` status: sets column `delivered_at` (from `message-timestamp`), plus `tracking_meta.success = true`
 - On `failed`/`rejected`/`expired`: sets `failed_at = now()` (permanent, no retry)

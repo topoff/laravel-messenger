@@ -6,10 +6,11 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Messages\VonageMessage;
 use Illuminate\Notifications\Notification;
+use Topoff\Messenger\Notifications\Concerns\TracksSmsDelivery;
 
 class NovaChannelNotification extends Notification
 {
-    use Queueable;
+    use Queueable, TracksSmsDelivery;
 
     public ?int $messengerMessageId = null;
 
@@ -34,6 +35,7 @@ class NovaChannelNotification extends Notification
     public function toVonage(object $notifiable): VonageMessage
     {
         return (new VonageMessage)
-            ->content($this->message);
+            ->content($this->message)
+            ->clientReference($this->messengerClientReference());
     }
 }

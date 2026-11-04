@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Topoff\Messenger\Services\Sms;
 
+use Closure;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -32,6 +33,24 @@ class SmsDeliveryRecorder
     public const string PENDING_KEY = 'sms_final_event_pending';
 
     public const int CLAIM_TTL_MINUTES = 5;
+
+    /** Provider ids of all parts of the current multipart send (only with the messenger's client reference). */
+    public const string PART_IDS_KEY = 'sms_part_ids';
+
+    /** Part ids of earlier sends of the same message. */
+    public const string PREVIOUS_PART_IDS_KEY = 'previous_sms_part_ids';
+
+    /** Last reported status per part id of the current send. */
+    public const string PART_STATUSES_KEY = 'sms_part_statuses';
+
+    /** Part statuses a later intermediate receipt must not replace. */
+    private const array FINAL_PART_STATUSES = ['delivered', 'failed', 'rejected', 'expired'];
+
+    public const string SEND_CURRENT = 'current';
+
+    public const string SEND_PREVIOUS = 'previous';
+
+    public const string SEND_UNKNOWN = 'unknown';
 
     /**
      * Find the message an SMS provider event belongs to: by the messenger id
@@ -80,6 +99,16 @@ class SmsDeliveryRecorder
             $previousId = $message->tracking_message_id;
             if (is_string($previousId) && $previousId !== '' && $previousId !== $providerMessageId) {
                 $trackingMeta['previous_message_ids'] = array_values(array_unique([...(array) ($trackingMeta['previous_message_ids'] ?? []), $previousId]));
+
+                // A new send: part ids of the earlier send only identify its late receipts.
+                $earlierPartIds = (array) ($trackingMeta[self::PART_IDS_KEY] ?? []);
+                if ($earlierPartIds !== []) {
+                    $trackingMeta[self::PREVIOUS_PART_IDS_KEY] = array_values(array_unique([...(array) ($trackingMeta[self::PREVIOUS_PART_IDS_KEY] ?? []), ...$earlierPartIds]));
+                }
+            }
+
+            if ($previousId !== $providerMessageId) {
+                unset($trackingMeta[self::PART_IDS_KEY], $trackingMeta[self::PART_STATUSES_KEY]);
             }
 
             $message->tracking_message_id = $providerMessageId;
@@ -87,6 +116,118 @@ class SmsDeliveryRecorder
             $message->tracking_meta = array_merge($trackingMeta, $meta);
             $message->save();
         });
+    }
+
+    /**
+     * Which send of the message a provider id belongs to: the current one
+     * (stored id or one of its parts), an earlier one, or none known yet (the
+     * receipt overtook recordSent()).
+     */
+    public function sendOf(Message $message, string $providerMessageId): string
+    {
+        $trackingMeta = $message->tracking_meta ?: [];
+
+        if ($message->tracking_message_id === $providerMessageId || in_array($providerMessageId, (array) ($trackingMeta[self::PART_IDS_KEY] ?? []), true)) {
+            return self::SEND_CURRENT;
+        }
+
+        if (in_array($providerMessageId, (array) ($trackingMeta['previous_message_ids'] ?? []), true)
+            || in_array($providerMessageId, (array) ($trackingMeta[self::PREVIOUS_PART_IDS_KEY] ?? []), true)) {
+            return self::SEND_PREVIOUS;
+        }
+
+        return self::SEND_UNKNOWN;
+    }
+
+    /**
+     * Store the status of one part of the current send and merge the receipt
+     * details (also for a single-part send) — re-checked under the row lock, so a send recorded meanwhile is
+     * never touched. Returns null when the id no longer belongs to the current
+     * send, else whether every part has reported `delivered` (always true for
+     * a single-part send). A final part status is never replaced by an
+     * intermediate one (e.g. a late `accepted` after `delivered`).
+     *
+     * @param  array<string, mixed>  $meta
+     */
+    public function recordPartStatus(int|string $messageId, string $providerMessageId, string $status, array $meta): ?bool
+    {
+        return $this->locked($messageId, function (Message $message) use ($providerMessageId, $status, $meta): ?bool {
+            if ($this->sendOf($message, $providerMessageId) !== self::SEND_CURRENT) {
+                return null;
+            }
+
+            $trackingMeta = $message->tracking_meta ?: [];
+            if ((array) ($trackingMeta[self::PART_IDS_KEY] ?? []) === []) {
+                $message->tracking_meta = array_merge($trackingMeta, $meta);
+                $message->save();
+
+                return true;
+            }
+
+            $statuses = (array) ($trackingMeta[self::PART_STATUSES_KEY] ?? []);
+            $known = $statuses[$providerMessageId] ?? null;
+            if (! in_array($known, self::FINAL_PART_STATUSES, true) || in_array($status, self::FINAL_PART_STATUSES, true)) {
+                $statuses[$providerMessageId] = $status;
+            }
+
+            $trackingMeta = array_merge($trackingMeta, $meta);
+            $trackingMeta[self::PART_STATUSES_KEY] = $statuses;
+            $message->tracking_meta = $trackingMeta;
+            $message->save();
+
+            return $this->allPartsDelivered($message);
+        });
+    }
+
+    /**
+     * Whether every part of the current send reported `delivered` (true for a
+     * single-part send).
+     */
+    public function allPartsDelivered(Message $message): bool
+    {
+        $trackingMeta = $message->tracking_meta ?: [];
+        $statuses = (array) ($trackingMeta[self::PART_STATUSES_KEY] ?? []);
+
+        return array_all((array) ($trackingMeta[self::PART_IDS_KEY] ?? []), fn (mixed $partId): bool => ($statuses[$partId] ?? null) === 'delivered');
+    }
+
+    /**
+     * Keep a receipt of an earlier send, which must not decide the message's
+     * final state, in tracking_meta.late_events (once per id and status).
+     */
+    public function recordLateEvent(int|string $messageId, string $provider, string $status, string $providerMessageId): void
+    {
+        $this->locked($messageId, function (Message $message) use ($provider, $status, $providerMessageId): void {
+            $trackingMeta = $message->tracking_meta ?: [];
+            if ($this->appendLateEvent($trackingMeta, $provider, $status, $providerMessageId)) {
+                $message->tracking_meta = $trackingMeta;
+                $message->save();
+            }
+        });
+    }
+
+    /**
+     * @param  array<string, mixed>  $trackingMeta
+     * @return bool whether the event was appended (false: already recorded)
+     */
+    private function appendLateEvent(array &$trackingMeta, string $provider, string $status, string $providerMessageId): bool
+    {
+        $lateEvents = (array) ($trackingMeta['late_events'] ?? []);
+        foreach ($lateEvents as $lateEvent) {
+            if (data_get($lateEvent, 'provider_message_id') === $providerMessageId && data_get($lateEvent, 'status') === $status) {
+                return false;
+            }
+        }
+
+        $lateEvents[] = [
+            'provider' => $provider,
+            'status' => $status,
+            'provider_message_id' => $providerMessageId,
+            'received_at' => now()->toIso8601String(),
+        ];
+        $trackingMeta['late_events'] = $lateEvents;
+
+        return true;
     }
 
     /**
@@ -106,11 +247,24 @@ class SmsDeliveryRecorder
      * Record a final delivery state and fire the business event(s).
      *
      * @param  array<string, mixed>  $meta
+     * @param  (Closure(Message): bool)|null  $stillApplies  checked under the row lock; false keeps
+     *                                                       the receipt only as late event
      */
-    public function recordFinal(Message $message, string $provider, string $status, bool $delivered, ?Carbon $at, array $meta): void
+    public function recordFinal(Message $message, string $provider, string $status, bool $delivered, ?Carbon $at, array $meta, ?Closure $stillApplies = null, ?string $providerMessageId = null): void
     {
-        $decision = $this->locked($message->getKey(), function (Message $locked) use ($provider, $status, $delivered, $at, $meta): string {
+        $decision = $this->locked($message->getKey(), function (Message $locked) use ($provider, $status, $delivered, $at, $meta, $stillApplies, $providerMessageId): string {
             $trackingMeta = $locked->tracking_meta ?: [];
+
+            // Re-checked under the lock: a send recorded since the receipt was
+            // classified makes it a late receipt of the earlier send.
+            if ($stillApplies instanceof Closure && ! $stillApplies($locked)) {
+                if ($this->appendLateEvent($trackingMeta, $provider, $status, $providerMessageId ?? '')) {
+                    $locked->tracking_meta = $trackingMeta;
+                    $locked->save();
+                }
+
+                return 'done';
+            }
 
             if ($locked->delivered_at === null && $locked->failed_at === null) {
                 if ($delivered) {

@@ -2,6 +2,28 @@
 
 All notable changes to `laravel-messenger` will be documented in this file.
 
+## 8.12.0 - 2026-11-04
+
+- Vonage delivery receipts of multipart SMS: every part has its own provider id;
+  until now only part 1 was stored, so the receipts of later parts were never
+  matched ("No message found for tracking_message_id"). New trait
+  `Notifications\Concerns\TracksSmsDelivery` (`messengerClientReference()`, pass it
+  to `VonageMessage::clientReference()`) sets the client reference `msg:<message id>`;
+  Vonage echoes it in each part's receipt, which `RecordVonageDlrJob` now matches by
+  primary key. Only this prefix counts — a host's own client reference is ignored.
+  `NovaChannelNotification` uses the trait.
+- With that reference the send listener stores all part ids
+  (`tracking_meta.sms_part_ids`); a multipart SMS counts as delivered only once every
+  part was delivered, any failed part fails it. Without the reference nothing changes
+  (only part 1 counts).
+- Receipts of an earlier send of the same message (`previous_message_ids`,
+  `previous_sms_part_ids`) are only kept in `tracking_meta.late_events` and no longer
+  decide the final state; a receipt that overtook the send listener is released for
+  another lookup.
+- Unmatched receipts without the messenger client reference (SMS sent outside the
+  messenger) log a warning instead of an error; a send listener event without a
+  channel response (no recipient route, nothing sent) logs a warning instead of an error.
+
 ## 8.11.0 - 2026-10-29
 
 - New notification channel `aws-sms` (AWS End User Messaging SMS, SMS-Voice v2):

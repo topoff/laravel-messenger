@@ -5,6 +5,7 @@ namespace Topoff\Messenger\Listeners;
 use Illuminate\Notifications\Events\NotificationSent;
 use Illuminate\Support\Facades\Log;
 use Throwable;
+use Topoff\Messenger\Services\Sms\SmsClientReference;
 use Topoff\Messenger\Services\Sms\SmsDeliveryRecorder;
 
 /**
@@ -39,6 +40,16 @@ class RecordNotificationSentListener
             }
 
             $response = $event->response;
+            if ($response === null) {
+                // The channel sent nothing (e.g. Laravel's Vonage channel without a recipient route).
+                Log::warning('RecordNotificationSentListener: SMS channel returned no response, no SMS was sent (no recipient route).', [
+                    'messengerMessageId' => $messengerMessageId,
+                    'channel' => $event->channel,
+                ]);
+
+                return;
+            }
+
             if (! is_object($response) || ! ($response instanceof \Traversable)) {
                 Log::error('RecordNotificationSentListener: SMS response is not traversable.', [
                     'messengerMessageId' => $messengerMessageId,
@@ -49,12 +60,14 @@ class RecordNotificationSentListener
                 return;
             }
 
-            /** @var object|null $sentSms */
-            $sentSms = null;
+            // A multipart SMS comes back as one item per part, each with its own provider id.
+            $items = [];
             foreach ($response as $item) {
-                $sentSms = $item;
-                break;
+                $items[] = $item;
             }
+
+            /** @var object|null $sentSms */
+            $sentSms = $items[0] ?? null;
 
             if (! $sentSms || ! method_exists($sentSms, 'getMessageId')) {
                 Log::error('RecordNotificationSentListener: SMS response item missing getMessageId method.', [
@@ -77,6 +90,11 @@ class RecordNotificationSentListener
                 $meta['vonage_message_price'] = $sentSms->getPrice();
             }
 
+            $partIds = $this->partIdsMatchableByClientReference($items, $sentSms, $messengerMessageId);
+            if ($partIds !== []) {
+                $meta['sms_part_ids'] = $partIds;
+            }
+
             $messageClass = config('messenger.models.message');
             if (! $messageClass::query()->whereKey($messengerMessageId)->exists()) {
                 Log::error('RecordNotificationSentListener: Message not found.', ['messengerMessageId' => $messengerMessageId]);
@@ -96,5 +114,36 @@ class RecordNotificationSentListener
                 'messengerMessageId' => $event->notification->messengerMessageId ?? null,
             ]);
         }
+    }
+
+    /**
+     * The provider ids of all parts — only for a multipart SMS that carried the
+     * messenger's own client reference: only then do the receipts of the later
+     * parts find this message, so only then may the final state wait for them.
+     *
+     * @param  list<mixed>  $items
+     * @return list<string>
+     */
+    private function partIdsMatchableByClientReference(array $items, object $sentSms, int|string $messengerMessageId): array
+    {
+        if (count($items) < 2 || ! method_exists($sentSms, 'getClientRef')) {
+            return [];
+        }
+
+        $expectedReference = SmsClientReference::for($messengerMessageId);
+        if ($expectedReference === '' || $sentSms->getClientRef() !== $expectedReference) {
+            return [];
+        }
+
+        $partIds = [];
+        foreach ($items as $item) {
+            if (! is_object($item) || ! method_exists($item, 'getMessageId')) {
+                return [];
+            }
+
+            $partIds[] = (string) $item->getMessageId();
+        }
+
+        return array_values(array_unique($partIds));
     }
 }
