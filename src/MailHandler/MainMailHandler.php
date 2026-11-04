@@ -173,8 +173,14 @@ class MainMailHandler implements GroupableMailTypeInterface
                 // attempt: give the counted attempt back, so backoff and
                 // max_retry_attempts only reflect real attempts (v8.12.1).
                 $this->message->attempts = max(0, (int) $this->message->attempts - 1);
+                // Only when the model would not persist the reset itself —
+                // a handler that refreshed the model (onBuilding) saves it.
+                $releaseByQuery = $this->message->reserved_at === null && ! $this->message->isDirty('reserved_at');
                 $this->message->save();
-                $this->releaseClaimOnDeferral();
+
+                if ($releaseByQuery) {
+                    $this->releaseClaimOnDeferral();
+                }
 
                 return;
             }
@@ -287,12 +293,14 @@ class MainMailHandler implements GroupableMailTypeInterface
      * A deferral resets `reserved_at` to null, but the claim was written by a
      * query — the model sees no change and save() would leave the reservation
      * in the database (the message then waited for the retry backoff). Release
-     * exactly our own claim (v8.12.1). The error path keeps its reservation on
-     * purpose: a worker holding a stale snapshot must not claim it again.
+     * exactly our own claim (v8.12.1) — only while it is still in the database:
+     * if save() already cleared it (refreshed model), another worker may hold a
+     * new claim of the same second by now. The error path keeps its reservation
+     * on purpose: a worker holding a stale snapshot must not claim it again.
      */
     private function releaseClaimOnDeferral(): void
     {
-        if ($this->message->reserved_at !== null || ! $this->claimedAt instanceof \DateTimeInterface) {
+        if (! $this->claimedAt instanceof \DateTimeInterface) {
             return;
         }
 

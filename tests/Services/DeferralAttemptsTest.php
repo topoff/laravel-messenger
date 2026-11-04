@@ -15,6 +15,24 @@ use Topoff\Messenger\Notifications\NovaChannelNotification;
 use Workbench\App\Mail\TestMail;
 use Workbench\App\Models\TestReceiver;
 
+class DeferralAttemptsRefreshingHandler extends MainMailHandler
+{
+    #[Override]
+    public function onBuilding(): void
+    {
+        $this->message->refresh();
+    }
+
+    #[Override]
+    public function shouldBeSentNow(): bool
+    {
+        $this->message->scheduled_at = now()->addMinutes(5);
+        $this->message->reserved_at = null;
+
+        return false;
+    }
+}
+
 class DeferralAttemptsThrowingHandler extends MainMailHandler
 {
     #[Override]
@@ -178,4 +196,26 @@ it('keeps the reservation after a send error, so a worker with a stale snapshot 
     expect($message->refresh()->sent_at)->toBeNull()
         ->and($message->attempts)->toBe(1);
     Mail::assertNothingSent();
+});
+
+it('never clears a claim another worker took after a refreshed handler saved its deferral', function (): void {
+    $type = createMessageType(['single_handler' => DeferralAttemptsRefreshingHandler::class]);
+    $message = createMessage([...$this->base, 'message_type_id' => $type->id]);
+    $staleB = Message::with('messageType')->findOrFail($message->id);
+
+    // Worker B claims right after A has saved its deferral (same second).
+    $bClaimed = false;
+    Message::saved(function (Message $saved) use ($message, $staleB, &$bClaimed): void {
+        if ($bClaimed || $saved->getKey() !== $message->getKey() || $saved->reserved_at !== null) {
+            return;
+        }
+
+        $bClaimed = true;
+        new MainMailHandler($staleB);
+    });
+
+    new DeferralAttemptsRefreshingHandler(Message::with('messageType')->findOrFail($message->id))->send();
+
+    expect($bClaimed)->toBeTrue()
+        ->and($message->refresh()->reserved_at)->not->toBeNull();
 });
