@@ -166,13 +166,16 @@ class MainMailHandler implements GroupableMailTypeInterface
 
         try {
             $this->message->attempts++;
+            // Counted value of this run, kept apart from the model: a handler
+            // may refresh() the message before deciding (v8.12.1).
+            $beforeThisAttempt = max(0, (int) $this->message->attempts - 1);
             $this->receiver = $this->getReceiver();
 
             if (! $this->shouldBeSentNow()) {
                 // A deferral (rate guard or handler logic) is not a send
                 // attempt: give the counted attempt back, so backoff and
                 // max_retry_attempts only reflect real attempts (v8.12.1).
-                $this->message->attempts = max(0, (int) $this->message->attempts - 1);
+                $this->message->attempts = $beforeThisAttempt;
                 // Only when the model would not persist the reset itself —
                 // a handler that refreshed the model (onBuilding) saves it.
                 $releaseByQuery = $this->message->reserved_at === null && ! $this->message->isDirty('reserved_at');

@@ -103,6 +103,9 @@ class MainNotificationHandler
     {
         try {
             $this->message->attempts++;
+            // Counted value of this run, kept apart from the model: a handler
+            // may refresh() the message before deciding (v8.12.1).
+            $beforeThisAttempt = max(0, (int) $this->message->attempts - 1);
             $receiver = $this->message->receiver;
 
             if (! $receiver) {
@@ -120,7 +123,7 @@ class MainNotificationHandler
                 // A deferral (rate guard or handler logic) is not a send
                 // attempt: give the counted attempt back, so backoff and
                 // max_retry_attempts only reflect real attempts (v8.12.1).
-                $this->message->attempts = max(0, (int) $this->message->attempts - 1);
+                $this->message->attempts = $beforeThisAttempt;
                 $this->message->save();
 
                 return;

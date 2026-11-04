@@ -33,6 +33,20 @@ class DeferralAttemptsRefreshingHandler extends MainMailHandler
     }
 }
 
+class DeferralAttemptsLateRefreshHandler extends MainMailHandler
+{
+    #[Override]
+    public function shouldBeSentNow(): bool
+    {
+        // Refresh after attempts++ (drops the unsaved increment), then defer.
+        $this->message->refresh();
+        $this->message->scheduled_at = now()->addMinutes(5);
+        $this->message->reserved_at = null;
+
+        return false;
+    }
+}
+
 class DeferralAttemptsThrowingHandler extends MainMailHandler
 {
     #[Override]
@@ -218,4 +232,14 @@ it('never clears a claim another worker took after a refreshed handler saved its
 
     expect($bClaimed)->toBeTrue()
         ->and($message->refresh()->reserved_at)->not->toBeNull();
+});
+
+it('keeps earlier real attempts when a handler refreshes the message before deferring (Code-Review R3)', function (): void {
+    $type = createMessageType(['single_handler' => DeferralAttemptsLateRefreshHandler::class]);
+    $message = createMessage([...$this->base, 'message_type_id' => $type->id, 'attempts' => 4]);
+
+    new DeferralAttemptsLateRefreshHandler(Message::with('messageType')->findOrFail($message->id))->send();
+
+    expect($message->refresh()->attempts)->toBe(4)
+        ->and($message->sent_at)->toBeNull();
 });
