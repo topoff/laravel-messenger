@@ -2,6 +2,12 @@
 
 All notable changes to `laravel-messenger` will be documented in this file.
 
+## 8.13.1 - 2026-11-05
+
+- `delivery_overrides_failure`: the override also sets `sent_at` when it is
+  still empty (a send that timed out and was later delivered). Without it the
+  retry sweep picked the message up again and sent it a second time.
+
 ## 8.13.0 - 2026-11-05
 
 - New opt-in `messenger.sms.delivery_overrides_failure` (`MESSENGER_SMS_DELIVERY_OVERRIDES_FAILURE`,

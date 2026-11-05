@@ -310,6 +310,9 @@ class SmsDeliveryRecorder
                 $trackingMeta[self::PENDING_KEY] = ['provider' => $provider, 'status' => $status, 'delivered' => true];
                 $locked->delivered_at = $at ?? now();
                 $locked->failed_at = null;
+                // The delivery proves the send — without sent_at the retry
+                // sweep would send the message again (timeout case).
+                $locked->sent_at ??= $locked->delivered_at;
                 $locked->tracking_meta = $trackingMeta;
                 $locked->save();
 

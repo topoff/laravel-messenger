@@ -308,3 +308,16 @@ it('notes a repeated failure after an override only once (delivery_overrides_fai
     expect(data_get($message->refresh()->tracking_meta, 'late_events'))->toHaveCount(1)
         ->and($message->delivered_at)->not->toBeNull();
 });
+
+it('sets sent_at when a delivery replaces a failure of a send that timed out (delivery_overrides_failure)', function () {
+    config(['messenger.sms.delivery_overrides_failure' => true]);
+    Event::fake([MessageDeliveredEvent::class]);
+    $message = createMessage(['tracking_message_id' => null, 'sent_at' => null, 'failed_at' => now(), 'error_at' => now(), 'attempts' => 1]);
+
+    runAwsSmsEventJob(awsSmsEvent(['context' => ['messenger_message_id' => (string) $message->getKey()]]));
+
+    $message->refresh();
+    expect($message->delivered_at)->not->toBeNull()
+        ->and($message->sent_at)->not->toBeNull()
+        ->and($message->failed_at)->toBeNull();
+});
