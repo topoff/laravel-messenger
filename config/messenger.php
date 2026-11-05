@@ -232,6 +232,14 @@ return [
     // credentials; the channel refuses to send without them instead of
     // falling back to the SDK default chain.
     'sms' => [
+        // First final state wins by default (delivered_at XOR failed_at; a
+        // contradicting later final only lands in tracking_meta.late_events).
+        // true: a later delivery of the current send replaces an earlier
+        // failure — failed_at is cleared, the failure kept in
+        // tracking_meta.overridden_failure, MessageDeliveredEvent fires.
+        // A failure never replaces a delivery.
+        'delivery_overrides_failure' => (bool) env('MESSENGER_SMS_DELIVERY_OVERRIDES_FAILURE', false),
+
         'aws' => [
             'key' => env('MESSENGER_AWS_SMS_KEY'),
             'secret' => env('MESSENGER_AWS_SMS_SECRET'),

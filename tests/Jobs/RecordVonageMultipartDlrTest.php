@@ -196,3 +196,20 @@ it('merges intermediate receipt details of a single-part sms', function () {
     expect(data_get($message->tracking_meta, 'dlr_status'))->toBe('accepted')
         ->and($message->delivered_at)->toBeNull();
 });
+
+it('replaces a failure once every part was delivered, even after a repeated failure receipt (delivery_overrides_failure)', function () {
+    config(['messenger.sms.delivery_overrides_failure' => true]);
+    Event::fake([MessageDeliveredEvent::class, MessageRejectedEvent::class]);
+    $message = multipartMessage();
+
+    vonageDlr($message, 'part-1', 'failed')->handle();
+    vonageDlr($message, 'part-1', 'delivered')->handle();
+    vonageDlr($message, 'part-1', 'failed')->handle();
+    vonageDlr($message, 'part-2', 'delivered')->handle();
+
+    $message->refresh();
+    expect($message->delivered_at)->not->toBeNull()
+        ->and($message->failed_at)->toBeNull()
+        ->and(data_get($message->tracking_meta, 'sms_part_statuses'))->toBe(['part-1' => 'delivered', 'part-2' => 'delivered']);
+    Event::assertDispatchedTimes(MessageDeliveredEvent::class, 1);
+});

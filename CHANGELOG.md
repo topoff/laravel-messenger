@@ -2,6 +2,23 @@
 
 All notable changes to `laravel-messenger` will be documented in this file.
 
+## 8.13.0 - 2026-11-05
+
+- New opt-in `messenger.sms.delivery_overrides_failure` (`MESSENGER_SMS_DELIVERY_OVERRIDES_FAILURE`,
+  default `false`): a later delivery receipt of the **current** send replaces an earlier
+  failure — `failed_at` is cleared, `delivered_at` set, the failure kept in
+  `tracking_meta.overridden_failure` and `MessageDeliveredEvent` fires (the earlier
+  failure events stay fired). A failure never replaces a delivery; receipts of an
+  earlier send or without a provider id stay `late_events`; a receipt that
+  overtook `recordSent()` counts as the current send when no send id is known yet.
+  While the failure's events are still pending (listener failed, worker died),
+  a delivery does not replace it and stays a late event — the failure's
+  at-least-once dispatch is never raced.
+  With the option on, a delivered multipart part stays delivered and repeated
+  receipts after an override are noted once. Default behaviour (first final
+  state wins) is unchanged.
+- `RecordAwsSmsEventJob` passes the provider message id to `SmsDeliveryRecorder::recordFinal()`.
+
 ## 8.12.1 - 2026-11-04
 
 - A deferral is no longer a send attempt: when `shouldBeSentNow()` returns `false`

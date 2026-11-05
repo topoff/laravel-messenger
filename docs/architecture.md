@@ -169,7 +169,7 @@ Controlled by `config('messenger.tracking.vonage_dlr.enabled')` (default: `false
   stores the AWS message id as `tracking_message_id` (`tracking_meta.provider = aws`).
 - Events: configuration set → SNS topic → `POST {prefix}/sms-sns` (`AwsSmsEventsController`, signature +
   topic required) → `RecordAwsSmsEventJob` → `SmsDeliveryRecorder`.
-- `SmsDeliveryRecorder` is shared with the Vonage DLR job: row-locked meta updates, first final state wins,
+- `SmsDeliveryRecorder` is shared with the Vonage DLR job: row-locked meta updates, first final state wins (opt-in `messenger.sms.delivery_overrides_failure`: a delivery of the current send replaces a failure),
   at-least-once business events (`sms_final_event_pending`, swept by `messenger:dispatch-pending-sms-events`).
 - Failures fire `SmsDeliveryFailedEvent` (Vonage additionally `MessageRejectedEvent`, kept for existing hosts).
 

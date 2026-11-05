@@ -201,3 +201,110 @@ it('lets only one of two concurrent copies dispatch the event', function () {
     Event::assertDispatchedTimes(MessageDeliveredEvent::class, 1);
     expect(data_get($message->refresh()->tracking_meta, SmsDeliveryRecorder::PENDING_KEY))->toBeNull();
 });
+
+it('lets a later delivery replace a failure when delivery_overrides_failure is on', function () {
+    config(['messenger.sms.delivery_overrides_failure' => true]);
+    Event::fake([MessageDeliveredEvent::class, SmsDeliveryFailedEvent::class]);
+    $message = createMessage(['tracking_message_id' => 'aws-msg-1']);
+
+    runAwsSmsEventJob(awsSmsEvent(['eventType' => 'TEXT_UNREACHABLE']));
+    runAwsSmsEventJob(awsSmsEvent());
+    runAwsSmsEventJob(awsSmsEvent());
+
+    $message->refresh();
+    expect($message->delivered_at)->not->toBeNull()
+        ->and($message->failed_at)->toBeNull()
+        ->and(data_get($message->tracking_meta, 'overridden_failure.status'))->toBe('TEXT_UNREACHABLE')
+        ->and(data_get($message->tracking_meta, 'overridden_failure.provider'))->toBe('aws')
+        ->and(data_get($message->tracking_meta, 'sms_final_status'))->toBe('TEXT_DELIVERED')
+        ->and(data_get($message->tracking_meta, SmsDeliveryRecorder::PENDING_KEY))->toBeNull()
+        ->and(data_get($message->tracking_meta, 'late_events'))->toBeNull();
+    Event::assertDispatchedTimes(SmsDeliveryFailedEvent::class, 1);
+    Event::assertDispatchedTimes(MessageDeliveredEvent::class, 1);
+});
+
+it('never lets a failure replace a delivery, even with delivery_overrides_failure on', function () {
+    config(['messenger.sms.delivery_overrides_failure' => true]);
+    Event::fake([MessageDeliveredEvent::class, SmsDeliveryFailedEvent::class]);
+    $message = createMessage(['tracking_message_id' => 'aws-msg-1']);
+
+    runAwsSmsEventJob(awsSmsEvent());
+    runAwsSmsEventJob(awsSmsEvent(['eventType' => 'TEXT_UNREACHABLE']));
+
+    $message->refresh();
+    expect($message->delivered_at)->not->toBeNull()
+        ->and($message->failed_at)->toBeNull()
+        ->and(data_get($message->tracking_meta, 'late_events.0.status'))->toBe('TEXT_UNREACHABLE');
+    Event::assertNotDispatched(SmsDeliveryFailedEvent::class);
+});
+
+it('keeps a delivery of an earlier send as late event even with delivery_overrides_failure on', function () {
+    config(['messenger.sms.delivery_overrides_failure' => true]);
+    Event::fake([MessageDeliveredEvent::class]);
+    $message = createMessage(['tracking_message_id' => 'aws-msg-2', 'failed_at' => now(), 'tracking_meta' => ['previous_message_ids' => ['aws-msg-1']]]);
+
+    runAwsSmsEventJob(awsSmsEvent());
+
+    $message->refresh();
+    expect($message->delivered_at)->toBeNull()
+        ->and($message->failed_at)->not->toBeNull();
+    Event::assertNotDispatched(MessageDeliveredEvent::class);
+});
+
+it('keeps the failure and its at-least-once event while that event is still pending (delivery_overrides_failure)', function () {
+    config(['messenger.sms.delivery_overrides_failure' => true]);
+    $calls = ['failed' => 0];
+    Event::listen(SmsDeliveryFailedEvent::class, function () use (&$calls): void {
+        $calls['failed']++;
+        if ($calls['failed'] === 1) {
+            throw new RuntimeException('listener down');
+        }
+    });
+    Event::fake([MessageDeliveredEvent::class]);
+    $message = createMessage(['tracking_message_id' => 'aws-msg-1']);
+
+    expect(fn () => runAwsSmsEventJob(awsSmsEvent(['eventType' => 'TEXT_UNREACHABLE'])))->toThrow(RuntimeException::class);
+    // Delivery while the failure event is pending: no override, noted as late event.
+    runAwsSmsEventJob(awsSmsEvent());
+    expect($message->refresh()->delivered_at)->toBeNull()
+        ->and(data_get($message->tracking_meta, SmsDeliveryRecorder::PENDING_KEY.'.status'))->toBe('TEXT_UNREACHABLE')
+        ->and(data_get($message->tracking_meta, 'late_events.0.status'))->toBe('TEXT_DELIVERED');
+
+    // The failure's retry fires the event; the message stays failed.
+    runAwsSmsEventJob(awsSmsEvent(['eventType' => 'TEXT_UNREACHABLE']));
+
+    $message->refresh();
+    expect($calls['failed'])->toBe(2)
+        ->and($message->failed_at)->not->toBeNull()
+        ->and($message->delivered_at)->toBeNull()
+        ->and(data_get($message->tracking_meta, SmsDeliveryRecorder::PENDING_KEY))->toBeNull();
+    Event::assertNotDispatched(MessageDeliveredEvent::class);
+});
+
+it('replaces a failure by a delivery that overtook recordSent() (delivery_overrides_failure)', function () {
+    config(['messenger.sms.delivery_overrides_failure' => true]);
+    Event::fake([MessageDeliveredEvent::class, SmsDeliveryFailedEvent::class]);
+    $message = createMessage(['tracking_message_id' => null]);
+    $context = ['context' => ['messenger_message_id' => (string) $message->getKey()]];
+
+    runAwsSmsEventJob(awsSmsEvent(['eventType' => 'TEXT_UNREACHABLE', ...$context]));
+    runAwsSmsEventJob(awsSmsEvent($context));
+
+    $message->refresh();
+    expect($message->delivered_at)->not->toBeNull()
+        ->and($message->failed_at)->toBeNull();
+});
+
+it('notes a repeated failure after an override only once (delivery_overrides_failure)', function () {
+    config(['messenger.sms.delivery_overrides_failure' => true]);
+    Event::fake([MessageDeliveredEvent::class, SmsDeliveryFailedEvent::class]);
+    $message = createMessage(['tracking_message_id' => 'aws-msg-1']);
+
+    runAwsSmsEventJob(awsSmsEvent(['eventType' => 'TEXT_UNREACHABLE']));
+    runAwsSmsEventJob(awsSmsEvent());
+    runAwsSmsEventJob(awsSmsEvent(['eventType' => 'TEXT_UNREACHABLE']));
+    runAwsSmsEventJob(awsSmsEvent(['eventType' => 'TEXT_UNREACHABLE']));
+
+    expect(data_get($message->refresh()->tracking_meta, 'late_events'))->toHaveCount(1)
+        ->and($message->delivered_at)->not->toBeNull();
+});

@@ -22,7 +22,9 @@ use Topoff\Messenger\Models\Message;
  *   send listener and an early delivery event never overwrite each other's
  *   tracking_meta keys;
  * - the first final state wins (delivered_at XOR failed_at); later
- *   contradicting finals are only kept in tracking_meta.late_events;
+ *   contradicting finals are only kept in tracking_meta.late_events —
+ *   unless messenger.sms.delivery_overrides_failure lets a later delivery
+ *   replace a failure (never the other way round);
  * - the business event is fired at least once: the final UPDATE stores
  *   tracking_meta.sms_final_event_pending, which is cleared only after all
  *   events were dispatched. A crash in between is picked up by a retry of the
@@ -166,7 +168,9 @@ class SmsDeliveryRecorder
 
             $statuses = (array) ($trackingMeta[self::PART_STATUSES_KEY] ?? []);
             $known = $statuses[$providerMessageId] ?? null;
-            if (! in_array($known, self::FINAL_PART_STATUSES, true) || in_array($status, self::FINAL_PART_STATUSES, true)) {
+            // Opt-in delivery_overrides_failure: a delivered part stays delivered.
+            $deliveredSticks = $known === 'delivered' && $status !== 'delivered' && (bool) config('messenger.sms.delivery_overrides_failure', false);
+            if (! $deliveredSticks && (! in_array($known, self::FINAL_PART_STATUSES, true) || in_array($status, self::FINAL_PART_STATUSES, true))) {
                 $statuses[$providerMessageId] = $status;
             }
 
@@ -286,7 +290,44 @@ class SmsDeliveryRecorder
                 return 'dispatch';
             }
 
+            $overrides = (bool) config('messenger.sms.delivery_overrides_failure', false);
+
+            // Opt-in: a delivery of the current send replaces an earlier
+            // failure (e.g. a timeout reported as failed, then delivered) —
+            // only with a provider id proven to belong to the current send.
+            // Here a final state exists; without delivered_at it is a failure.
+            // Not while the failure's events are still pending: replacing then
+            // would race their at-least-once dispatch — the receipt stays a
+            // late event, as without the option.
+            if ($delivered && $locked->delivered_at === null && $overrides && ! is_array($pending) && $this->isCurrentSend($locked, $providerMessageId)) {
+                $trackingMeta = array_merge($trackingMeta, $meta);
+                $trackingMeta['overridden_failure'] = [
+                    'failed_at' => $locked->failed_at->toIso8601String(),
+                    'provider' => $trackingMeta['sms_final_provider'] ?? null,
+                    'status' => $trackingMeta['sms_final_status'] ?? null,
+                    'replaced_at' => now()->toIso8601String(),
+                ];
+                $trackingMeta[self::PENDING_KEY] = ['provider' => $provider, 'status' => $status, 'delivered' => true];
+                $locked->delivered_at = $at ?? now();
+                $locked->failed_at = null;
+                $locked->tracking_meta = $trackingMeta;
+                $locked->save();
+
+                return 'dispatch';
+            }
+
             $alreadyRecorded = ($trackingMeta['sms_final_status'] ?? null) === $status && ($trackingMeta['sms_final_provider'] ?? null) === $provider;
+
+            // Opt-in: a repeated receipt after an override is noted once.
+            if ($overrides && ! $alreadyRecorded) {
+                if ($this->appendLateEvent($trackingMeta, $provider, $status, $providerMessageId ?? '')) {
+                    $locked->tracking_meta = $trackingMeta;
+                    $locked->save();
+                }
+
+                return 'done';
+            }
+
             if (! $alreadyRecorded) {
                 $trackingMeta['late_events'] = [...(array) ($trackingMeta['late_events'] ?? []), [
                     'provider' => $provider,
@@ -303,6 +344,31 @@ class SmsDeliveryRecorder
         if ($decision === 'dispatch') {
             $this->dispatchPending($message->getKey());
         }
+    }
+
+    /**
+     * Whether a receipt belongs to the message's current send: its provider id
+     * (or a part id) is the stored one — or no send id is known yet at all (the
+     * receipt overtook recordSent(), matched via the messenger's client
+     * reference), so there is no other send it could belong to.
+     */
+    private function isCurrentSend(Message $message, ?string $providerMessageId): bool
+    {
+        if ($providerMessageId === null || $providerMessageId === '') {
+            return false;
+        }
+
+        $send = $this->sendOf($message, $providerMessageId);
+        if ($send === self::SEND_CURRENT) {
+            return true;
+        }
+
+        $trackingMeta = $message->tracking_meta ?: [];
+
+        return $send !== self::SEND_PREVIOUS
+            && ($message->tracking_message_id === null || $message->tracking_message_id === '')
+            && (array) ($trackingMeta['previous_message_ids'] ?? []) === []
+            && (array) ($trackingMeta[self::PREVIOUS_PART_IDS_KEY] ?? []) === [];
     }
 
     /**

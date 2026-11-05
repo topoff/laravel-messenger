@@ -74,7 +74,7 @@ class RecordAwsSmsEventJob implements ShouldQueue
             'aws_sms_mcc_mnc' => isset($this->event['mcc']) ? ($this->event['mcc'].'/'.($this->event['mnc'] ?? '')) : null,
             'aws_sms_price' => $this->event['totalMessagePrice'] ?? null,
             'aws_sms_parts' => $this->event['totalMessageParts'] ?? null,
-        ]);
+        ], providerMessageId: $providerMessageId);
     }
 
     private function retryOrDrop(?string $providerMessageId): void
