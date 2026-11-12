@@ -240,3 +240,109 @@ it('sends the bearer token on every request', function () {
 
     Http::assertSent(fn (Request $r): bool => $r->hasHeader('Authorization', 'Bearer secret-token'));
 });
+
+/**
+ * @param  array<string, mixed>  $listBody
+ */
+function fakeZoneForCreateIfMissing(array $listBody, array $postBody = ['result' => 'success', 'data' => ['id' => 5]]): void
+{
+    Http::fake(fn (Request $request) => match (true) {
+        $request->method() === 'GET' && (bool) preg_match('#/2/domains/[^/]+/zones#', $request->url()) => Http::response([
+            'result' => 'success', 'data' => [['fqdn' => 'example.com']],
+        ]),
+        $request->method() === 'GET' && str_contains($request->url(), '/2/zones/example.com/records') => Http::response(
+            match (true) {
+                str_contains($request->url(), 'page=2') => $listBody['__page2'] ?? ['result' => 'success', 'data' => []],
+                str_contains($request->url(), 'page=3') => $listBody['__page3'] ?? ['result' => 'success', 'data' => []],
+                default => array_diff_key($listBody, ['__page2' => true, '__page3' => true]),
+            }
+        ),
+        $request->method() === 'POST' && str_contains($request->url(), '/2/zones/example.com/records') => Http::response($postBody),
+        default => Http::response(['unexpected' => $request->method().' '.$request->url()], 500),
+    });
+}
+
+it('createRecordIfMissing creates the record when the name is free', function () {
+    fakeZoneForCreateIfMissing(['result' => 'success', 'data' => [
+        ['id' => 1, 'source' => '@', 'type' => 'TXT', 'target' => 'v=spf1 -all', 'ttl' => 300, 'description' => []],
+    ]]);
+
+    $created = new InfomaniakDnsApi('tok')->createRecordIfMissing('_dmarc.example.com', 'TXT', ['"v=DMARC1; p=reject;"'], 3600);
+
+    expect($created)->toBeTrue();
+    Http::assertSent(fn (Request $r): bool => $r->method() === 'POST'
+        && $r->data() === ['source' => '_dmarc', 'type' => 'TXT', 'ttl' => 3600, 'target' => 'v=DMARC1; p=reject;']);
+});
+
+it('createRecordIfMissing leaves an existing record of any type untouched', function (string $type, string $source) {
+    fakeZoneForCreateIfMissing(['result' => 'success', 'data' => [
+        ['id' => 9, 'source' => $source, 'type' => $type, 'target' => 'v=DMARC1; p=quarantine; rua=mailto:x@example.org', 'ttl' => 3600, 'description' => []],
+    ]]);
+
+    $created = new InfomaniakDnsApi('tok')->createRecordIfMissing('_dmarc.example.com', 'TXT', ['"v=DMARC1; p=none;"']);
+
+    expect($created)->toBeFalse();
+    Http::assertNotSent(fn (Request $r): bool => in_array($r->method(), ['POST', 'PUT', 'DELETE'], true));
+})->with([
+    'TXT' => ['TXT', '_dmarc'],
+    'CNAME' => ['CNAME', '_dmarc'],
+    'upper-case source' => ['TXT', '_DMARC'],
+]);
+
+it('createRecordIfMissing finds an existing record on a later page', function () {
+    fakeZoneForCreateIfMissing([
+        'result' => 'success', 'pages' => 2, 'total' => 2,
+        'data' => [['id' => 1, 'source' => 'www', 'type' => 'A', 'target' => '1.2.3.4', 'ttl' => 300, 'description' => []]],
+        '__page2' => ['result' => 'success', 'pages' => 2, 'total' => 2,
+            'data' => [['id' => 2, 'source' => '_dmarc', 'type' => 'TXT', 'target' => 'v=DMARC1; p=reject;', 'ttl' => 300, 'description' => []]]],
+    ]);
+
+    expect(new InfomaniakDnsApi('tok')->createRecordIfMissing('_dmarc.example.com', 'TXT', ['v=DMARC1; p=none;']))->toBeFalse();
+    Http::assertNotSent(fn (Request $r): bool => $r->method() === 'POST');
+});
+
+it('createRecordIfMissing keeps the pagination hints of page 1 when a later page omits them', function () {
+    fakeZoneForCreateIfMissing([
+        'result' => 'success', 'pages' => 3, 'total' => 3,
+        'data' => [['id' => 1, 'source' => 'www', 'type' => 'A', 'target' => '1.2.3.4', 'ttl' => 300, 'description' => []]],
+        '__page2' => ['result' => 'success',
+            'data' => [['id' => 2, 'source' => 'mail', 'type' => 'A', 'target' => '1.2.3.5', 'ttl' => 300, 'description' => []]]],
+        '__page3' => ['result' => 'success',
+            'data' => [['id' => 3, 'source' => '_dmarc', 'type' => 'TXT', 'target' => 'v=DMARC1; p=reject;', 'ttl' => 300, 'description' => []]]],
+    ]);
+
+    expect(new InfomaniakDnsApi('tok')->createRecordIfMissing('_dmarc.example.com', 'TXT', ['v=DMARC1; p=none;']))->toBeFalse();
+    Http::assertSent(fn (Request $r): bool => $r->method() === 'GET' && str_contains($r->url(), 'page=3'));
+    Http::assertNotSent(fn (Request $r): bool => $r->method() === 'POST');
+});
+
+it('createRecordIfMissing refuses to write when the listing is not trustworthy', function (array $listBody, string $message) {
+    fakeZoneForCreateIfMissing($listBody);
+
+    expect(fn () => new InfomaniakDnsApi('tok')->createRecordIfMissing('_dmarc.example.com', 'TXT', ['v=DMARC1; p=none;']))
+        ->toThrow(RuntimeException::class, $message);
+    Http::assertNotSent(fn (Request $r): bool => $r->method() === 'POST');
+})->with([
+    'result error' => [['result' => 'error', 'error' => ['code' => 'x']], 'did not report success'],
+    'no result' => [['data' => []], 'did not report success'],
+    'missing data' => [['result' => 'success'], 'returned no record list'],
+    'data not a list' => [['result' => 'success', 'data' => ['id' => 1]], 'returned no record list'],
+    'incomplete by total' => [['result' => 'success', 'total' => 5, 'data' => []], 'incomplete'],
+    'record without source' => [['result' => 'success', 'data' => [['id' => 7, 'type' => 'TXT']]], 'without a source'],
+    'record not an object' => [['result' => 'success', 'data' => [false]], 'without a source'],
+    'record with empty source' => [['result' => 'success', 'data' => [['id' => 7, 'source' => ' ', 'type' => 'TXT']]], 'without a source'],
+]);
+
+it('createRecordIfMissing throws when the create is not confirmed', function () {
+    fakeZoneForCreateIfMissing(['result' => 'success', 'data' => []], ['result' => 'error', 'error' => ['code' => 'invalid']]);
+
+    expect(fn () => new InfomaniakDnsApi('tok')->createRecordIfMissing('_dmarc.example.com', 'TXT', ['v=DMARC1; p=none;']))
+        ->toThrow(RuntimeException::class, 'did not report success');
+});
+
+it('createRecordIfMissing throws when no zone covers the name', function () {
+    Http::fake(['*' => Http::response([], 404)]);
+
+    expect(fn () => new InfomaniakDnsApi('tok')->createRecordIfMissing('_dmarc.unknown.example', 'TXT', ['v=DMARC1; p=none;']))
+        ->toThrow(RuntimeException::class, 'zone not found');
+});

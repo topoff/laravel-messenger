@@ -7,9 +7,10 @@ use Aws\SesV2\SesV2Client;
 use Aws\Sns\SnsClient;
 use Aws\Sqs\SqsClient;
 use Aws\Sts\StsClient;
+use Topoff\Messenger\Contracts\CreatesRoute53RecordsIfMissing;
 use Topoff\Messenger\Contracts\SesSnsProvisioningApi;
 
-class AwsSesSnsProvisioningApi implements SesSnsProvisioningApi
+class AwsSesSnsProvisioningApi implements CreatesRoute53RecordsIfMissing, SesSnsProvisioningApi
 {
     protected object $sesV2;
 
@@ -490,6 +491,67 @@ class AwsSesSnsProvisioningApi implements SesSnsProvisioningApi
                 ]],
             ],
         ]);
+    }
+
+    public function createRoute53RecordIfMissing(
+        string $hostedZoneId,
+        string $recordName,
+        string $recordType,
+        array $values,
+        int $ttl = 300,
+    ): bool {
+        $wanted = $this->normalizeRoute53Name($recordName);
+
+        // No StartRecordType: the first record set at or after the name is
+        // returned whatever its type, so an existing CNAME counts as taken too.
+        $result = $this->route53->listResourceRecordSets([
+            'HostedZoneId' => $hostedZoneId,
+            'StartRecordName' => $recordName,
+            'MaxItems' => '1',
+        ]);
+
+        foreach ((array) ($result['ResourceRecordSets'] ?? []) as $recordSet) {
+            if ($this->normalizeRoute53Name((string) ($recordSet['Name'] ?? '')) === $wanted) {
+                return false;
+            }
+        }
+
+        // CREATE (not UPSERT): Route53 rejects the change if the record set
+        // appeared in the meantime, so an existing record is never replaced.
+        $this->route53->changeResourceRecordSets([
+            'HostedZoneId' => $hostedZoneId,
+            'ChangeBatch' => [
+                'Changes' => [[
+                    'Action' => 'CREATE',
+                    'ResourceRecordSet' => [
+                        'Name' => $recordName,
+                        'Type' => strtoupper($recordType),
+                        'TTL' => $ttl,
+                        'ResourceRecords' => array_map(
+                            static fn (string $value): array => ['Value' => $value],
+                            array_values($values)
+                        ),
+                    ],
+                ]],
+            ],
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Route53 returns names lower-cased with a trailing dot and escapes special
+     * characters as three-digit octal (e.g. `\052` for `*`).
+     */
+    protected function normalizeRoute53Name(string $name): string
+    {
+        $decoded = (string) preg_replace_callback(
+            '/\\\\([0-7]{3})/',
+            static fn (array $m): string => chr((int) octdec($m[1])),
+            $name,
+        );
+
+        return rtrim(strtolower(trim($decoded)), '.');
     }
 
     /**

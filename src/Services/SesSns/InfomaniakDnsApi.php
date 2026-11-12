@@ -107,6 +107,53 @@ class InfomaniakDnsApi
     }
 
     /**
+     * Create a record only when NO record of any type exists at the given name.
+     * Never updates or deletes anything. Returns true when created, false when
+     * the name was already taken (e.g. an existing, possibly hardened `_dmarc`).
+     *
+     * Fail-safe: the existence check only trusts a complete, well-formed record
+     * listing (see listRecordsStrictly()); anything else throws instead of
+     * writing on the assumption that the name is free.
+     *
+     * @param  array<int, string>  $values
+     */
+    public function createRecordIfMissing(string $recordFqdn, string $type, array $values, int $ttl = 300): bool
+    {
+        if ($this->hasRecordsAt($recordFqdn)) {
+            return false;
+        }
+
+        $zone = (string) $this->resolveZone($recordFqdn);
+        $type = strtoupper($type);
+        $source = $this->relativeSource($recordFqdn, $zone);
+
+        foreach ($values as $value) {
+            $response = $this->client()->post("/2/zones/{$zone}/records", array_merge(
+                ['source' => $source, 'type' => $type, 'ttl' => $ttl],
+                $this->normalizeValue($type, $value),
+            ));
+            $this->assertSuccessResult($response, "Infomaniak record create in {$zone}");
+        }
+
+        return true;
+    }
+
+    /**
+     * Whether any record (any type) exists at the given FQDN.
+     */
+    public function hasRecordsAt(string $recordFqdn): bool
+    {
+        $zone = $this->resolveZone($recordFqdn);
+        if ($zone === null) {
+            throw new RuntimeException('Infomaniak zone not found for: '.$recordFqdn);
+        }
+
+        $source = $this->normalizeSource($this->relativeSource($recordFqdn, $zone));
+
+        return array_any($this->listRecordsStrictly($zone), fn ($record) => $this->normalizeSource($record['source']) === $source);
+    }
+
+    /**
      * Ask Infomaniak which managed zone covers the given FQDN. The API returns all
      * zones associated with the domain — we pick the longest FQDN that is a suffix
      * of the input (i.e. the most specific zone, in case the account hosts both an
@@ -158,6 +205,67 @@ class InfomaniakDnsApi
     }
 
     /**
+     * Like listRecords(), but only accepts a response that proves the listing is
+     * complete: HTTP 2xx, `result === "success"`, `data` is a list. Follows
+     * `pages` when the API paginates and throws when `total` exceeds what was read.
+     *
+     * @return array<int, array{source: string, type: string}>
+     */
+    protected function listRecordsStrictly(string $zoneFqdn): array
+    {
+        $records = [];
+        $page = 1;
+        $pages = 1;
+        $total = null;
+
+        do {
+            $query = ['with' => 'records_description'];
+            if ($page > 1) {
+                $query['page'] = $page;
+            }
+
+            $response = $this->client()->get("/2/zones/{$zoneFqdn}/records", $query);
+            $this->assertSuccessResult($response, "Infomaniak record list for {$zoneFqdn}");
+
+            $data = $response->json('data');
+            if (! is_array($data) || ! array_is_list($data)) {
+                throw new RuntimeException("Infomaniak record list for {$zoneFqdn} returned no record list.");
+            }
+
+            foreach ($data as $record) {
+                if (! is_array($record) || ! is_string($record['source'] ?? null) || trim($record['source']) === '') {
+                    throw new RuntimeException("Infomaniak record list for {$zoneFqdn} contains a record without a source.");
+                }
+
+                $records[] = [
+                    'source' => $record['source'],
+                    'type' => (string) ($record['type'] ?? ''),
+                ];
+            }
+
+            // Keep the largest pagination hints seen: a later page without them
+            // must not end the walk early or drop the completeness check.
+            $pages = max($pages, (int) ($response->json('pages') ?? 1));
+            $pageTotal = $response->json('total');
+            if (is_numeric($pageTotal)) {
+                $total = max((int) $pageTotal, (int) ($total ?? 0));
+            }
+            $page++;
+        } while ($page <= $pages && $data !== []);
+
+        if ($total !== null && count($records) < $total) {
+            throw new RuntimeException(sprintf(
+                'Infomaniak record list for %s is incomplete (%d of %d records read).',
+                $zoneFqdn,
+                count($records),
+                $total,
+            ));
+        }
+
+        return $records;
+    }
+
+    /**
      * @param  array<string, mixed>  $payload
      */
     public function createRecord(string $zoneFqdn, array $payload): int
@@ -202,6 +310,19 @@ class InfomaniakDnsApi
             $response->status(),
             (string) $response->body(),
         ));
+    }
+
+    protected function assertSuccessResult(Response $response, string $context): void
+    {
+        $this->assertOk($response, $context);
+
+        if ($response->json('result') !== 'success') {
+            throw new RuntimeException(sprintf(
+                '%s did not report success: %s',
+                $context,
+                (string) $response->body(),
+            ));
+        }
     }
 
     /**

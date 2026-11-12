@@ -385,9 +385,13 @@ return [
         //                       does not need SES verification.
         //
         //   dmarc             — (Optional) Full DMARC TXT record value for the identity domain.
-        //                       Written to `_dmarc.<identity_domain>` by the DNS automation when
-        //                       a provider is configured. Defaults to 'v=DMARC1; p=none;' when
-        //                       omitted. Set to false to skip DMARC entirely for this identity.
+        //                       The DNS automation only CREATES `_dmarc.<identity_domain>` with
+        //                       this value when no record exists at that name yet — an existing
+        //                       record is never changed (change a policy in DNS by hand).
+        //                       When omitted, nothing is written ('v=DMARC1; p=none;' is only
+        //                       shown as a recommendation); false hides DMARC entirely.
+        //                       Careful with subdomain identities: a record at the subdomain
+        //                       replaces the policy inherited from the organizational domain.
         //
         // Run `php artisan messenger:ses-sns:setup-sending` to provision all identities
         // in SES and get the required DNS records (DKIM, SPF, MX, DMARC).
@@ -419,13 +423,13 @@ return [
                     'mail_from_domain' => env('AWS_SES_MAIL_FROM_DOMAIN'),
                     'mail_from_address' => env('MAIL_FROM_ADDRESS'),
                     // 'reply_to_address' => env('...'),
-                    // 'dmarc' => env('MESSENGER_DMARC_RECORD', 'v=DMARC1; p=none;'),
                 ],
             ],
 
             'mail_from_behavior_on_mx_failure' => 'USE_DEFAULT_VALUE',
 
-            // DNS automation for SES verification records (DKIM CNAMEs, MAIL FROM MX/TXT, DMARC TXT).
+            // DNS automation for SES verification records (DKIM CNAMEs, MAIL FROM MX/TXT; DMARC TXT
+            // only create-if-missing for an explicit `dmarc` policy).
             //
             // Only one provider runs per `setup-sending` invocation. Order of precedence:
             //   1. Infomaniak (when `infomaniak.enabled` is true)

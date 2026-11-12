@@ -4,6 +4,7 @@ namespace Topoff\Messenger\Services\SesSns;
 
 use Illuminate\Support\Arr;
 use RuntimeException;
+use Topoff\Messenger\Contracts\CreatesRoute53RecordsIfMissing;
 use Topoff\Messenger\Contracts\SesSnsProvisioningApi;
 
 class SesSendingSetupService
@@ -50,6 +51,8 @@ class SesSendingSetupService
         $dnsRecords = [];
         $identities = $this->identities();
         $configurationSets = $this->configurationSets();
+        $conflictingDmarcNames = $this->conflictingDmarcNames($identities);
+        $handledDmarcNames = [];
 
         // 1. Loop each identity → create SES identity, configure MAIL FROM, build DNS records
         foreach ($identities as $identityKey => $identityConfig) {
@@ -88,13 +91,15 @@ class SesSendingSetupService
                 $steps[] = ['label' => 'SES custom MAIL FROM'.$suffix, 'ok' => true, 'details' => 'Skipped (not configured).'];
             }
 
+            // The DMARC record stays in the reported records, but is never upserted:
+            // see createDmarcIfConfigured() for the create-only handling.
             $dmarcRecord = $this->buildDmarcDnsRecord($identity, $identityConfig);
             if ($dmarcRecord !== null) {
-                $identityDnsRecords[] = $dmarcRecord;
                 $dnsRecords[] = $dmarcRecord;
             }
 
             $this->upsertDnsIfConfigured($identity, $identityDnsRecords, $steps);
+            $this->createDmarcIfConfigured($identity, $identityConfig, $conflictingDmarcNames, $handledDmarcNames, $suffix, $steps);
 
             $verified = (bool) Arr::get($identityData, 'VerifiedForSendingStatus', false);
             $steps[] = [
@@ -422,13 +427,7 @@ class SesSendingSetupService
             return;
         }
 
-        $hostedZoneId = (string) config('messenger.ses_sns.sending.route53.hosted_zone_id', '');
-        if ($hostedZoneId === '') {
-            $hostedZoneId = (string) $this->api->findHostedZoneIdByDomain($identityDomain = $this->identityDomainFromIdentity($identity));
-            if ($hostedZoneId === '') {
-                throw new RuntimeException('Route53 hosted zone not found for domain: '.$identityDomain);
-            }
-        }
+        $hostedZoneId = $this->route53HostedZoneId($identity);
 
         $ttl = (int) config('messenger.ses_sns.sending.route53.ttl', 300);
         foreach ($dnsRecords as $record) {
@@ -442,6 +441,159 @@ class SesSendingSetupService
         }
 
         $steps[] = ['label' => 'Route53 DNS automation', 'ok' => true, 'details' => 'Upserted '.count($dnsRecords).' record(s) in zone '.$hostedZoneId];
+    }
+
+    protected function route53HostedZoneId(string $identity): string
+    {
+        $hostedZoneId = (string) config('messenger.ses_sns.sending.route53.hosted_zone_id', '');
+        if ($hostedZoneId === '') {
+            $hostedZoneId = (string) $this->api->findHostedZoneIdByDomain($identityDomain = $this->identityDomainFromIdentity($identity));
+            if ($hostedZoneId === '') {
+                throw new RuntimeException('Route53 hosted zone not found for domain: '.$identityDomain);
+            }
+        }
+
+        return $hostedZoneId;
+    }
+
+    /**
+     * Which DNS provider the automation writes to in this run, if any.
+     */
+    protected function activeDnsProvider(): ?string
+    {
+        if ((bool) config('messenger.ses_sns.sending.infomaniak.enabled', false)) {
+            return (bool) config('messenger.ses_sns.sending.infomaniak.auto_create_records', true) ? 'infomaniak' : null;
+        }
+
+        if ((bool) config('messenger.ses_sns.sending.route53.enabled', false)
+            && (bool) config('messenger.ses_sns.sending.route53.auto_create_records', false)) {
+            return 'route53';
+        }
+
+        return null;
+    }
+
+    /**
+     * The DMARC record the automation may create for an identity: only for an
+     * explicit, non-empty `dmarc` string. A missing `dmarc` never produces a
+     * write, because a default policy at a subdomain would override (and
+     * weaken) the policy inherited from the organizational domain.
+     *
+     * @param  array<string, mixed>  $identityConfig
+     * @return array{name: string, type: string, values: array<int, string>}|null
+     */
+    protected function managedDmarcRecord(string $identity, array $identityConfig): ?array
+    {
+        $configured = $identityConfig['dmarc'] ?? null;
+        if (! is_string($configured) || trim($configured) === '') {
+            return null;
+        }
+
+        return $this->buildDmarcDnsRecord($identity, $identityConfig);
+    }
+
+    /**
+     * `_dmarc` names for which identities configure different explicit values.
+     *
+     * @param  array<string, array<string, mixed>>  $identities
+     * @return array<string, true>
+     */
+    protected function conflictingDmarcNames(array $identities): array
+    {
+        $valuesByName = [];
+        foreach ($identities as $identityConfig) {
+            $record = $this->managedDmarcRecord($this->resolveIdentity($identityConfig), $identityConfig);
+            if ($record !== null) {
+                $valuesByName[$this->dmarcNameKey($record['name'])][$record['values'][0]] = true;
+            }
+        }
+
+        return array_map(
+            static fn (): bool => true,
+            array_filter($valuesByName, static fn (array $values): bool => count($values) > 1),
+        );
+    }
+
+    /**
+     * Comparison key for a DNS name: case-insensitive, trailing dot ignored
+     * (both providers treat `example.com` and `example.com.` as the same name).
+     */
+    protected function dmarcNameKey(string $name): string
+    {
+        return rtrim(strtolower(trim($name)), '.');
+    }
+
+    /**
+     * Create `_dmarc.<identity_domain>` when an explicit policy is configured and
+     * the name is still free. An existing record is never changed — not even
+     * when the configured policy differs. Each name is handled once per run.
+     *
+     * @param  array<string, mixed>  $identityConfig
+     * @param  array<string, true>  $conflictingDmarcNames
+     * @param  array<string, true>  $handledDmarcNames
+     * @param  array<int, array{label: string, ok: bool, details: string}>  $steps
+     */
+    protected function createDmarcIfConfigured(
+        string $identity,
+        array $identityConfig,
+        array $conflictingDmarcNames,
+        array &$handledDmarcNames,
+        string $suffix,
+        array &$steps,
+    ): void {
+        $provider = $this->activeDnsProvider();
+        if ($provider === null) {
+            return;
+        }
+
+        $label = 'DMARC'.$suffix;
+        $record = $this->managedDmarcRecord($identity, $identityConfig);
+        if ($record === null) {
+            $steps[] = ['label' => $label, 'ok' => true, 'details' => 'Not managed (no explicit dmarc policy configured); DNS left untouched.'];
+
+            return;
+        }
+
+        $name = $record['name'];
+        $key = $this->dmarcNameKey($name);
+        if (isset($handledDmarcNames[$key])) {
+            return;
+        }
+        $handledDmarcNames[$key] = true;
+
+        if (isset($conflictingDmarcNames[$key])) {
+            $steps[] = ['label' => $label, 'ok' => false, 'details' => 'Not written: identities configure conflicting DMARC policies for '.$name.'.'];
+
+            return;
+        }
+
+        try {
+            if ($provider === 'infomaniak') {
+                $ttl = (int) config('messenger.ses_sns.sending.infomaniak.ttl', 300);
+                $created = $this->infomaniakDnsApi()->createRecordIfMissing($name, $record['type'], $record['values'], $ttl);
+            } else {
+                if (! $this->api instanceof CreatesRoute53RecordsIfMissing) {
+                    $steps[] = ['label' => $label, 'ok' => false, 'details' => 'Not written: the provisioning API cannot check for an existing '.$name.' record. Apply it manually if missing.'];
+
+                    return;
+                }
+
+                $ttl = (int) config('messenger.ses_sns.sending.route53.ttl', 300);
+                $created = $this->api->createRoute53RecordIfMissing($this->route53HostedZoneId($identity), $name, $record['type'], $record['values'], $ttl);
+            }
+        } catch (\Throwable $e) {
+            $steps[] = ['label' => $label, 'ok' => false, 'details' => 'Not written ('.$name.'): '.$e->getMessage()];
+
+            return;
+        }
+
+        $steps[] = [
+            'label' => $label,
+            'ok' => true,
+            'details' => $created
+                ? 'Created '.$name.'.'
+                : $name.' already exists; left unchanged (existing DMARC records are never overwritten).',
+        ];
     }
 
     /**
@@ -613,8 +765,10 @@ class SesSendingSetupService
     }
 
     /**
-     * Build the DMARC TXT record for an identity, or null when the identity opts out
-     * (`dmarc => false`). Defaults to `v=DMARC1; p=none;` when no value is configured.
+     * Build the DMARC TXT record reported for an identity (dns_records, check(),
+     * dashboard), or null when the identity opts out (`dmarc => false`). Defaults
+     * to `v=DMARC1; p=none;` as a recommendation when no value is configured —
+     * the DNS automation only ever writes it via managedDmarcRecord().
      *
      * @param  array<string, mixed>  $identityConfig
      * @return array{name: string, type: string, values: array<int, string>}|null
