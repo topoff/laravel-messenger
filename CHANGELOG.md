@@ -2,6 +2,17 @@
 
 All notable changes to `laravel-messenger` will be documented in this file.
 
+## 8.15.0 - 2026-11-19
+
+- Manual send actions (Nova `SendNotificationAction`, Filament «Send Notification»)
+  offer the SMS provider as channel: `SMS (Vonage)` and — when
+  `messenger.sms.aws` credentials are set — `SMS (AWS)` (`aws-sms`).
+  `NovaChannelNotification` implements `toAwsSms()`.
+- New `messenger.notifications.default_sms_channel` (default `vonage`; falls back
+  to Vonage when the configured channel is not offered) and
+  `messenger.notifications.sms_price_hints` (channel => text, shown in the SMS
+  counter). The hard-coded «Schweiz: 6.7rp / sms» hint is gone.
+
 ## 8.13.1 - 2026-11-05
 
 - `delivery_overrides_failure`: the override also sets `sent_at` when it is

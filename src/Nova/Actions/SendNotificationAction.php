@@ -22,6 +22,7 @@ use Throwable;
 use Topoff\Messenger\Models\Message;
 use Topoff\Messenger\Notifications\NovaChannelNotification;
 use Topoff\Messenger\Repositories\MessageTypeRepository;
+use Topoff\Messenger\Services\Sms\SmsChannelOptions;
 
 class SendNotificationAction extends Action
 {
@@ -35,7 +36,7 @@ class SendNotificationAction extends Action
         $subject = trim((string) $fields->get('subject'));
         $message = trim((string) $fields->get('message'));
 
-        if (! in_array($channel, ['mail', 'vonage'], true)) {
+        if ($channel !== 'mail' && ! SmsChannelOptions::isSms($channel)) {
             return Action::danger('Please select a valid channel.');
         }
 
@@ -131,12 +132,9 @@ class SendNotificationAction extends Action
     {
         return [
             Select::make(__('Channel'), 'channel')
-                ->options([
-                    'mail' => 'Email',
-                    'vonage' => 'SMS',
-                ])
+                ->options(['mail' => 'Email'] + SmsChannelOptions::channels())
                 ->displayUsingLabels()
-                ->default('vonage')
+                ->default(SmsChannelOptions::defaultChannel())
                 ->rules('required'),
             Text::make(__('Subject (Email only)'), 'subject')
                 ->help('Required when channel is Email.')
@@ -151,7 +149,7 @@ class SendNotificationAction extends Action
                 }),
             Text::make(__('Recipient Phone'), 'recipient_phone')
                 ->dependsOn(['channel'], function (Text $field, NovaRequest $request, FormData $formData): void {
-                    if ((string) $formData->channel !== 'vonage') {
+                    if (! SmsChannelOptions::isSms((string) $formData->channel)) {
                         $field->hide();
 
                         return;
@@ -176,7 +174,8 @@ class SendNotificationAction extends Action
             Text::make(__('SMS Counter'), 'sms_counter')
                 ->readonly()
                 ->dependsOn(['channel', 'message'], function (Text $field, NovaRequest $request, FormData $formData): void {
-                    if ((string) $formData->channel !== 'vonage') {
+                    $channel = (string) $formData->channel;
+                    if (! SmsChannelOptions::isSms($channel)) {
                         $field->setValue('Only relevant for SMS channel.');
 
                         return;
@@ -184,10 +183,11 @@ class SendNotificationAction extends Action
 
                     $metrics = $this->calculateSmsMetrics((string) $formData->message);
                     $fitsInOneSms = $metrics['segments'] === 1 ? 'yes' : 'no';
+                    $priceHint = SmsChannelOptions::priceHint($channel);
 
-                    $field->setValue("{$metrics['encoding']} | chars: {$metrics['length']} | segments: {$metrics['segments']} | one SMS: {$fitsInOneSms}");
+                    $field->setValue("{$metrics['encoding']} | chars: {$metrics['length']} | segments: {$metrics['segments']} | one SMS: {$fitsInOneSms}".($priceHint !== null ? " | {$priceHint}" : ''));
                 })
-                ->help('Shows SMS length and if the message fits into one SMS. Schweiz: 6.7rp / sms'),
+                ->help('Shows SMS length, if the message fits into one SMS and the provider price (each segment is billed).'),
         ];
     }
 

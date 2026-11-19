@@ -17,6 +17,7 @@ use Topoff\Messenger\Filament\Resources\MessageResource;
 use Topoff\Messenger\Mail\CustomMessageMail;
 use Topoff\Messenger\Notifications\NovaChannelNotification;
 use Topoff\Messenger\Repositories\MessageTypeRepository;
+use Topoff\Messenger\Services\Sms\SmsChannelOptions;
 
 class ListMessages extends ListRecords
 {
@@ -158,11 +159,8 @@ class ListMessages extends ListRecords
                 ->color('primary')
                 ->form([
                     Forms\Components\Select::make('channel')
-                        ->options([
-                            'mail' => 'Email',
-                            'vonage' => 'SMS',
-                        ])
-                        ->default('vonage')
+                        ->options(['mail' => 'Email'] + SmsChannelOptions::channels())
+                        ->default(SmsChannelOptions::defaultChannel())
                         ->required(),
                     Forms\Components\TextInput::make('subject')
                         ->label('Subject (Email only)')

@@ -38,4 +38,12 @@ class NovaChannelNotification extends Notification
             ->content($this->message)
             ->clientReference($this->messengerClientReference());
     }
+
+    /**
+     * Same text as the Vonage SMS, for the `aws-sms` channel.
+     */
+    public function toAwsSms(object $notifiable): string
+    {
+        return $this->message;
+    }
 }

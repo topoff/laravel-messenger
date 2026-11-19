@@ -338,7 +338,7 @@ Returns identity & DNS status:
 | `PreviewMessageInBrowserAction` | Preview message template rendering (signed URL, 10 min expiry) |
 | `PreviewMessageTypeInBrowserAction` | Preview a message type's template (requires selecting a message) |
 | `SendCustomMailAction` | Compose ad-hoc emails with markdown editor, supports preview-only, scheduling, mailer selection, and SES configuration set override |
-| `SendNotificationAction` | Send SMS/email notifications via AnonymousNotifiable (mail & vonage channels) |
+| `SendNotificationAction` | Send SMS/email notifications via AnonymousNotifiable (mail, `vonage`, and `aws-sms` when AWS SMS credentials are set; preselected SMS channel `notifications.default_sms_channel`, price hint per channel `notifications.sms_price_hints`) |
 | `OpenSesSnsSiteAction` | Open SES/SNS dashboard (standalone action, signed URL, 30 min expiry) |
 
 ### Filters (`src/Nova/Filters/`)

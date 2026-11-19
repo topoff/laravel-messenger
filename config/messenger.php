@@ -119,6 +119,13 @@ return [
 
     'notifications' => [
         'default_message_footer' => '',
+
+        // Manual send actions (Nova, Filament): preselected SMS channel
+        // (`vonage` or `aws-sms`; `aws-sms` is offered only when
+        // messenger.sms.aws credentials are set) and an optional price hint
+        // per channel shown next to the segment counter.
+        'default_sms_channel' => 'vonage',
+        'sms_price_hints' => [],
     ],
 
     'tracking' => [
