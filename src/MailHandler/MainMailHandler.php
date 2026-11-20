@@ -15,6 +15,7 @@ use Topoff\Messenger\Exceptions\ReceiverMissingException;
 use Topoff\Messenger\Models\Message;
 use Topoff\Messenger\Services\ConsentService;
 use Topoff\Messenger\Services\SendRateGuard;
+use Topoff\Messenger\Support\SendFailureLogContext;
 
 /**
  * Base / Parent class of all MailHandlers
@@ -223,7 +224,7 @@ class MainMailHandler implements GroupableMailTypeInterface
                 $this->message->error_message = Str::limit(($t->getCode().' : '.$t->getMessage()), 245);
                 $this->message->save();
 
-                Log::warning(static::class.':'.__FUNCTION__.': Message permanently failed: message_id: '.$this->message->id.' class: '.$this->mailClass().' - Code: '.$t->getCode().' Message: '.$t->getMessage());
+                Log::warning(static::class.':'.__FUNCTION__.': Message permanently failed: message_id: '.$this->message->id.' class: '.$this->mailClass().' - Code: '.$t->getCode().' Message: '.SendFailureLogContext::redact($t->getMessage()), SendFailureLogContext::for($this->message, $t, static::class));
             } else {
                 $this->message->error_at = now();
                 $this->message->error_message = Str::limit(($t->getCode().' : '.$t->getMessage()), 245);
@@ -233,8 +234,10 @@ class MainMailHandler implements GroupableMailTypeInterface
                 $errorHasBeenHandled = $this->onError($t, $params);
 
                 if (! $errorHasBeenHandled) {
+                    // Only identifiers and error codes — never the mail parameters
+                    // (Message incl. receiver, company, contact) or trace arguments.
                     Log::error(static::class.':'.__FUNCTION__.': Messages could not be sent: message_id: '.$this->message->id.' class: '.$this->mailClass().' - Code: '.$t->getCode().' Message: '
-                        .$t->getMessage().' on line '.$t->getLine(), ['params' => $params->toArray(), 'trace' => $t->getTrace()]);
+                        .SendFailureLogContext::redact($t->getMessage()).' on line '.$t->getLine(), SendFailureLogContext::for($this->message, $t, static::class));
                 }
             }
         }

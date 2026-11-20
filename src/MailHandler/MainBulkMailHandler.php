@@ -10,6 +10,7 @@ use Throwable;
 use Topoff\Messenger\Contracts\GroupableMailTypeInterface;
 use Topoff\Messenger\Contracts\MessageReceiverInterface;
 use Topoff\Messenger\Exceptions\MissingGroupableMailTypeInterfaceException;
+use Topoff\Messenger\Support\SendFailureLogContext;
 
 /**
  * All Mails which should be sent als BulkMails with this MainBulkMailHandler
@@ -79,9 +80,10 @@ class MainBulkMailHandler
             $this->setMessagesToSent();
         } catch (Throwable $t) {
             Log::critical('Mail was sent but messages could not be marked as sent', [
-                'receiver' => $this->receiver->getEmail(),
+                'receiver_type' => $this->messageGroup->first()?->receiver_type,
+                'receiver_id' => $this->messageGroup->first()?->receiver_id,
                 'message_ids' => $this->messageGroup->pluck('id')->all(),
-                'exception' => $t,
+                ...SendFailureLogContext::forThrowable($t),
             ]);
 
             throw $t;
@@ -93,7 +95,7 @@ class MainBulkMailHandler
             } catch (Throwable $t) {
                 Log::warning('Post-send hook failed', [
                     'message_id' => $key,
-                    'exception' => $t,
+                    ...SendFailureLogContext::forThrowable($t),
                 ]);
             }
         }

@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Log\Events\MessageLogged;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Topoff\Messenger\Exceptions\ReceiverMissingException;
 use Topoff\Messenger\MailHandler\MainMailHandler;
@@ -264,4 +266,47 @@ it('sends mail to the receiver email address', function () {
     $handler->send();
 
     Mail::assertSent(TestMail::class, fn ($mail) => $mail->hasTo('specific@example.com'));
+});
+
+it('logs a failed send with identifiers only — no mail parameters, models or trace arguments', function () {
+    config()->set('messenger.sending.check_should_send', fn () => true);
+
+    $this->receiver->update(['email' => 'info@example.ch___deleted']);
+
+    $message = createMessage([
+        'receiver_type' => TestReceiver::class,
+        'receiver_id' => $this->receiver->id,
+        'message_type_id' => $this->messageType->id,
+        'messagable_type' => TestMessagable::class,
+        'messagable_id' => $this->messagable->id,
+    ]);
+
+    Mail::shouldReceive('to')->andThrow(new RuntimeException('Request to AWS SES API failed for info@example.ch___deleted. Reason: Domain contains illegal character.'));
+
+    $logged = [];
+    Log::listen(function (MessageLogged $event) use (&$logged): void {
+        $logged[] = $event;
+    });
+
+    $handler = new MainMailHandler($message->load('messageType'));
+    $handler->send();
+
+    $errors = array_values(array_filter($logged, fn (MessageLogged $event): bool => $event->level === 'error'));
+    expect($errors)->toHaveCount(1);
+
+    $context = $errors[0]->context;
+    $serialized = json_encode($context).$errors[0]->message;
+
+    expect($context)->not->toHaveKey('params')
+        ->and($context['message_id'])->toBe($message->id)
+        ->and($context['receiver_type'])->toBe(TestReceiver::class)
+        ->and((string) $context['receiver_id'])->toBe((string) $this->receiver->id)
+        ->and($context['exception_class'])->toBe(RuntimeException::class)
+        ->and($context['trace'])->each->toBeString()
+        ->and($serialized)->not->toContain('info@example.ch')
+        ->and($serialized)->toContain('[email]')
+        ->and($serialized)->toContain('Domain contains illegal character');
+
+    $message->refresh();
+    expect($message->error_at)->not->toBeNull();
 });

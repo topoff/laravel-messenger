@@ -11,6 +11,7 @@ use Throwable;
 use Topoff\Messenger\Models\Message;
 use Topoff\Messenger\Services\ConsentService;
 use Topoff\Messenger\Services\SendRateGuard;
+use Topoff\Messenger\Support\SendFailureLogContext;
 
 /**
  * Base handler for notification-based channels (SMS, push, etc.).
@@ -169,7 +170,7 @@ class MainNotificationHandler
 
             if (! $errorHasBeenHandled) {
                 Log::error(static::class.':'.__FUNCTION__.': Notification could not be sent: message_id: '.$this->message->id.' class: '.$this->notificationClass().' - Code: '.$t->getCode().' Message: '
-                    .$t->getMessage().' on line '.$t->getLine(), ['trace' => $t->getTrace()]);
+                    .SendFailureLogContext::redact($t->getMessage()).' on line '.$t->getLine(), SendFailureLogContext::for($this->message, $t, static::class));
             }
         }
     }
